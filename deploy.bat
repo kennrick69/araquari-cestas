@@ -7,7 +7,7 @@ echo ========================================
 echo.
 
 :: ALTERE AQUI o link do seu repositorio
-set REPO=https://github.com/SEU_USUARIO/araquari-cestas.git
+set REPO=https://github.com/kennrick69/araquari-cestas.git
 set BRANCH=main
 
 :: Verificar se ja e um repo git
