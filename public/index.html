@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A1A">
+<title>Araquari Cestas</title>
+<link rel="icon" type="image/png" href="assets/img/logo.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+    --bg: #0D0D0D;
+    --bg2: #1A1A1A;
+    --bg3: #242424;
+    --card: #1E1E1E;
+    --card2: #2A2A2A;
+    --text: #FFFFFF;
+    --text2: #B0B0B0;
+    --text3: #707070;
+    --orange: #E8850C;
+    --orange-l: #F5A623;
+    --orange-d: #C06A00;
+    --green: #34C759;
+    --green-d: #2DA44E;
+    --blue: #4DB8E8;
+    --red: #FF3B30;
+    --yellow: #FFD93D;
+    --border: rgba(255,255,255,0.08);
+    --glass: rgba(26,26,26,0.85);
+    --glass2: rgba(26,26,26,0.95);
+    --radius: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:var(--text); overflow:hidden; height:100vh; height:100dvh; }
+::-webkit-scrollbar { width:0; }
+
+/* ── SPLASH ── */
+#splash {
+    position:fixed; inset:0; z-index:9999;
+    background:radial-gradient(ellipse at 50% 40%, #2A1A0A 0%, #0D0D0D 70%);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    overflow:hidden;
+}
+#splash.hide { opacity:0; transform:scale(1.1); pointer-events:none; }
+
+/* Floating food emojis background */
+.splash-foods { position:absolute; inset:0; z-index:0; overflow:hidden; }
+.splash-food {
+    position:absolute; font-size:28px; opacity:0;
+    animation: foodFall linear forwards;
+}
+@keyframes foodFall {
+    0% { opacity:0; transform:translateY(-60px) rotate(0deg) scale(0.5); }
+    10% { opacity:0.6; transform:translateY(0) scale(1); }
+    90% { opacity:0.4; }
+    100% { opacity:0; transform:translateY(calc(100vh + 60px)) rotate(360deg) scale(0.7); }
+}
+
+/* Glow rings behind logo */
+.splash-glow {
+    position:absolute; width:280px; height:280px; border-radius:50%; z-index:1;
+    border:2px solid rgba(232,133,12,0.08);
+    animation: glowPulse 2.5s ease-in-out infinite;
+}
+.splash-glow:nth-child(2) { width:360px; height:360px; animation-delay:0.4s; border-color:rgba(232,133,12,0.05); }
+.splash-glow:nth-child(3) { width:440px; height:440px; animation-delay:0.8s; border-color:rgba(232,133,12,0.03); }
+@keyframes glowPulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.08);opacity:1} }
+
+/* Center content */
+.splash-center { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center; }
+
+.splash-logo-wrap {
+    width:120px; height:120px; border-radius:30px; overflow:hidden;
+    box-shadow: 0 0 60px rgba(232,133,12,0.3), 0 20px 60px rgba(0,0,0,0.5);
+    animation: logoReveal 1s cubic-bezier(0.34,1.56,0.64,1) 0.3s both;
+}
+.splash-logo-wrap img { width:100%; height:100%; object-fit:contain; }
+@keyframes logoReveal { from{opacity:0;transform:scale(0.3) rotateY(90deg)} to{opacity:1;transform:scale(1) rotateY(0)} }
+
+.splash-brand {
+    margin-top:20px; font-size:30px; font-weight:900; color:#fff; letter-spacing:-0.5px;
+    animation: textReveal 0.8s ease 0.8s both;
+}
+.splash-brand span { color:var(--orange); }
+@keyframes textReveal { from{opacity:0;transform:translateY(20px);filter:blur(10px)} to{opacity:1;transform:translateY(0);filter:blur(0)} }
+
+.splash-tagline {
+    margin-top:8px; font-size:14px; color:rgba(255,255,255,0.5); font-weight:600;
+    animation: textReveal 0.8s ease 1.1s both;
+}
+
+/* Video preview window */
+.splash-video-wrap {
+    margin-top:24px; width:220px; height:220px; border-radius:22px; overflow:hidden;
+    border:2px solid rgba(232,133,12,0.2);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    animation: videoReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) 1.4s both;
+    background:#000;
+}
+.splash-video-wrap video { width:100%; height:100%; object-fit:cover; }
+@keyframes videoReveal { from{opacity:0;transform:translateY(30px) scale(0.8)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+.splash-loader-bar {
+    margin-top:32px; width:140px; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;
+    animation: textReveal 0.5s ease 1.8s both;
+}
+.splash-loader-fill {
+    width:0%; height:100%; background:linear-gradient(90deg, var(--orange), var(--orange-l)); border-radius:2px;
+    animation: loaderFill 2.5s ease 2s forwards;
+}
+@keyframes loaderFill { to{width:100%} }
+
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
+
+/* ── APP CONTAINER ── */
+#app { position:fixed; inset:0; display:flex; flex-direction:column; }
+.screen { position:absolute; inset:0; display:none; flex-direction:column; }
+.screen.active { display:flex; animation:screenIn 0.4s ease-out; }
+@keyframes screenIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── MAP ── */
+#map-container { position:absolute; inset:0; z-index:0; }
+#map-container .leaflet-container { height:100%; width:100%; }
+.map-gradient-top { position:absolute; top:0; left:0; right:0; height:120px; background:linear-gradient(var(--bg),transparent); z-index:400; pointer-events:none; }
+.map-gradient-bottom { position:absolute; bottom:0; left:0; right:0; height:200px; background:linear-gradient(transparent,var(--bg)); z-index:400; pointer-events:none; }
+
+/* ── CENTER PIN (overlay on map) ── */
+.center-pin { position:absolute; top:50%; left:50%; transform:translate(-50%,-100%); z-index:500; font-size:42px; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5)); transition:transform 0.2s; pointer-events:none; }
+.center-pin.bounce { animation:pinBounce 0.4s ease; }
+@keyframes pinBounce { 0%{transform:translate(-50%,-100%)} 50%{transform:translate(-50%,-120%)} 100%{transform:translate(-50%,-100%)} }
+.center-pin-shadow { position:absolute; top:50%; left:50%; transform:translate(-50%,2px); width:16px; height:6px; background:rgba(0,0,0,0.3); border-radius:50%; z-index:499; pointer-events:none; }
+
+/* ── HEADER BAR ── */
+.app-header {
+    position:relative; z-index:500; padding:12px 20px; padding-top: max(12px, env(safe-area-inset-top));
+    display:flex; align-items:center; justify-content:space-between;
+}
+.header-logo { display:flex; align-items:center; gap:10px; }
+.header-logo img { width:38px; height:38px; border-radius:10px; }
+.header-logo span { font-size:16px; font-weight:800; }
+.header-btn { width:40px; height:40px; border-radius:12px; background:var(--glass); backdrop-filter:blur(20px); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; }
+.header-right { display:flex; gap:8px; }
+
+/* ── BOTTOM SHEET ── */
+.bottom-sheet {
+    position:absolute; bottom:0; left:0; right:0; z-index:500;
+    background:var(--bg); border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+    padding:12px 20px 24px; padding-bottom:max(24px, env(safe-area-inset-bottom));
+    box-shadow:0 -8px 40px rgba(0,0,0,0.5);
+    transition: transform 0.5s cubic-bezier(0.32,0.72,0,1);
+    max-height:75vh; overflow-y:auto;
+}
+.bottom-sheet.collapsed { transform:translateY(calc(100% - 80px)); }
+.sheet-handle { width:36px; height:4px; background:var(--text3); border-radius:2px; margin:0 auto 16px; }
+.sheet-title { font-size:20px; font-weight:800; margin-bottom:4px; }
+.sheet-sub { font-size:13px; color:var(--text2); font-weight:600; margin-bottom:20px; }
+
+/* ── BASKET CARDS ── */
+.basket-cards { display:flex; flex-direction:column; gap:12px; }
+.basket-card {
+    display:flex; align-items:center; gap:14px; padding:16px;
+    background:var(--card); border-radius:var(--radius); cursor:pointer;
+    border:2.5px solid transparent; transition:all 0.25s;
+    position:relative; overflow:hidden;
+}
+.basket-card:hover, .basket-card:active { border-color:var(--orange); background:var(--card2); }
+.basket-card.selected { border-color:var(--orange); background:rgba(232,133,12,0.08); }
+.basket-icon { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+.basket-info { flex:1; }
+.basket-name { font-size:16px; font-weight:800; margin-bottom:2px; }
+.basket-desc { font-size:12px; color:var(--text2); font-weight:500; }
+.basket-items-preview { font-size:11px; color:var(--text3); margin-top:4px; font-weight:500; }
+.basket-price { text-align:right; }
+.basket-price-val { font-size:20px; font-weight:800; color:var(--orange); }
+.basket-price-sub { font-size:11px; color:var(--text3); font-weight:600; }
+.basket-tag { position:absolute; top:8px; right:8px; padding:3px 8px; border-radius:6px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; }
+
+/* ── SEARCH / ADDRESS BAR ── */
+.address-bar {
+    display:flex; align-items:center; gap:12px; padding:14px 16px;
+    background:var(--card); border-radius:var(--radius); margin-bottom:16px; cursor:pointer;
+    border:2px solid var(--border); transition:border 0.2s;
+}
+.address-bar:focus-within { border-color:var(--orange); }
+.address-dot { width:10px; height:10px; border-radius:50%; background:var(--green); flex-shrink:0; box-shadow:0 0 8px rgba(52,199,89,0.4); }
+.address-text { flex:1; }
+.address-text-main { font-size:14px; font-weight:700; }
+.address-text-sub { font-size:11px; color:var(--text3); font-weight:500; }
+.address-arrow { color:var(--text3); font-size:16px; }
+
+/* ── BUTTONS ── */
+.btn {
+    width:100%; padding:16px; border:none; border-radius:var(--radius); font-family:inherit;
+    font-size:15px; font-weight:800; cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn:active { transform:scale(0.97); }
+.btn:disabled { opacity:0.4; cursor:not-allowed; transform:none !important; }
+.btn-primary { background:var(--orange); color:#fff; }
+.btn-primary:hover { background:var(--orange-l); }
+.btn-green { background:var(--green); color:#fff; }
+.btn-dark { background:var(--card2); color:var(--text); border:2px solid var(--border); }
+.btn-ghost { background:transparent; color:var(--text2); }
+.btn-sm { padding:10px 16px; font-size:13px; width:auto; }
+
+/* ── FORM ── */
+.form-group { margin-bottom:14px; }
+.form-label { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:6px; display:block; text-transform:uppercase; letter-spacing:0.5px; }
+.form-label .req { color:var(--red); }
+.form-input {
+    width:100%; padding:14px 16px; background:var(--card); border:2px solid var(--border);
+    border-radius:12px; color:var(--text); font-family:inherit; font-size:14px; font-weight:600; outline:none;
+    transition:border 0.2s;
+}
+.form-input:focus { border-color:var(--orange); }
+.form-input::placeholder { color:var(--text3); }
+
+/* ── PAYMENT METHODS ── */
+.pay-methods { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.pay-method {
+    display:flex; align-items:center; gap:14px; padding:16px;
+    background:var(--card); border-radius:var(--radius); cursor:pointer;
+    border:2.5px solid transparent; transition:all 0.2s;
+}
+.pay-method.selected { border-color:var(--orange); background:rgba(232,133,12,0.06); }
+.pay-emoji { font-size:28px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--bg3); border-radius:12px; }
+.pay-info { flex:1; }
+.pay-name { font-size:14px; font-weight:700; }
+.pay-desc { font-size:11px; color:var(--text3); font-weight:500; margin-top:2px; }
+.pay-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; transition:all 0.2s; }
+.pay-method.selected .pay-check { background:var(--orange); border-color:var(--orange); }
+.pay-tag { padding:3px 8px; border-radius:6px; font-size:9px; font-weight:800; }
+
+/* ── FILE UPLOAD ── */
+.file-upload {
+    border:2px dashed var(--border); border-radius:12px; padding:20px 16px; text-align:center;
+    cursor:pointer; transition:all 0.2s; background:var(--card); margin-bottom:12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+}
+.file-upload.done { border-color:var(--green); background:rgba(52,199,89,0.06); }
+.file-upload .upload-icon { font-size:22px; color:var(--text3); }
+.file-upload p { font-size:12px; color:var(--text3); font-weight:600; margin:0; }
+.file-upload .file-ok { font-size:13px; color:var(--green); font-weight:700; }
+
+/* ── ORDER STATUS ── */
+.status-screen { padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100%; background:var(--bg); }
+.status-icon { font-size:80px; margin-bottom:20px; animation:pulse 2s infinite; }
+.status-title { font-size:24px; font-weight:800; margin-bottom:8px; text-align:center; }
+.status-sub { font-size:14px; color:var(--text2); text-align:center; max-width:300px; line-height:1.7; font-weight:600; margin-bottom:32px; }
+.status-steps { width:100%; max-width:340px; margin-bottom:32px; }
+.status-step { display:flex; align-items:flex-start; gap:14px; position:relative; padding-bottom:24px; }
+.status-step:last-child { padding-bottom:0; }
+.status-step::before { content:''; position:absolute; left:15px; top:34px; bottom:0; width:2px; background:var(--border); }
+.status-step:last-child::before { display:none; }
+.status-step.active::before { background:var(--orange); }
+.status-step.done::before { background:var(--green); }
+.step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:var(--card); border:2px solid var(--border); }
+.status-step.done .step-dot { background:var(--green); border-color:var(--green); }
+.status-step.active .step-dot { background:var(--orange); border-color:var(--orange); animation:pulse 2s infinite; }
+.step-text { padding-top:4px; }
+.step-title { font-size:14px; font-weight:700; }
+.step-desc { font-size:11px; color:var(--text3); font-weight:500; margin-top:2px; }
+
+/* ── SUMMARY ROW ── */
+.summary { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
+.summary-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; }
+.summary-row span:first-child { color:var(--text2); font-size:13px; font-weight:600; }
+.summary-row span:last-child { font-size:13px; font-weight:700; }
+.summary-total { border-top:1px solid var(--border); margin-top:8px; padding-top:12px; }
+.summary-total span:last-child { font-size:18px; color:var(--orange); }
+.discount { color:var(--green) !important; }
+
+/* ── BACK BUTTON ── */
+.back-btn { position:absolute; top:12px; left:16px; top:max(12px, env(safe-area-inset-top)); z-index:600; width:40px; height:40px; border-radius:50%; background:var(--glass); backdrop-filter:blur(20px); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; }
+
+/* ── BASKET DETAIL ── */
+.detail-hero { padding:20px; padding-top:max(60px, calc(env(safe-area-inset-top) + 48px)); text-align:center; }
+.detail-icon-wrap { width:80px; height:80px; border-radius:22px; display:flex; align-items:center; justify-content:center; font-size:40px; margin:0 auto 14px; }
+.detail-name { font-size:26px; font-weight:900; margin-bottom:2px; }
+.detail-desc { font-size:13px; color:var(--text2); font-weight:600; }
+.detail-price-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:14px; }
+.detail-price { font-size:32px; font-weight:900; color:var(--orange); }
+.detail-price-pix { font-size:13px; color:var(--green); font-weight:700; background:rgba(52,199,89,0.1); padding:4px 10px; border-radius:8px; }
+
+.detail-section-label { font-size:11px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:1px; padding:16px 20px 10px; }
+
+.detail-items { padding:0 20px; }
+.detail-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:13px 0; border-bottom:1px solid var(--border);
+}
+.detail-item:last-child { border-bottom:none; }
+.detail-item-left { display:flex; align-items:center; gap:12px; }
+.detail-item-dot { width:6px; height:6px; border-radius:50%; background:var(--orange); flex-shrink:0; }
+.detail-item-name { font-size:14px; font-weight:600; }
+.detail-item-qty { font-size:12px; color:var(--text3); font-weight:600; }
+
+.detail-footer {
+    position:sticky; bottom:0; padding:16px 20px; padding-bottom:max(16px, env(safe-area-inset-bottom));
+    background:var(--bg2); border-top:1px solid var(--border);
+    display:flex; align-items:center; gap:12px;
+}
+.qty-selector {
+    display:flex; align-items:center; border:2px solid var(--border); border-radius:12px; overflow:hidden; background:var(--card);
+}
+.qty-btn { width:42px; height:42px; border:none; background:transparent; color:var(--text); font-size:18px; font-weight:800; cursor:pointer; font-family:inherit; }
+.qty-btn:active { background:var(--bg3); }
+.qty-val { width:36px; text-align:center; font-size:16px; font-weight:800; }
+
+/* ── DETAIL IMAGE ── */
+.detail-img-wrap {
+    width:100%; max-height:200px; border-radius:16px; overflow:hidden;
+    margin:0 20px 0; width:calc(100% - 40px);
+    border:1px solid var(--border);
+}
+.detail-img-wrap img { width:100%; height:200px; object-fit:cover; cursor:pointer; }
+
+/* ── LIGHTBOX ── */
+.lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9000; display:none; align-items:center; justify-content:center; flex-direction:column; }
+.lightbox.show { display:flex; animation:fadeIn 0.25s; }
+.lightbox img { max-width:92%; max-height:80vh; object-fit:contain; border-radius:12px; animation:lightboxIn 0.3s cubic-bezier(0.32,0.72,0,1); }
+@keyframes lightboxIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+.lightbox-close { position:absolute; top:max(16px, env(safe-area-inset-top)); right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.12); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.detail-packaging {
+    margin:12px 20px 0; padding:10px 14px; background:var(--card);
+    border-radius:10px; font-size:12px; color:var(--text2); font-weight:600;
+    display:flex; align-items:center; gap:8px;
+}
+
+/* ── COMPARE MODAL ── */
+.compare-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:950; display:none; align-items:flex-end; justify-content:center; }
+.compare-overlay.show { display:flex; animation:fadeIn 0.3s; }
+.compare-sheet {
+    width:100%; max-width:500px; max-height:85vh; background:var(--bg);
+    border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+    padding:20px 0; animation:slideUp 0.4s cubic-bezier(0.32,0.72,0,1);
+    display:flex; flex-direction:column;
+}
+.compare-header { padding:0 20px 16px; border-bottom:1px solid var(--border); }
+.compare-body { overflow-x:auto; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
+.compare-table { width:100%; min-width:420px; border-collapse:collapse; font-size:12px; }
+.compare-table thead { position:sticky; top:0; z-index:2; }
+.compare-table th {
+    padding:12px 8px; text-align:center; font-weight:800; font-size:11px;
+    background:var(--bg2); border-bottom:2px solid var(--border); white-space:nowrap;
+}
+.compare-table th:first-child { text-align:left; padding-left:16px; min-width:140px; position:sticky; left:0; background:var(--bg2); z-index:3; }
+.compare-table td { padding:10px 8px; text-align:center; border-bottom:1px solid var(--border); color:var(--text2); font-weight:500; }
+.compare-table td:first-child { text-align:left; padding-left:16px; color:var(--text); font-weight:600; position:sticky; left:0; background:var(--bg); z-index:1; }
+.compare-table .col-x { color:var(--green); font-weight:700; }
+.compare-table .col-c { color:var(--orange); font-weight:700; }
+.compare-table .col-p { color:var(--yellow); font-weight:700; }
+.compare-table .has-item { color:var(--text); font-weight:600; }
+.compare-table .no-item { color:var(--text3); }
+.compare-price-row td { font-size:16px; font-weight:900; padding:14px 8px; border-top:2px solid var(--border); background:var(--bg2); }
+.compare-price-row td:first-child { background:var(--bg2); }
+
+/* ── CONFIRM ADDRESS MODAL ── */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:900; display:none; align-items:flex-end; justify-content:center; }
+.modal-overlay.show { display:flex; animation:fadeIn 0.3s; }
+.modal { width:100%; max-width:500px; background:var(--bg); border-radius:var(--radius-xl) var(--radius-xl) 0 0; padding:24px 20px; padding-bottom:max(24px, env(safe-area-inset-bottom)); animation:slideUp 0.4s cubic-bezier(0.32,0.72,0,1); }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+/* ── RESPONSIVE ── */
+@media (min-width:500px) {
+    body { display:flex; justify-content:center; background:#000; }
+    #app { max-width:430px; position:relative; border-left:1px solid #222; border-right:1px solid #222; }
+    #splash { max-width:430px; left:50%; transform:translateX(-50%); }
+    #splash.hide { transform:translateX(-50%) scale(1.1); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SPLASH ═══════════════════ -->
+<div id="splash">
+    <!-- Floating food emojis -->
+    <div class="splash-foods" id="splash-foods"></div>
+
+    <!-- Glow rings -->
+    <div class="splash-glow"></div>
+    <div class="splash-glow"></div>
+    <div class="splash-glow"></div>
+
+    <!-- Center content -->
+    <div class="splash-center">
+        <div class="splash-logo-wrap"><img src="assets/img/logo.png" alt="Logo"></div>
+        <div class="splash-brand">Araquari <span>Cestas</span></div>
+        <div class="splash-tagline">🛒 Cesta básica na sua porta</div>
+        <div class="splash-video-wrap">
+            <video autoplay muted playsinline loop id="splash-video">
+                <source src="assets/video/splash.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="splash-loader-bar"><div class="splash-loader-fill"></div></div>
+    </div>
+</div>
+
+<!-- ═══════════════════ APP ═══════════════════ -->
+<div id="app">
+
+    <!-- MAP (always present behind everything) -->
+    <div id="map-container"><div id="map"></div></div>
+    <div class="map-gradient-top"></div>
+    <div class="center-pin" id="center-pin" style="display:none">📍</div>
+    <div class="center-pin-shadow" id="center-pin-shadow" style="display:none"></div>
+
+    <!-- ═══ SCREEN: HOME ═══ -->
+    <div id="screen-home" class="screen active">
+        <div class="app-header">
+            <div class="header-logo">
+                <img src="assets/img/logo.png" alt="">
+                <span>Araquari Cestas</span>
+            </div>
+            <div class="header-right">
+                <div class="header-btn" onclick="showScreen('orders')">📦</div>
+                <div class="header-btn">👤</div>
+            </div>
+        </div>
+
+        <div class="bottom-sheet" id="home-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">Escolha sua cesta 🛒</div>
+            <div class="sheet-sub">Selecione o tipo e peça agora</div>
+
+            <!-- Compare button -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="width:auto;padding:8px 14px;font-size:12px;border-radius:10px">📊 Comparar cestas</button>
+            </div>
+
+            <!-- Basket cards -->
+            <div class="basket-cards">
+                <div class="basket-card" onclick="selectBasket('x')" id="card-x">
+                    <div class="basket-icon" style="background:rgba(52,199,89,0.12)">🍚</div>
+                    <div class="basket-info">
+                        <div class="basket-name">Cesta X</div>
+                        <div class="basket-desc">Essencial · 11 itens</div>
+                        <div class="basket-items-preview">Arroz, Feijão, Café, Óleo, Sardinha...</div>
+                    </div>
+                    <div class="basket-price">
+                        <div class="basket-price-val">R$ 89<small>,90</small></div>
+                        <div class="basket-price-sub">à vista</div>
+                    </div>
+                </div>
+
+                <div class="basket-card" onclick="selectBasket('confort')" id="card-confort">
+                    <div class="basket-icon" style="background:rgba(232,133,12,0.12)">🛒</div>
+                    <div class="basket-info">
+                        <div class="basket-name">Cesta Confort</div>
+                        <div class="basket-desc">Família · 14 itens</div>
+                        <div class="basket-items-preview">Arroz 5kg, Feijão, Café, 2x Óleo, Fubá...</div>
+                    </div>
+                    <div class="basket-price">
+                        <div class="basket-price-val">R$ 159<small>,90</small></div>
+                        <div class="basket-price-sub">à vista</div>
+                    </div>
+                    <div class="basket-tag" style="background:rgba(232,133,12,0.15);color:var(--orange)">POPULAR</div>
+                </div>
+
+                <div class="basket-card" onclick="selectBasket('plus')" id="card-plus">
+                    <div class="basket-icon" style="background:rgba(255,217,61,0.12)">👑</div>
+                    <div class="basket-info">
+                        <div class="basket-name">Cesta Plus</div>
+                        <div class="basket-desc">Premium · 33 itens</div>
+                        <div class="basket-items-preview">Completa + higiene e limpeza</div>
+                    </div>
+                    <div class="basket-price">
+                        <div class="basket-price-val">R$ 249<small>,90</small></div>
+                        <div class="basket-price-sub">à vista</div>
+                    </div>
+                    <div class="basket-tag" style="background:rgba(255,217,61,0.15);color:var(--yellow)">⭐ PREMIUM</div>
+                </div>
+            </div>
+
+            <div style="margin-top:14px;font-size:10px;color:var(--text3);line-height:1.5;font-weight:500;text-align:center">
+                *Imagens ilustrativas. As marcas e valores podem sofrer alterações de acordo com a disponibilidade.
+            </div>
+
+            <div style="height:12px"></div>
+        </div>
+    </div>
+
+    <!-- ═══ SCREEN: MAP (choose address) ═══ -->
+    <div id="screen-map" class="screen" style="pointer-events:none">
+        <div class="back-btn" style="pointer-events:auto" onclick="showScreen('home')">←</div>
+
+        <div class="app-header" style="justify-content:center;pointer-events:none">
+            <div style="background:var(--glass);backdrop-filter:blur(20px);padding:8px 20px;border-radius:50px;border:1px solid var(--border);pointer-events:auto">
+                <span style="font-size:13px;font-weight:700">📍 Mova o mapa para ajustar</span>
+            </div>
+        </div>
+
+        <!-- GPS button -->
+        <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto">
+            <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)">🎯</div>
+        </div>
+
+        <div class="bottom-sheet" style="max-height:50vh;pointer-events:auto">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">Onde deseja entregar? 📍</div>
+            <div class="sheet-sub">Arraste o mapa para posicionar o pin no local exato</div>
+
+            <div class="address-bar" style="cursor:default;margin-bottom:12px">
+                <div class="address-dot"></div>
+                <div class="address-text">
+                    <div class="address-text-main" id="map-address">Buscando endereço...</div>
+                    <div class="address-text-sub" id="map-address-sub">Mova o mapa para atualizar</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="confirmAddress()" id="btn-confirm-address">Confirmar local de entrega</button>
+        </div>
+    </div>
+
+    <!-- ═══ SCREEN: PAYMENT ═══ -->
+    <div id="screen-payment" class="screen" style="background:var(--bg);overflow-y:auto">
+        <div class="back-btn" onclick="showScreen('home')">←</div>
+
+        <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
+            <div class="sheet-title">Pagamento 💳</div>
+            <div class="sheet-sub">Escolha como deseja pagar</div>
+
+            <!-- Order summary -->
+            <div class="summary" id="payment-summary"></div>
+
+            <!-- Payment methods -->
+            <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Forma de pagamento</div>
+            <div class="pay-methods">
+                <div class="pay-method" onclick="selectPay('pix')" id="pay-pix">
+                    <div class="pay-emoji">📱</div>
+                    <div class="pay-info">
+                        <div class="pay-name">PIX</div>
+                        <div class="pay-desc">Aprovação instantânea</div>
+                    </div>
+                    <span class="pay-tag" style="background:rgba(52,199,89,0.12);color:var(--green)">5% OFF</span>
+                    <div class="pay-check"></div>
+                </div>
+                <div class="pay-method" onclick="selectPay('cartao')" id="pay-cartao">
+                    <div class="pay-emoji">💳</div>
+                    <div class="pay-info">
+                        <div class="pay-name">Cartão de Crédito</div>
+                        <div class="pay-desc">Até 3x sem juros</div>
+                    </div>
+                    <div class="pay-check"></div>
+                </div>
+                <div class="pay-method" onclick="selectPay('boleto')" id="pay-boleto">
+                    <div class="pay-emoji">📄</div>
+                    <div class="pay-info">
+                        <div class="pay-name">Boleto à Vista</div>
+                        <div class="pay-desc">Vencimento 3 dias úteis</div>
+                    </div>
+                    <div class="pay-check"></div>
+                </div>
+                <div class="pay-method" onclick="selectPay('boleto30')" id="pay-boleto30">
+                    <div class="pay-emoji">📅</div>
+                    <div class="pay-info">
+                        <div class="pay-name">Boleto 30 Dias</div>
+                        <div class="pay-desc">Pague em até 30 dias</div>
+                    </div>
+                    <span class="pay-tag" style="background:rgba(232,133,12,0.12);color:var(--orange)">CADASTRO</span>
+                    <div class="pay-check"></div>
+                </div>
+            </div>
+
+            <!-- Boleto 30 dias: document upload area (hidden by default) -->
+            <div id="boleto30-area" style="display:none">
+                <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Documentos obrigatórios</div>
+                <div style="background:rgba(232,133,12,0.06);border:1px solid rgba(232,133,12,0.15);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:12px;color:var(--orange);font-weight:600">
+                    ⚠️ Para boleto 30 dias é necessário enviar seus documentos para análise de crédito.
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">CPF <span class="req">*</span></label>
+                    <input class="form-input" placeholder="000.000.000-00" id="input-cpf" oninput="this.value=maskCPF(this.value)">
+                </div>
+
+                <label class="file-upload" id="upload-doc">
+                    <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('doc',this)">
+                    <div class="upload-icon">📎</div>
+                    <p>RG ou CNH (foto ou PDF)</p>
+                </label>
+                <label class="file-upload" id="upload-res">
+                    <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('res',this)">
+                    <div class="upload-icon">📎</div>
+                    <p>Comprovante de Residência</p>
+                </label>
+            </div>
+
+            <button class="btn btn-primary" id="btn-pay" onclick="finalizePay()" disabled>Finalizar Pedido</button>
+            <div style="height:40px"></div>
+        </div>
+    </div>
+
+    <!-- ═══ SCREEN: STATUS ═══ -->
+    <div id="screen-status" class="screen">
+        <div class="status-screen" id="status-content"></div>
+    </div>
+
+    <!-- ═══ SCREEN: BASKET DETAIL ═══ -->
+    <div id="screen-detail" class="screen" style="background:var(--bg);overflow-y:auto">
+        <div class="back-btn" onclick="showScreen('home')">←</div>
+        <div id="detail-content"></div>
+        <div class="detail-footer" id="detail-footer"></div>
+    </div>
+
+    <!-- ═══ SCREEN: ORDERS (history) ═══ -->
+    <div id="screen-orders" class="screen" style="background:var(--bg);overflow-y:auto">
+        <div class="back-btn" onclick="showScreen('home')">←</div>
+        <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
+            <div class="sheet-title">Meus Pedidos 📦</div>
+            <div class="sheet-sub">Histórico de pedidos</div>
+            <div style="text-align:center;padding:60px 20px;color:var(--text3)">
+                <div style="font-size:56px;margin-bottom:12px">📭</div>
+                <p style="font-weight:600">Nenhum pedido ainda</p>
+                <p style="font-size:12px;margin-top:4px">Seus pedidos aparecerão aqui</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ CONFIRM ADDRESS MODAL ═══ -->
+<div class="modal-overlay" id="modal-address">
+    <div class="modal">
+        <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:40px;margin-bottom:8px">📍</div>
+            <div style="font-size:18px;font-weight:800">Confirme o endereço</div>
+        </div>
+
+        <div class="address-bar" style="cursor:default;margin-bottom:16px">
+            <div class="address-dot"></div>
+            <div class="address-text">
+                <div class="address-text-main" id="modal-address-main">Rua Exemplo, 123</div>
+                <div class="address-text-sub" id="modal-address-sub">Centro, Araquari - SC</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Quem vai receber <span class="req">*</span></label>
+            <input class="form-input" placeholder="Nome completo de quem recebe" id="input-recebedor">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Telefone de contato <span class="req">*</span></label>
+            <input class="form-input" placeholder="(00) 00000-0000" id="input-telefone" inputmode="tel" oninput="this.value=maskPhone(this.value)">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Número <span class="req">*</span></label>
+            <input class="form-input" placeholder="Nº da casa/apto" id="input-numero" inputmode="numeric" type="text">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ponto de referência <span class="req">*</span></label>
+            <input class="form-input" placeholder="Ex: próximo ao mercado, casa azul..." id="input-ref">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Complemento</label>
+            <input class="form-input" placeholder="Apto, bloco, fundos..." id="input-comp">
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-dark" style="flex:1" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-primary" style="flex:2" onclick="saveAddress()">✓ Confirmar endereço</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ LIGHTBOX ═══ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- ═══ COMPARE MODAL ═══ -->
+<div class="compare-overlay" id="modal-compare" onclick="if(event.target===this)closeCompare()">
+    <div class="compare-sheet">
+        <div class="compare-header">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+                <div>
+                    <div style="font-size:18px;font-weight:800">📊 Comparativo de Cestas</div>
+                    <div style="font-size:12px;color:var(--text3);margin-top:2px">Deslize para ver todas</div>
+                </div>
+                <div class="header-btn" onclick="closeCompare()" style="font-size:14px;cursor:pointer">✕</div>
+            </div>
+        </div>
+        <div class="compare-body">
+            <table class="compare-table" id="compare-table-body"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const state = {
+    basket: null,
+    address: null,
+    addressFull: null,
+    lat: null,
+    lng: null,
+    payMethod: null,
+    qty: 1,
+    uploads: { doc:false, res:false }
+};
+
+const BASKETS = {
+    x: {
+        name:"Cesta X", price:89.90, emoji:"🍚", desc:"Essencial · 11 itens", color:"var(--green)",
+        img:"assets/img/cesta-x.png",
+        items:[
+            { name:"Açúcar Refinado Especial", qty:"1x 1 kg" },
+            { name:"Arroz Parboilizado Tipo 1", qty:"2x 1 kg" },
+            { name:"Biscoito Recheado Chocolate", qty:"1x 140 g" },
+            { name:"Café em Pó Extra Forte", qty:"1x 500 g" },
+            { name:"Feijão Carioca Tipo 1", qty:"1x 1 kg" },
+            { name:"Fubá Mimoso Fino", qty:"1x 500 g" },
+            { name:"Macarrão Espaguete com Ovos", qty:"1x 500 g" },
+            { name:"Molho de Tomate Refogado Tradicional", qty:"1x 340 g" },
+            { name:"Óleo de Soja PET", qty:"1x 900 ml" },
+            { name:"Sal Refinado Iodado", qty:"1x 1 kg" },
+            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+        ],
+        packaging:"Embalagem Saco Plástico Transparente"
+    },
+    confort: {
+        name:"Cesta Confort", price:159.90, emoji:"🛒", desc:"Família · 14 itens", color:"var(--orange)",
+        img:"assets/img/cesta-confort.png",
+        items:[
+            { name:"Açúcar Refinado Especial", qty:"2x 1 kg" },
+            { name:"Arroz Parboilizado Tipo 1", qty:"1x 5 kg" },
+            { name:"Biscoito Sortido", qty:"1x 280 g" },
+            { name:"Café em Pó Extra Forte a Vácuo", qty:"1x 500 g" },
+            { name:"Farinha de Milho Amarelo", qty:"1x 1 kg" },
+            { name:"Farinha de Trigo Tipo 1 Tradicional", qty:"1x 1 kg" },
+            { name:"Feijão Preto Tipo 1", qty:"1x 1 kg" },
+            { name:"Fubá Amarelo", qty:"1x 1 kg" },
+            { name:"Macarrão Espaguete com Ovos", qty:"1x 500 g" },
+            { name:"Macarrão Parafuso com Ovos", qty:"1x 500 g" },
+            { name:"Molho de Tomate Refogado Sachê", qty:"1x 340 g" },
+            { name:"Óleo de Soja PET", qty:"2x 900 ml" },
+            { name:"Refresco em Pó Morango", qty:"1x 25 g" },
+            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+        ],
+        packaging:"Caixa de Papelão Corrugado Duplo"
+    },
+    plus: {
+        name:"Cesta Plus", price:249.90, emoji:"👑", desc:"Premium · 33 itens", color:"var(--yellow)",
+        img:"assets/img/cesta-plus.png",
+        items:[
+            { name:"Achocolatado em Pó", qty:"1x 370 g" },
+            { name:"Açúcar Cristal Branco", qty:"1x 5 kg" },
+            { name:"Água Sanitária", qty:"1x 1 l" },
+            { name:"Arroz Parboilizado Tipo 1", qty:"1x 5 kg" },
+            { name:"Biscoito Recheado Chocolate", qty:"1x 140 g" },
+            { name:"Café em Pó Tradicional a Vácuo", qty:"1x 500 g" },
+            { name:"Creme Dental Tripla Limpeza", qty:"2x 70 g" },
+            { name:"Creme de Leite Leve UHT", qty:"1x 200 g" },
+            { name:"Desinfetante 3 em 1", qty:"1x 500 ml" },
+            { name:"Detergente Neutro", qty:"2x 500 ml" },
+            { name:"Ervilha em Conserva Lata", qty:"1x 200 g" },
+            { name:"Esponja Dupla Face", qty:"1x 7x10 cm" },
+            { name:"Farinha de Milho Amarelo", qty:"1x 1 kg" },
+            { name:"Farinha de Trigo", qty:"1x 1 kg" },
+            { name:"Farofa Temperada", qty:"1x 250 g" },
+            { name:"Feijão Preto Tipo 1", qty:"2x 1 kg" },
+            { name:"Fubá Mimoso Fino", qty:"1x 1 kg" },
+            { name:"Gelatina Morango", qty:"1x 20 g" },
+            { name:"Lã de Aço c/ 8 Unidades", qty:"1x 60 g" },
+            { name:"Leite Condensado Semi Desnatado", qty:"1x 395 g" },
+            { name:"Macarrão Espaguete com Ovos", qty:"2x 500 g" },
+            { name:"Macarrão Parafuso com Ovos", qty:"1x 500 g" },
+            { name:"Milho Verde em Conserva Lata", qty:"1x 170 g" },
+            { name:"Molho de Tomate Tradicional", qty:"2x 300 g" },
+            { name:"Óleo de Soja PET", qty:"2x 900 ml" },
+            { name:"Papel Higiênico Folha Simples c/ 4 Rolos", qty:"1x 4x30 m" },
+            { name:"Polenta Preparo Rápido", qty:"1x 500 g" },
+            { name:"Pudim em Pó Coco", qty:"1x 50 g" },
+            { name:"Refresco em Pó Morango", qty:"2x 25 g" },
+            { name:"Sabão em Pó", qty:"1x 1 kg" },
+            { name:"Sabonete Glicerinado", qty:"2x 90 g" },
+            { name:"Sal Refinado Iodado", qty:"1x 1 kg" },
+            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+        ],
+        packaging:"Caixas de Papelão Corrugado Duplo"
+    }
+};
+
+let map, userLat = -26.3726, userLng = -48.7213; // Araquari default
+
+// ═══════════════════════════════════════
+// SPLASH
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+    const splash = document.getElementById('splash');
+
+    // Spawn floating food emojis
+    const foods = ['🍚','🫘','☕','🥛','🍝','🫒','🍅','🌽','🍪','🧂','🍞','🐟','🥫','🌾','🍬','🥔','🍳','🧈','🥩','🍌'];
+    const container = document.getElementById('splash-foods');
+    for(let i = 0; i < 24; i++) {
+        const el = document.createElement('div');
+        el.className = 'splash-food';
+        el.textContent = foods[i % foods.length];
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.fontSize = (20 + Math.random() * 18) + 'px';
+        el.style.animationDuration = (3 + Math.random() * 4) + 's';
+        el.style.animationDelay = (Math.random() * 3.5) + 's';
+        container.appendChild(el);
+    }
+
+    const hideSplash = () => {
+        splash.classList.add('hide');
+        setTimeout(() => { splash.style.display = 'none'; initMap(); }, 800);
+    };
+
+    // Auto-hide after loader bar finishes (2s delay + 2.5s fill + small buffer)
+    setTimeout(hideSplash, 5000);
+});
+
+// ═══════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════
+function initMap() {
+    map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([userLat, userLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // Try to get user location
+    if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            map.setView([userLat, userLng], 16);
+        }, () => {}, { enableHighAccuracy:true, timeout:5000 });
+    }
+
+    // On map move, update address
+    map.on('moveend', onMapMove);
+    map.on('move', () => {
+        document.getElementById('center-pin').classList.remove('bounce');
+    });
+    map.on('moveend', () => {
+        document.getElementById('center-pin').classList.add('bounce');
+    });
+}
+
+function onMapMove() {
+    const center = map.getCenter();
+    state.lat = center.lat;
+    state.lng = center.lng;
+    reverseGeocode(center.lat, center.lng);
+}
+
+function reverseGeocode(lat, lng) {
+    // Use Nominatim (free, no API key)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+        .then(r => r.json())
+        .then(data => {
+            const a = data.address || {};
+            const road = a.road || a.pedestrian || a.footway || 'Localização selecionada';
+            const houseNum = a.house_number || '';
+            const area = a.suburb || a.neighbourhood || a.city_district || '';
+            const city = a.city || a.town || a.village || 'Araquari';
+            const st = a.state || 'SC';
+
+            const main = road;
+            const sub = [area, city, st].filter(Boolean).join(', ');
+
+            document.getElementById('map-address').textContent = houseNum ? `${main}, ${houseNum}` : main;
+            document.getElementById('map-address-sub').textContent = sub || 'Mova para ajustar';
+
+            state.addressFull = { main, sub, road, area, city, state:st, houseNum };
+        })
+        .catch(() => {
+            document.getElementById('map-address').textContent = 'Localização selecionada';
+            document.getElementById('map-address-sub').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            state.addressFull = { main:'Localização selecionada', sub:`${lat.toFixed(5)}, ${lng.toFixed(5)}` };
+        });
+}
+
+function centerOnUser() {
+    if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            map.setView([userLat, userLng], 17, { animate:true });
+        }, () => alert('Não foi possível obter sua localização.'), { enableHighAccuracy:true });
+    }
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+
+    const pin = document.getElementById('center-pin');
+    const pinShadow = document.getElementById('center-pin-shadow');
+
+    if(id === 'map') {
+        pin.style.display = 'block';
+        pinShadow.style.display = 'block';
+        setTimeout(() => { map.invalidateSize(); onMapMove(); }, 100);
+    } else {
+        pin.style.display = 'none';
+        pinShadow.style.display = 'none';
+    }
+
+    if(id === 'payment') renderPaymentSummary();
+}
+
+function goToMap() {
+    showScreen('map');
+}
+
+// ═══════════════════════════════════════
+// BASKET SELECTION
+// ═══════════════════════════════════════
+function selectBasket(type) {
+    state.basket = type;
+    state.qty = 1;
+    document.querySelectorAll('.basket-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('card-' + type).classList.add('selected');
+    openDetail(type);
+}
+
+function openDetail(type) {
+    const b = BASKETS[type];
+    showScreen('detail');
+    renderDetail();
+}
+
+function renderDetail() {
+    const b = BASKETS[state.basket];
+    const pixPrice = (b.price * 0.95).toFixed(2).replace('.',',');
+    const totalPrice = (b.price * state.qty).toFixed(2).replace('.',',');
+
+    const imgBlock = b.img ? `<div class="detail-img-wrap"><img src="${b.img}" alt="${b.name}" onclick="openLightbox('${b.img}')"></div>` : '';
+    const pkgBlock = b.packaging ? `<div class="detail-packaging">Embalagem: ${b.packaging}</div>` : '';
+
+    document.getElementById('detail-content').innerHTML = `
+        <div class="detail-hero">
+            <div class="detail-name">${b.name}</div>
+            <div class="detail-desc">${b.desc}</div>
+            <div class="detail-price-row">
+                <div class="detail-price">R$ ${b.price.toFixed(2).replace('.',',')}</div>
+                <div class="detail-price-pix">PIX R$ ${pixPrice}</div>
+            </div>
+        </div>
+
+        ${imgBlock}
+
+        <div class="detail-section-label">Itens da cesta (${b.items.length})</div>
+
+        <div class="detail-items">
+            ${b.items.map(item => `
+                <div class="detail-item">
+                    <div class="detail-item-left">
+                        <div class="detail-item-dot"></div>
+                        <div class="detail-item-name">${item.name}</div>
+                    </div>
+                    <div class="detail-item-qty">${item.qty}</div>
+                </div>
+            `).join('')}
+        </div>
+
+        ${pkgBlock}
+        <div style="padding:14px 20px 0;font-size:10px;color:var(--text3);line-height:1.5;font-weight:500">
+            *Imagens meramente ilustrativas.<br>
+            **As marcas e quantidades dos produtos podem sofrer alterações sem aviso prévio, de acordo com a disponibilidade em estoque.
+        </div>
+        <div style="height:80px"></div>
+    `;
+
+    document.getElementById('detail-footer').innerHTML = `
+        <div class="qty-selector">
+            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <span class="qty-val" id="qty-display">${state.qty}</span>
+            <button class="qty-btn" onclick="changeQty(1)">+</button>
+        </div>
+        <button class="btn btn-primary" style="flex:1" onclick="proceedFromDetail()">
+            Pedir · R$ ${totalPrice}
+        </button>
+    `;
+}
+
+function changeQty(delta) {
+    state.qty = Math.max(1, Math.min(10, state.qty + delta));
+    renderDetail();
+}
+
+function proceedFromDetail() {
+    if(state.address) {
+        showScreen('payment');
+    } else {
+        goToMap();
+    }
+}
+
+// ═══════════════════════════════════════
+// ADDRESS CONFIRMATION
+// ═══════════════════════════════════════
+function confirmAddress() {
+    const modal = document.getElementById('modal-address');
+    const af = state.addressFull || {};
+    document.getElementById('modal-address-main').textContent = af.main || 'Endereço selecionado';
+    document.getElementById('modal-address-sub').textContent = af.sub || '';
+    document.getElementById('input-recebedor').value = '';
+    document.getElementById('input-telefone').value = '';
+    document.getElementById('input-numero').value = af.houseNum || '';
+    document.getElementById('input-ref').value = '';
+    document.getElementById('input-comp').value = '';
+    modal.classList.add('show');
+}
+
+function closeModal() {
+    document.getElementById('modal-address').classList.remove('show');
+}
+
+function saveAddress() {
+    const recebedor = document.getElementById('input-recebedor').value.trim();
+    const telefone = document.getElementById('input-telefone').value.trim();
+    const num = document.getElementById('input-numero').value.trim();
+    const ref = document.getElementById('input-ref').value.trim();
+    const comp = document.getElementById('input-comp').value.trim();
+
+    if(!recebedor) { shakeInput('input-recebedor'); return; }
+    if(telefone.length < 14) { shakeInput('input-telefone'); return; }
+    if(!num) { shakeInput('input-numero'); return; }
+    if(!ref) { shakeInput('input-ref'); return; }
+
+    const af = state.addressFull || {};
+    state.address = {
+        main: af.main + (num ? ', ' + num : ''),
+        sub: af.sub,
+        ref, comp, num, recebedor, telefone
+    };
+
+    closeModal();
+
+    // If basket already selected, go to payment
+    if(state.basket) {
+        setTimeout(() => showScreen('payment'), 300);
+    } else {
+        setTimeout(() => showScreen('home'), 300);
+    }
+}
+
+function shakeInput(id) {
+    const el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)';
+    el.style.animation = 'shake 0.4s';
+    el.focus();
+    setTimeout(() => { el.style.animation = ''; el.style.borderColor = ''; }, 400);
+}
+
+// ═══════════════════════════════════════
+// PAYMENT
+// ═══════════════════════════════════════
+function renderPaymentSummary() {
+    if(!state.basket) return;
+    const b = BASKETS[state.basket];
+    const subtotal = b.price * state.qty;
+    const isPix = state.payMethod === 'pix';
+    const discount = isPix ? subtotal * 0.05 : 0;
+    const total = subtotal - discount;
+
+    document.getElementById('payment-summary').innerHTML = `
+        <div class="summary-row"><span>${b.emoji} ${b.name} × ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
+        <div class="summary-row"><span>🚚 Entrega</span><span style="color:var(--green)">Grátis</span></div>
+        ${isPix ? `<div class="summary-row"><span>📱 Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
+        <div class="summary-row summary-total"><span style="font-weight:800;color:var(--text)">Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
+        ${state.address ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">ENTREGAR EM</div>
+            <div style="font-size:13px;font-weight:700">${state.address.main}</div>
+            <div style="font-size:11px;color:var(--text3)">${state.address.sub}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">Ref: ${state.address.ref}</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:2px">RECEBEDOR</div>
+                <div style="font-size:13px;font-weight:700">${state.address.recebedor}</div>
+                <div style="font-size:11px;color:var(--text2)">${state.address.telefone}</div>
+            </div>
+        </div>` : ''}
+    `;
+}
+
+function selectPay(method) {
+    state.payMethod = method;
+    document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
+    document.getElementById('pay-' + method).classList.add('selected');
+
+    document.getElementById('boleto30-area').style.display = method === 'boleto30' ? 'block' : 'none';
+    document.getElementById('btn-pay').disabled = false;
+
+    if(method === 'boleto30') {
+        document.getElementById('btn-pay').textContent = '📩 Enviar para Análise';
+    } else {
+        document.getElementById('btn-pay').textContent = '✓ Finalizar Pedido';
+    }
+
+    renderPaymentSummary();
+}
+
+function handleUpload(type, el) {
+    if(el.files && el.files[0]) {
+        state.uploads[type] = true;
+        const container = el.closest('.file-upload');
+        container.classList.add('done');
+        container.innerHTML = `<input type="file" style="display:none"><div class="file-ok">✅ ${el.files[0].name}</div>`;
+    }
+}
+
+function finalizePay() {
+    if(!state.payMethod) return;
+
+    if(state.payMethod === 'boleto30') {
+        const cpf = document.getElementById('input-cpf')?.value || '';
+        if(cpf.length < 14) { alert('Preencha o CPF corretamente.'); return; }
+        if(!state.uploads.doc || !state.uploads.res) {
+            alert('Envie todos os documentos obrigatórios.'); return;
+        }
+        showStatus('analise');
+    } else {
+        showStatus('separacao');
+    }
+}
+
+// ═══════════════════════════════════════
+// STATUS
+// ═══════════════════════════════════════
+function showStatus(type) {
+    showScreen('status');
+    const b = BASKETS[state.basket];
+    const el = document.getElementById('status-content');
+
+    if(type === 'analise') {
+        el.innerHTML = `
+            <div class="status-icon">🔍</div>
+            <div class="status-title">Em Análise</div>
+            <div class="status-sub">Seus documentos foram enviados e estão sendo analisados. Você receberá uma notificação assim que for aprovado.</div>
+            <div class="status-steps">
+                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
+                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
+                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
+                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
+            </div>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+        `;
+    } else {
+        el.innerHTML = `
+            <div class="status-icon">📦</div>
+            <div class="status-title">Em Separação!</div>
+            <div class="status-sub">Pagamento confirmado! Sua ${b.name} está sendo preparada com carinho.</div>
+            <div class="status-steps">
+                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento aprovado</div></div></div>
+                <div class="status-step active"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step"><div class="step-dot">📦</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
+                <div class="status-step"><div class="step-dot">🏍️</div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
+                <div class="status-step"><div class="step-dot">🏠</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
+            </div>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+        `;
+
+        // Simulate progression
+        simulateProgress();
+    }
+}
+
+function simulateProgress() {
+    const steps = document.querySelectorAll('#status-content .status-step');
+    let current = 1;
+    const interval = setInterval(() => {
+        if(current >= steps.length - 1) { clearInterval(interval); return; }
+        steps[current].classList.remove('active');
+        steps[current].classList.add('done');
+        steps[current].querySelector('.step-dot').textContent = '✓';
+        current++;
+        steps[current].classList.add('active');
+
+        // Update main icon/title
+        const icons = ['📦','👨‍🍳','📦','🏍️','🏠'];
+        const titles = ['Em Separação!','Em Separação!','Pronto p/ Entrega!','A Caminho!','Entregue! 🎉'];
+        document.querySelector('#status-content .status-icon').textContent = icons[current];
+        document.querySelector('#status-content .status-title').textContent = titles[current];
+    }, 4000);
+}
+
+// ═══════════════════════════════════════
+// LIGHTBOX
+// ═══════════════════════════════════════
+function openLightbox(src) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('show');
+}
+
+// ═══════════════════════════════════════
+// COMPARE
+// ═══════════════════════════════════════
+function openCompare() {
+    const keys = ['x','confort','plus'];
+    const baskets = keys.map(k => BASKETS[k]);
+
+    // Collect all unique item names across all baskets
+    const allItems = [];
+    const seen = new Set();
+    keys.forEach(k => {
+        BASKETS[k].items.forEach(item => {
+            if(!seen.has(item.name)) {
+                seen.add(item.name);
+                allItems.push(item.name);
+            }
+        });
+    });
+
+    // Build lookup: basket key -> item name -> qty
+    const lookup = {};
+    keys.forEach(k => {
+        lookup[k] = {};
+        BASKETS[k].items.forEach(item => { lookup[k][item.name] = item.qty; });
+    });
+
+    const colClasses = ['col-x','col-c','col-p'];
+
+    let html = `<thead><tr>
+        <th>Item</th>
+        ${baskets.map((b,i) => `<th><span style="display:block;font-size:18px;margin-bottom:2px">${b.emoji}</span>${b.name}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    allItems.forEach(name => {
+        html += `<tr>`;
+        html += `<td>${name}</td>`;
+        keys.forEach((k,i) => {
+            const qty = lookup[k][name];
+            if(qty) {
+                html += `<td class="has-item ${colClasses[i]}">${qty}</td>`;
+            } else {
+                html += `<td class="no-item">—</td>`;
+            }
+        });
+        html += `</tr>`;
+    });
+
+    // Packaging row
+    html += `<tr><td>Embalagem</td>`;
+    keys.forEach((k,i) => { html += `<td class="has-item" style="font-size:11px">${BASKETS[k].packaging}</td>`; });
+    html += `</tr>`;
+
+    // Price row
+    html += `<tr class="compare-price-row"><td style="font-weight:900;color:var(--text)">Preço</td>`;
+    keys.forEach((k,i) => {
+        html += `<td class="${colClasses[i]}">R$ ${BASKETS[k].price.toFixed(2).replace('.',',')}</td>`;
+    });
+    html += `</tr>`;
+
+    html += `</tbody>`;
+    html += `<tfoot><tr><td colspan="4" style="text-align:center;padding:12px;font-size:10px;color:var(--text3);font-weight:500">*Imagens ilustrativas. Marcas e valores podem sofrer alterações conforme disponibilidade.</td></tr></tfoot>`;
+
+    document.getElementById('compare-table-body').innerHTML = html;
+    document.getElementById('modal-compare').classList.add('show');
+}
+
+function closeCompare() {
+    document.getElementById('modal-compare').classList.remove('show');
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+const maskCPF = v => v.replace(/\D/g,"").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2").slice(0,14);
+const maskPhone = v => v.replace(/\D/g,"").replace(/(\d{2})(\d)/,"($1) $2").replace(/(\d{5})(\d)/,"$1-$2").slice(0,15);
+
+// Add shake animation
+const style = document.createElement('style');
+style.textContent = `@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}`;
+document.head.appendChild(style);
+</script>
+
+</body>
+</html>
