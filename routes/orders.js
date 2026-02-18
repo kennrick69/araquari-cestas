@@ -87,7 +87,7 @@ router.post('/', async (req, res) => {
             [pedido.id, status, 'Pedido criado']
         );
 
-        console.log(`📦 Novo pedido: ${codigo} | ${cesta_nome} | ${pagamento_metodo} | R$ ${total}`);
+        console.log(`Novo pedido: ${codigo} | ${cesta_nome} | ${pagamento_metodo} | R$ ${total}`);
 
         res.status(201).json({
             success: true,
@@ -101,7 +101,7 @@ router.post('/', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Erro ao criar pedido:', err);
+        console.error('Erro ao criar pedido:', err);
         res.status(500).json({ error: 'Erro interno ao criar pedido' });
     }
 });
@@ -141,11 +141,11 @@ router.post('/:codigo/documentos',
                 );
             }
 
-            console.log(`📎 Docs recebidos para pedido ${codigo}`);
+            console.log(`Docs recebidos para pedido ${codigo}`);
             res.json({ success: true, message: 'Documentos recebidos' });
 
         } catch (err) {
-            console.error('❌ Erro ao salvar documentos:', err);
+            console.error('Erro ao salvar documentos:', err);
             res.status(500).json({ error: 'Erro ao salvar documentos' });
         }
     }
@@ -185,7 +185,7 @@ router.get('/:codigo', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Erro ao buscar pedido:', err);
+        console.error('Erro ao buscar pedido:', err);
         res.status(500).json({ error: 'Erro ao buscar pedido' });
     }
 });
@@ -208,7 +208,7 @@ router.get('/telefone/:tel', async (req, res) => {
         res.json({ pedidos: result.rows });
 
     } catch (err) {
-        console.error('❌ Erro ao buscar por telefone:', err);
+        console.error('Erro ao buscar por telefone:', err);
         res.status(500).json({ error: 'Erro ao buscar pedidos' });
     }
 });

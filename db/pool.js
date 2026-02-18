@@ -8,12 +8,12 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-    console.error('❌ Erro inesperado no pool PostgreSQL:', err);
+    console.error('Erro inesperado no pool PostgreSQL:', err);
 });
 
 // Testar conexão
 pool.query('SELECT NOW()')
-    .then(() => console.log('✅ PostgreSQL conectado'))
-    .catch(err => console.error('❌ Falha ao conectar PostgreSQL:', err.message));
+    .then(() => console.log('PostgreSQL conectado'))
+    .catch(err => console.error('Falha ao conectar PostgreSQL:', err.message));
 
 module.exports = pool;

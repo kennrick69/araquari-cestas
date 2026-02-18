@@ -51,7 +51,7 @@ router.get('/dashboard', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Erro dashboard:', err);
+        console.error('Erro dashboard:', err);
         res.status(500).json({ error: 'Erro ao carregar dashboard' });
     }
 });
@@ -103,7 +103,7 @@ router.get('/pedidos', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Erro ao listar pedidos:', err);
+        console.error('Erro ao listar pedidos:', err);
         res.status(500).json({ error: 'Erro ao listar pedidos' });
     }
 });
@@ -126,7 +126,7 @@ router.get('/pedidos/:id', async (req, res) => {
         res.json({ pedido: result.rows[0], historico: log.rows });
 
     } catch (err) {
-        console.error('❌ Erro ao buscar pedido:', err);
+        console.error('Erro ao buscar pedido:', err);
         res.status(500).json({ error: 'Erro ao buscar pedido' });
     }
 });
@@ -179,7 +179,7 @@ router.patch('/pedidos/:id/status', async (req, res) => {
             [req.params.id, anterior, status, observacao || null]
         );
 
-        console.log(`🔄 Pedido #${req.params.id}: ${anterior} → ${status}`);
+        console.log(`Pedido #${req.params.id}: ${anterior} → ${status}`);
 
         res.json({
             success: true,
@@ -189,7 +189,7 @@ router.patch('/pedidos/:id/status', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Erro ao atualizar status:', err);
+        console.error('Erro ao atualizar status:', err);
         res.status(500).json({ error: 'Erro ao atualizar status' });
     }
 });

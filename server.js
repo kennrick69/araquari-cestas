@@ -56,11 +56,15 @@ app.get('*', (req, res) => {
 // ══════════════════════════════════════
 // Start
 // ══════════════════════════════════════
-app.listen(PORT, () => {
-    console.log(`
-╔══════════════════════════════════════╗
-║   🛒 ARAQUARI CESTAS — API          ║
-║   Rodando na porta ${PORT}              ║
-╚══════════════════════════════════════╝
-    `);
+app.listen(PORT, async () => {
+    console.log('');
+    console.log('========================================');
+    console.log('   ARAQUARI CESTAS - API');
+    console.log('   Rodando na porta ' + PORT);
+    console.log('========================================');
+    console.log('');
+
+    // Auto-criar tabelas se nao existirem
+    const migrate = require('./db/migrate');
+    await migrate();
 });
