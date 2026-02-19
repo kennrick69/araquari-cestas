@@ -1175,7 +1175,7 @@ async function finalizePay() {
             endereco_referencia: addr.ref || '',
             endereco_bairro: af.area || '',
             endereco_cidade: af.city || 'Araquari',
-            endereco_estado: af.state || 'SC',
+            endereco_estado: abreviarEstado(af.state || 'SC'),
             latitude: state.lat || -26.3726,
             longitude: state.lng || -48.7213,
             recebedor_nome: addr.recebedor || '',
@@ -1198,7 +1198,7 @@ async function finalizePay() {
         console.log('Resposta:', data);
 
         if(!res.ok || !data.success) {
-            throw new Error(data.error || 'Erro ao criar pedido');
+            throw new Error(data.detail || data.error || 'Erro ao criar pedido');
         }
 
         state.pedidoCodigo = data.pedido.codigo;
@@ -1496,6 +1496,11 @@ async function buscarPedidos() {
 // ═══════════════════════════════════════
 const maskCPF = v => v.replace(/\D/g,"").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2").slice(0,14);
 const maskPhone = v => v.replace(/\D/g,"").replace(/(\d{2})(\d)/,"($1) $2").replace(/(\d{5})(\d)/,"$1-$2").slice(0,15);
+
+function abreviarEstado(nome) {
+    const map = {'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'};
+    return map[nome] || (nome && nome.length === 2 ? nome.toUpperCase() : 'SC');
+}
 
 // Add shake animation
 const style = document.createElement('style');
