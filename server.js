@@ -30,6 +30,25 @@ app.use('/api/pedidos', require('./routes/orders'));
 app.use('/api/admin', require('./routes/admin'));
 
 // ══════════════════════════════════════
+// Geocode proxy (avoids CORS with Nominatim)
+// ══════════════════════════════════════
+app.get('/api/geocode', async (req, res) => {
+    try {
+        const { lat, lng } = req.query;
+        if(!lat || !lng) return res.status(400).json({ error: 'lat e lng obrigatorios' });
+
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+        });
+        const data = await response.json();
+        res.json(data);
+    } catch(err) {
+        res.status(500).json({ error: 'Erro ao geocodificar', address: {} });
+    }
+});
+
+// ══════════════════════════════════════
 // Health check
 // ══════════════════════════════════════
 app.get('/api/health', async (req, res) => {
