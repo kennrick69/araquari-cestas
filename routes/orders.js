@@ -56,6 +56,10 @@ router.post('/', async (req, res) => {
             status = 'novo';
         }
 
+        // Mapa de estados para sigla
+        const ESTADOS = {'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'};
+        const uf = ESTADOS[endereco_estado] || (endereco_estado && endereco_estado.length === 2 ? endereco_estado.toUpperCase() : 'SC');
+
         const result = await pool.query(
             `INSERT INTO pedidos (
                 codigo, cesta_tipo, cesta_nome, cesta_preco, quantidade,
@@ -72,7 +76,7 @@ router.post('/', async (req, res) => {
                 codigo, cesta_tipo, cesta_nome, cesta_preco, quantidade || 1,
                 endereco_rua, endereco_numero, endereco_complemento,
                 endereco_referencia, endereco_bairro, endereco_cidade || 'Araquari',
-                endereco_estado || 'SC', latitude, longitude,
+                uf, latitude, longitude,
                 recebedor_nome, recebedor_telefone,
                 pagamento_metodo, pagamento_status, desconto || 0, total,
                 cpf || null, status
@@ -102,7 +106,7 @@ router.post('/', async (req, res) => {
 
     } catch (err) {
         console.error('Erro ao criar pedido:', err);
-        res.status(500).json({ error: 'Erro interno ao criar pedido' });
+        res.status(500).json({ error: 'Erro interno ao criar pedido', detail: err.message });
     }
 });
 
