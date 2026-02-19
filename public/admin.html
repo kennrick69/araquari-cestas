@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Araquari Cestas - Painel Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--card:#14141f;--border:#1e1e30;--orange:#E8850C;--green:#3DA33D;--red:#e74c3c;--yellow:#f39c12;--blue:#3498db;--text:#fff;--text2:#a0a0b0;--text3:#606070}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:16px;font-weight:800;color:var(--orange)}
+.topbar .subtitle{font-size:11px;color:var(--text3);margin-top:2px}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+
+/* Login */
+.login-box{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px 32px;text-align:center}
+.login-box h2{font-size:20px;margin-bottom:8px}
+.login-box p{font-size:13px;color:var(--text3);margin-bottom:24px}
+.login-box input{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:16px;text-align:center;letter-spacing:1px}
+.login-box input:focus{outline:none;border-color:var(--orange)}
+
+/* KPI Cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.kpi-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.kpi-value{font-size:28px;font-weight:900;margin-top:4px}
+.kpi-sub{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);transition:.2s}
+.tab.active,.tab:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+
+/* Filters */
+.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filters select,.filters input{padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+.filters select:focus,.filters input:focus{outline:none;border-color:var(--orange)}
+
+/* Table */
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:12px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover{background:#ffffff05}
+
+/* Status badges */
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block}
+.badge-novo{background:#3498db20;color:#3498db}
+.badge-confirmado{background:#3DA33D20;color:#3DA33D}
+.badge-separacao{background:#E8850C20;color:#E8850C}
+.badge-pronto{background:#2ecc7120;color:#2ecc71}
+.badge-a_caminho{background:#9b59b620;color:#9b59b6}
+.badge-entregue{background:#3DA33D20;color:#3DA33D}
+.badge-cancelado{background:#e74c3c20;color:#e74c3c}
+.badge-analise{background:#f39c1220;color:#f39c12}
+.badge-aprovado{background:#3DA33D20;color:#3DA33D}
+.badge-recusado{background:#e74c3c20;color:#e74c3c}
+
+/* Buttons */
+.btn{padding:8px 16px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;transition:.2s}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn:hover{opacity:.85;transform:scale(1.02)}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:18px;margin-bottom:16px}
+.modal-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.modal-row:last-child{border:none}
+.modal-row .label{color:var(--text3)}
+.modal-row .value{font-weight:700;text-align:right}
+.modal-actions{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+
+/* Status select in modal */
+.status-select{width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin:12px 0}
+.obs-input{width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:12px;resize:vertical;min-height:60px}
+
+/* Doc links */
+.doc-link{color:var(--blue);text-decoration:none;font-weight:600}
+.doc-link:hover{text-decoration:underline}
+
+/* Responsive */
+@media(max-width:600px){
+    .container{padding:12px}
+    .kpi-value{font-size:22px}
+    .filters{flex-direction:column}
+    .filters select,.filters input{width:100%}
+}
+
+/* Loading */
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.spin{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* History */
+.hist-item{display:flex;gap:12px;padding:8px 0;font-size:12px;border-bottom:1px solid var(--border)}
+.hist-item:last-child{border:none}
+.hist-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);margin-top:4px;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div>
+        <h1>Araquari Cestas - Admin</h1>
+        <div class="subtitle" id="admin-subtitle">Painel de Gerenciamento</div>
+    </div>
+    <div id="logout-area" style="display:none">
+        <button class="btn btn-sm btn-orange" onclick="logout()">Sair</button>
+    </div>
+</div>
+
+<!-- Login -->
+<div id="login-screen">
+    <div class="login-box">
+        <h2>Painel Admin</h2>
+        <p>Digite o token de acesso</p>
+        <input type="password" id="token-input" placeholder="Token de admin" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn btn-orange" onclick="doLogin()" style="width:100%;padding:12px">Entrar</button>
+        <div id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;display:none">Token invalido</div>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div id="admin-panel" style="display:none">
+<div class="container">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Pedidos Hoje</div><div class="kpi-value" id="kpi-hoje">-</div></div>
+        <div class="kpi"><div class="kpi-label">Receita Hoje</div><div class="kpi-value" id="kpi-receita-hoje" style="color:var(--green)">-</div></div>
+        <div class="kpi"><div class="kpi-label">Total Pedidos</div><div class="kpi-value" id="kpi-total">-</div></div>
+        <div class="kpi"><div class="kpi-label">Pendentes Analise</div><div class="kpi-value" id="kpi-analise" style="color:var(--yellow)">-</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">Pedidos</div>
+        <div class="tab" data-tab="analise" onclick="switchTab('analise')">Boleto 30d</div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <select id="filter-status" onchange="loadPedidos()">
+            <option value="">Todos os status</option>
+            <option value="novo">Novo</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="separacao">Em Separacao</option>
+            <option value="pronto">Pronto</option>
+            <option value="a_caminho">A Caminho</option>
+            <option value="entregue">Entregue</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="analise">Em Analise</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="recusado">Recusado</option>
+        </select>
+        <select id="filter-cesta" onchange="loadPedidos()">
+            <option value="">Todas as cestas</option>
+            <option value="x">Cesta X</option>
+            <option value="confort">Cesta Confort</option>
+            <option value="plus">Cesta Plus</option>
+        </select>
+        <input type="text" id="filter-busca" placeholder="Buscar codigo, nome, tel..." onkeydown="if(event.key==='Enter')loadPedidos()">
+        <button class="btn btn-sm btn-orange" onclick="loadPedidos()">Buscar</button>
+        <button class="btn btn-sm btn-blue" onclick="loadDashboard();loadPedidos()">Atualizar</button>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Cesta</th>
+                    <th>Recebedor</th>
+                    <th>Telefone</th>
+                    <th>Pagamento</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th>Acao</th>
+                </tr>
+            </thead>
+            <tbody id="orders-tbody">
+                <tr><td colspan="9" class="loading"><div class="spin"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+
+</div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="modal-detail">
+    <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+let TOKEN = localStorage.getItem('admin_token') || '';
+let currentPage = 1;
+const API = '/api/admin';
+const STATUS_LABELS = {
+    'novo':'Novo','confirmado':'Confirmado','separacao':'Em Separacao',
+    'pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue',
+    'cancelado':'Cancelado','analise':'Em Analise','aprovado':'Aprovado','recusado':'Recusado'
+};
+const PAY_LABELS = {'pix':'PIX','cartao':'Cartao','boleto':'Boleto','boleto30':'Boleto 30d'};
+
+// Auth
+function doLogin() {
+    TOKEN = document.getElementById('token-input').value.trim();
+    if(!TOKEN) return;
+    fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
+        .then(r => {
+            if(!r.ok) throw new Error();
+            return r.json();
+        })
+        .then(data => {
+            localStorage.setItem('admin_token', TOKEN);
+            showPanel();
+            renderDashboard(data);
+            loadPedidos();
+        })
+        .catch(() => {
+            document.getElementById('login-error').style.display = 'block';
+        });
+}
+
+function logout() {
+    TOKEN = '';
+    localStorage.removeItem('admin_token');
+    document.getElementById('admin-panel').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'block';
+    document.getElementById('logout-area').style.display = 'none';
+}
+
+function showPanel() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('logout-area').style.display = 'block';
+}
+
+// Auto-login if token stored
+if(TOKEN) {
+    fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => { showPanel(); renderDashboard(data); loadPedidos(); })
+        .catch(() => logout());
+}
+
+// Dashboard
+async function loadDashboard() {
+    try {
+        const res = await fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}});
+        const data = await res.json();
+        renderDashboard(data);
+    } catch(e) {}
+}
+
+function renderDashboard(d) {
+    document.getElementById('kpi-hoje').textContent = d.pedidos_hoje;
+    document.getElementById('kpi-receita-hoje').textContent = 'R$ '+d.receita_hoje.toFixed(2).replace('.',',');
+    document.getElementById('kpi-total').textContent = d.total_pedidos;
+    document.getElementById('kpi-analise').textContent = d.pendentes_analise;
+}
+
+// Tabs
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+    if(tab === 'analise') {
+        document.getElementById('filter-status').value = 'analise';
+    } else {
+        document.getElementById('filter-status').value = '';
+    }
+    loadPedidos();
+}
+
+// Load orders
+async function loadPedidos() {
+    const tbody = document.getElementById('orders-tbody');
+    tbody.innerHTML = '<tr><td colspan="9" class="loading"><div class="spin"></div></td></tr>';
+
+    const status = document.getElementById('filter-status').value;
+    const cesta = document.getElementById('filter-cesta').value;
+    const busca = document.getElementById('filter-busca').value;
+
+    const params = new URLSearchParams();
+    if(status) params.set('status', status);
+    if(cesta) params.set('cesta', cesta);
+    if(busca) params.set('busca', busca);
+    params.set('pagina', currentPage);
+    params.set('limite', 25);
+
+    try {
+        const res = await fetch(API+'/pedidos?'+params, {headers:{'x-admin-token':TOKEN}});
+        const data = await res.json();
+
+        if(data.pedidos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">Nenhum pedido encontrado</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.pedidos.map(p => `
+            <tr>
+                <td style="font-weight:800;color:var(--orange)">${p.codigo}</td>
+                <td>${p.cesta_nome}</td>
+                <td style="font-weight:600">${p.recebedor_nome}</td>
+                <td style="color:var(--text2)">${p.recebedor_telefone}</td>
+                <td>${PAY_LABELS[p.pagamento_metodo]||p.pagamento_metodo}</td>
+                <td style="font-weight:800;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</td>
+                <td><span class="badge badge-${p.status}">${STATUS_LABELS[p.status]||p.status}</span></td>
+                <td style="color:var(--text3);font-size:12px">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td>
+                <td><button class="btn btn-sm btn-orange" onclick="openDetail(${p.id})">Ver</button></td>
+            </tr>
+        `).join('');
+
+        // Pagination
+        const totalPages = Math.ceil(data.total / 25);
+        const pagDiv = document.getElementById('pagination');
+        if(totalPages > 1) {
+            let html = '';
+            for(let i = 1; i <= totalPages; i++) {
+                html += `<button class="btn btn-sm ${i===currentPage?'btn-orange':'btn-blue'}" onclick="currentPage=${i};loadPedidos()">${i}</button>`;
+            }
+            pagDiv.innerHTML = html;
+        } else {
+            pagDiv.innerHTML = '';
+        }
+
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="9" style="color:var(--red);text-align:center;padding:20px">Erro ao carregar pedidos</td></tr>';
+    }
+}
+
+// Order Detail
+async function openDetail(id) {
+    const modal = document.getElementById('modal-detail');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+    modal.classList.add('show');
+
+    try {
+        const res = await fetch(API+'/pedidos/'+id, {headers:{'x-admin-token':TOKEN}});
+        const data = await res.json();
+        const p = data.pedido;
+        const hist = data.historico || [];
+
+        const endereco = [p.endereco_rua, p.endereco_numero, p.endereco_bairro, p.endereco_cidade, p.endereco_estado].filter(Boolean).join(', ');
+
+        content.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+                <div>
+                    <h3 style="color:var(--orange)">${p.codigo}</h3>
+                    <span class="badge badge-${p.status}">${STATUS_LABELS[p.status]||p.status}</span>
+                </div>
+                <button class="btn btn-sm" onclick="closeDetail()" style="background:var(--border);color:var(--text)">✕</button>
+            </div>
+
+            <div class="modal-row"><span class="label">Cesta</span><span class="value">${p.cesta_nome}</span></div>
+            <div class="modal-row"><span class="label">Quantidade</span><span class="value">${p.quantidade}x</span></div>
+            <div class="modal-row"><span class="label">Preco Unitario</span><span class="value">R$ ${parseFloat(p.cesta_preco).toFixed(2).replace('.',',')}</span></div>
+            <div class="modal-row"><span class="label">Desconto</span><span class="value" style="color:var(--green)">${p.desconto > 0 ? '-R$ '+parseFloat(p.desconto).toFixed(2).replace('.',',') : '-'}</span></div>
+            <div class="modal-row"><span class="label">Total</span><span class="value" style="font-size:16px;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</span></div>
+
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div class="modal-row"><span class="label">Recebedor</span><span class="value">${p.recebedor_nome}</span></div>
+                <div class="modal-row"><span class="label">Telefone</span><span class="value">${p.recebedor_telefone}</span></div>
+                <div class="modal-row"><span class="label">Endereco</span><span class="value" style="white-space:normal;max-width:250px">${endereco}</span></div>
+                ${p.endereco_referencia ? `<div class="modal-row"><span class="label">Referencia</span><span class="value">${p.endereco_referencia}</span></div>` : ''}
+                ${p.endereco_complemento ? `<div class="modal-row"><span class="label">Complemento</span><span class="value">${p.endereco_complemento}</span></div>` : ''}
+            </div>
+
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div class="modal-row"><span class="label">Pagamento</span><span class="value">${PAY_LABELS[p.pagamento_metodo]||p.pagamento_metodo}</span></div>
+                <div class="modal-row"><span class="label">Pag. Status</span><span class="value">${p.pagamento_status}</span></div>
+                ${p.cpf ? `<div class="modal-row"><span class="label">CPF</span><span class="value">${p.cpf}</span></div>` : ''}
+                ${p.doc_identidade ? `<div class="modal-row"><span class="label">Doc Identidade</span><span class="value"><a href="/uploads/${p.doc_identidade}" target="_blank" class="doc-link">Ver documento</a></span></div>` : ''}
+                ${p.doc_residencia ? `<div class="modal-row"><span class="label">Doc Residencia</span><span class="value"><a href="/uploads/${p.doc_residencia}" target="_blank" class="doc-link">Ver documento</a></span></div>` : ''}
+            </div>
+
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div class="modal-row"><span class="label">Criado em</span><span class="value">${new Date(p.criado_em).toLocaleString('pt-BR')}</span></div>
+                <div class="modal-row"><span class="label">Atualizado</span><span class="value">${new Date(p.atualizado_em).toLocaleString('pt-BR')}</span></div>
+            </div>
+
+            ${hist.length > 0 ? `
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Historico</div>
+                ${hist.map(h => `
+                    <div class="hist-item">
+                        <div class="hist-dot"></div>
+                        <div>
+                            <span style="font-weight:700">${h.status_anterior ? h.status_anterior+' → ' : ''}${STATUS_LABELS[h.status_novo]||h.status_novo}</span>
+                            ${h.observacao ? `<div style="color:var(--text3);margin-top:2px">${h.observacao}</div>` : ''}
+                            <div style="color:var(--text3);margin-top:2px">${new Date(h.criado_em).toLocaleString('pt-BR')}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>` : ''}
+
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Alterar Status</div>
+                <select class="status-select" id="new-status">
+                    <option value="">Selecione...</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="separacao">Em Separacao</option>
+                    <option value="pronto">Pronto</option>
+                    <option value="a_caminho">A Caminho</option>
+                    <option value="entregue">Entregue</option>
+                    <option value="cancelado">Cancelado</option>
+                    ${p.pagamento_metodo === 'boleto30' ? '<option value="aprovado">Aprovar Boleto 30d</option><option value="recusado">Recusar Boleto 30d</option>' : ''}
+                </select>
+                <textarea class="obs-input" id="obs-status" placeholder="Observacao (opcional)"></textarea>
+                <div class="modal-actions">
+                    <button class="btn btn-green" onclick="updateStatus(${p.id})">Salvar Status</button>
+                    <button class="btn" style="background:var(--border);color:var(--text)" onclick="closeDetail()">Fechar</button>
+                </div>
+            </div>
+        `;
+    } catch(e) {
+        content.innerHTML = '<div style="color:var(--red);padding:20px">Erro ao carregar pedido</div>';
+    }
+}
+
+async function updateStatus(id) {
+    const status = document.getElementById('new-status').value;
+    const obs = document.getElementById('obs-status').value;
+    if(!status) { alert('Selecione um status'); return; }
+
+    try {
+        const res = await fetch(API+'/pedidos/'+id+'/status', {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+            body: JSON.stringify({status, observacao: obs || null})
+        });
+        const data = await res.json();
+        if(data.success) {
+            alert('Status atualizado: ' + data.message);
+            openDetail(id);
+            loadPedidos();
+            loadDashboard();
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    } catch(e) {
+        alert('Erro ao atualizar status');
+    }
+}
+
+function closeDetail() {
+    document.getElementById('modal-detail').classList.remove('show');
+}
+
+// Close modal on overlay click
+document.getElementById('modal-detail').addEventListener('click', function(e) {
+    if(e.target === this) closeDetail();
+});
+
+// Auto-refresh every 30s
+setInterval(() => {
+    if(TOKEN && document.getElementById('admin-panel').style.display !== 'none') {
+        loadDashboard();
+        loadPedidos();
+    }
+}, 30000);
+</script>
+</body>
+</html>

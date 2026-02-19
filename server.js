@@ -17,8 +17,13 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Servir uploads (documentos) — protegido em produção
+// Servir uploads (documentos)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Servir .well-known (TWA Digital Asset Links)
+app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), {
+    setHeaders: (res) => { res.setHeader('Content-Type', 'application/json'); }
+}));
 
 // Servir frontend (pasta public)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -28,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ══════════════════════════════════════
 app.use('/api/pedidos', require('./routes/orders'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/pagamento', require('./routes/payments'));
 
 // ══════════════════════════════════════
 // Geocode proxy (avoids CORS with Nominatim)

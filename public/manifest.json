@@ -1,0 +1,20 @@
+{
+  "name": "Araquari Cestas",
+  "short_name": "Araquari Cestas",
+  "description": "Cestas basicas entregues na sua porta em Araquari",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#E8850C",
+  "background_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/assets/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "shopping"],
+  "lang": "pt-BR"
+}

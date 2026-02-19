@@ -14,20 +14,32 @@ async function migrate() {
             )
         `);
 
-        if (check.rows[0].exists) {
-            console.log('Tabelas ja existem. Pulando migracao.');
-            return;
+        if (!check.rows[0].exists) {
+            console.log('Criando tabelas...');
+            const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+            await pool.query(schema);
+            console.log('Tabelas criadas com sucesso!');
+        } else {
+            console.log('Tabelas ja existem.');
         }
 
-        console.log('Criando tabelas...');
-
-        const schema = fs.readFileSync(
-            path.join(__dirname, 'schema.sql'),
-            'utf8'
-        );
-
-        await pool.query(schema);
-        console.log('Tabelas criadas com sucesso!');
+        // Rodar migracoes adicionais
+        const migrations = ['migration-002-gateway.sql'];
+        for (const file of migrations) {
+            const filePath = path.join(__dirname, file);
+            if (fs.existsSync(filePath)) {
+                try {
+                    const sql = fs.readFileSync(filePath, 'utf8');
+                    await pool.query(sql);
+                    console.log('Migracao aplicada: ' + file);
+                } catch(e) {
+                    // Ignora erros de colunas ja existentes
+                    if (!e.message.includes('already exists')) {
+                        console.error('Erro na migracao ' + file + ':', e.message);
+                    }
+                }
+            }
+        }
 
     } catch (err) {
         console.error('Erro na migracao:', err.message);
