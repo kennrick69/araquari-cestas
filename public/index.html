@@ -617,11 +617,17 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
         <div class="back-btn" onclick="showScreen('home')">←</div>
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
             <div class="sheet-title">Meus Pedidos 📦</div>
-            <div class="sheet-sub">Histórico de pedidos</div>
-            <div style="text-align:center;padding:60px 20px;color:var(--text3)">
+            <div class="sheet-sub">Consulte pelo codigo ou telefone</div>
+
+            <div class="form-group" style="margin-top:16px">
+                <input class="form-input" placeholder="Codigo do pedido ou telefone" id="input-busca-pedido" style="text-align:center;font-weight:700;letter-spacing:0.5px">
+            </div>
+            <button class="btn btn-primary" onclick="buscarPedidos()" style="margin-bottom:20px">Buscar</button>
+
+            <div id="orders-list" style="text-align:center;padding:20px;color:var(--text3)">
                 <div style="font-size:56px;margin-bottom:12px">📭</div>
                 <p style="font-weight:600">Nenhum pedido ainda</p>
-                <p style="font-size:12px;margin-top:4px">Seus pedidos aparecerão aqui</p>
+                <p style="font-size:12px;margin-top:4px">Digite seu telefone ou codigo do pedido acima</p>
             </div>
         </div>
     </div>
@@ -699,6 +705,8 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
+const API_URL = '/api';
+
 const state = {
     basket: null,
     address: null,
@@ -707,7 +715,9 @@ const state = {
     lng: null,
     payMethod: null,
     qty: 1,
-    uploads: { doc:false, res:false }
+    uploads: { doc:false, res:false },
+    uploadFiles: { doc:null, res:null },
+    pedidoCodigo: null
 };
 
 const BASKETS = {
@@ -863,9 +873,11 @@ function onMapMove() {
 }
 
 function reverseGeocode(lat, lng) {
-    // Use Nominatim (free, no API key)
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
-        .then(r => r.json())
+    fetch(`/api/geocode?lat=${lat}&lng=${lng}`)
+        .then(r => {
+            if(!r.ok) throw new Error('Geocode error');
+            return r.json();
+        })
         .then(data => {
             const a = data.address || {};
             const road = a.road || a.pedestrian || a.footway || 'Localização selecionada';
@@ -1116,24 +1128,106 @@ function selectPay(method) {
 function handleUpload(type, el) {
     if(el.files && el.files[0]) {
         state.uploads[type] = true;
+        state.uploadFiles[type] = el.files[0];
         const container = el.closest('.file-upload');
         container.classList.add('done');
         container.innerHTML = `<input type="file" style="display:none"><div class="file-ok">✅ ${el.files[0].name}</div>`;
     }
 }
 
-function finalizePay() {
+async function finalizePay() {
     if(!state.payMethod) return;
+    if(!state.address) { alert('Defina o endereco de entrega primeiro.'); return; }
+
+    const btn = document.getElementById('btn-pay');
+    const originalText = btn.textContent;
 
     if(state.payMethod === 'boleto30') {
         const cpf = document.getElementById('input-cpf')?.value || '';
         if(cpf.length < 14) { alert('Preencha o CPF corretamente.'); return; }
         if(!state.uploads.doc || !state.uploads.res) {
-            alert('Envie todos os documentos obrigatórios.'); return;
+            alert('Envie todos os documentos obrigatorios.'); return;
         }
-        showStatus('analise');
-    } else {
-        showStatus('separacao');
+    }
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.textContent = 'Enviando pedido...';
+
+    try {
+        const b = BASKETS[state.basket];
+        const subtotal = b.price * state.qty;
+        const isPix = state.payMethod === 'pix';
+        const discount = isPix ? subtotal * 0.05 : 0;
+        const total = subtotal - discount;
+
+        const af = state.addressFull || {};
+        const addr = state.address || {};
+
+        const body = {
+            cesta_tipo: state.basket,
+            cesta_nome: b.name,
+            cesta_preco: b.price,
+            quantidade: state.qty,
+            endereco_rua: af.road || af.main || '',
+            endereco_numero: addr.num || '',
+            endereco_complemento: addr.comp || '',
+            endereco_referencia: addr.ref || '',
+            endereco_bairro: af.area || '',
+            endereco_cidade: af.city || 'Araquari',
+            endereco_estado: af.state || 'SC',
+            latitude: state.lat || -26.3726,
+            longitude: state.lng || -48.7213,
+            recebedor_nome: addr.recebedor || '',
+            recebedor_telefone: addr.telefone || '',
+            pagamento_metodo: state.payMethod,
+            desconto: discount,
+            total: total,
+            cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : null
+        };
+
+        console.log('Enviando pedido:', JSON.stringify(body));
+
+        const res = await fetch('/api/pedidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        console.log('Resposta:', data);
+
+        if(!res.ok || !data.success) {
+            throw new Error(data.error || 'Erro ao criar pedido');
+        }
+
+        state.pedidoCodigo = data.pedido.codigo;
+
+        // Upload documents for boleto30
+        if(state.payMethod === 'boleto30' && (state.uploadFiles.doc || state.uploadFiles.res)) {
+            btn.textContent = 'Enviando documentos...';
+            const formData = new FormData();
+            if(state.uploadFiles.doc) formData.append('doc_identidade', state.uploadFiles.doc);
+            if(state.uploadFiles.res) formData.append('doc_residencia', state.uploadFiles.res);
+
+            await fetch('/api/pedidos/' + data.pedido.codigo + '/documentos', {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        // Show status screen
+        if(state.payMethod === 'boleto30') {
+            showStatus('analise');
+        } else {
+            showStatus('separacao');
+        }
+
+    } catch(err) {
+        console.error('Erro ao finalizar pedido:', err);
+        alert('Erro ao enviar pedido: ' + err.message + '\nTente novamente.');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 }
 
@@ -1143,58 +1237,107 @@ function finalizePay() {
 function showStatus(type) {
     showScreen('status');
     const b = BASKETS[state.basket];
+    const codigo = state.pedidoCodigo || '---';
     const el = document.getElementById('status-content');
 
     if(type === 'analise') {
         el.innerHTML = `
             <div class="status-icon">🔍</div>
-            <div class="status-title">Em Análise</div>
-            <div class="status-sub">Seus documentos foram enviados e estão sendo analisados. Você receberá uma notificação assim que for aprovado.</div>
+            <div class="status-title">Em Analise</div>
+            <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:18px;font-weight:900;color:var(--orange);margin-top:4px;letter-spacing:1px">${codigo}</div>
+            </div>
+            <div class="status-sub">Seus documentos foram enviados e estao sendo analisados. Voce recebera uma notificacao assim que for aprovado.</div>
             <div class="status-steps">
                 <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
                 <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
-                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
-                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
+                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em analise de credito</div><div class="step-desc">Prazo: ate 24h uteis</div></div></div>
+                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovacao</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
             </div>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao inicio</button>
         `;
+        // Poll for status updates
+        startStatusPolling(codigo);
     } else {
         el.innerHTML = `
             <div class="status-icon">📦</div>
-            <div class="status-title">Em Separação!</div>
-            <div class="status-sub">Pagamento confirmado! Sua ${b.name} está sendo preparada com carinho.</div>
-            <div class="status-steps">
-                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento aprovado</div></div></div>
-                <div class="status-step active"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+            <div class="status-title">Pedido Criado!</div>
+            <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px;letter-spacing:1px">${codigo}</div>
+            </div>
+            <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
+            <div class="status-steps" id="live-steps">
+                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
+                <div class="status-step active"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando confirmacao</div><div class="step-desc">Verificando pagamento</div></div></div>
+                <div class="status-step"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separacao</div><div class="step-desc">Montando sua cesta</div></div></div>
                 <div class="status-step"><div class="step-dot">📦</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
                 <div class="status-step"><div class="step-dot">🏍️</div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
                 <div class="status-step"><div class="step-dot">🏠</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
             </div>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao inicio</button>
         `;
-
-        // Simulate progression
-        simulateProgress();
+        // Poll for status updates
+        startStatusPolling(codigo);
     }
 }
 
-function simulateProgress() {
-    const steps = document.querySelectorAll('#status-content .status-step');
-    let current = 1;
-    const interval = setInterval(() => {
-        if(current >= steps.length - 1) { clearInterval(interval); return; }
-        steps[current].classList.remove('active');
-        steps[current].classList.add('done');
-        steps[current].querySelector('.step-dot').textContent = '✓';
-        current++;
-        steps[current].classList.add('active');
+// Map status from API to step index
+const STATUS_MAP = {
+    'novo': 1,
+    'confirmado': 2,
+    'separacao': 2,
+    'pronto': 3,
+    'a_caminho': 4,
+    'entregue': 5
+};
 
-        // Update main icon/title
-        const icons = ['📦','👨‍🍳','📦','🏍️','🏠'];
-        const titles = ['Em Separação!','Em Separação!','Pronto p/ Entrega!','A Caminho!','Entregue! 🎉'];
-        document.querySelector('#status-content .status-icon').textContent = icons[current];
-        document.querySelector('#status-content .status-title').textContent = titles[current];
-    }, 4000);
+let pollInterval = null;
+
+function startStatusPolling(codigo) {
+    if(pollInterval) clearInterval(pollInterval);
+    if(!codigo || codigo === '---') return;
+
+    pollInterval = setInterval(async () => {
+        try {
+            const res = await fetch('/api/pedidos/' + codigo);
+            if(!res.ok) return;
+            const data = await res.json();
+            const pedido = data.pedido;
+
+            // Update live steps for normal orders
+            const steps = document.querySelectorAll('#live-steps .status-step');
+            if(steps.length === 0) return;
+
+            const targetStep = STATUS_MAP[pedido.status] || 1;
+
+            steps.forEach((step, i) => {
+                step.classList.remove('done', 'active');
+                if(i < targetStep) {
+                    step.classList.add('done');
+                    step.querySelector('.step-dot').textContent = '✓';
+                } else if(i === targetStep) {
+                    step.classList.add('active');
+                }
+            });
+
+            // Update title
+            const titles = { 'novo':'Pedido Criado!', 'confirmado':'Confirmado!', 'separacao':'Em Separacao!', 'pronto':'Pronto p/ Entrega!', 'a_caminho':'A Caminho!', 'entregue':'Entregue! 🎉' };
+            const icons = { 'novo':'📦', 'confirmado':'✅', 'separacao':'👨‍🍳', 'pronto':'📦', 'a_caminho':'🏍️', 'entregue':'🏠' };
+            const titleEl = document.querySelector('#status-content .status-title');
+            const iconEl = document.querySelector('#status-content .status-icon');
+            if(titleEl) titleEl.textContent = titles[pedido.status] || pedido.status;
+            if(iconEl) iconEl.textContent = icons[pedido.status] || '📦';
+
+            // Stop polling when delivered or cancelled
+            if(pedido.status === 'entregue' || pedido.status === 'cancelado') {
+                clearInterval(pollInterval);
+            }
+        } catch(e) {
+            // Silent fail on poll
+        }
+    }, 10000); // Poll every 10 seconds
 }
 
 // ═══════════════════════════════════════
@@ -1276,6 +1419,76 @@ function openCompare() {
 
 function closeCompare() {
     document.getElementById('modal-compare').classList.remove('show');
+}
+
+// ═══════════════════════════════════════
+// ORDERS SEARCH
+// ═══════════════════════════════════════
+async function buscarPedidos() {
+    const input = document.getElementById('input-busca-pedido').value.trim();
+    if(!input) return;
+
+    const listEl = document.getElementById('orders-list');
+    listEl.innerHTML = '<div style="padding:30px;color:var(--text3)">Buscando...</div>';
+
+    try {
+        let pedidos = [];
+
+        // Check if it looks like an order code (starts with AC-)
+        if(input.toUpperCase().startsWith('AC-')) {
+            const res = await fetch('/api/pedidos/' + input.toUpperCase());
+            if(res.ok) {
+                const data = await res.json();
+                pedidos = [data.pedido];
+            }
+        } else {
+            // Search by phone
+            const tel = input.replace(/\D/g, '');
+            const res = await fetch('/api/pedidos/telefone/' + tel);
+            if(res.ok) {
+                const data = await res.json();
+                pedidos = data.pedidos || [];
+            }
+        }
+
+        if(pedidos.length === 0) {
+            listEl.innerHTML = `
+                <div style="text-align:center;padding:30px;color:var(--text3)">
+                    <div style="font-size:40px;margin-bottom:8px">🔍</div>
+                    <p style="font-weight:600">Nenhum pedido encontrado</p>
+                    <p style="font-size:12px;margin-top:4px">Verifique o codigo ou telefone digitado</p>
+                </div>`;
+            return;
+        }
+
+        const statusLabels = {
+            'novo':'Novo', 'confirmado':'Confirmado', 'separacao':'Em Separacao',
+            'pronto':'Pronto', 'a_caminho':'A Caminho', 'entregue':'Entregue',
+            'cancelado':'Cancelado', 'analise':'Em Analise', 'aprovado':'Aprovado', 'recusado':'Recusado'
+        };
+        const statusColors = {
+            'novo':'var(--orange)', 'confirmado':'var(--green)', 'separacao':'var(--orange)',
+            'pronto':'var(--green)', 'a_caminho':'var(--orange)', 'entregue':'var(--green)',
+            'cancelado':'var(--red)', 'analise':'var(--yellow)', 'aprovado':'var(--green)', 'recusado':'var(--red)'
+        };
+
+        listEl.innerHTML = pedidos.map(p => `
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;text-align:left">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <span style="font-weight:900;font-size:13px;color:var(--text);letter-spacing:0.5px">${p.codigo}</span>
+                    <span style="font-size:11px;font-weight:700;color:${statusColors[p.status] || 'var(--text3)'};background:${statusColors[p.status] || 'var(--text3)'}15;padding:3px 10px;border-radius:20px">${statusLabels[p.status] || p.status}</span>
+                </div>
+                <div style="font-size:13px;font-weight:600;color:var(--text2)">${p.cesta_nome || ''}</div>
+                <div style="display:flex;justify-content:space-between;margin-top:6px">
+                    <span style="font-size:12px;color:var(--text3)">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+                    <span style="font-size:14px;font-weight:800;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</span>
+                </div>
+            </div>
+        `).join('');
+
+    } catch(err) {
+        listEl.innerHTML = '<div style="padding:30px;color:var(--red)">Erro ao buscar pedidos</div>';
+    }
 }
 
 // ═══════════════════════════════════════
