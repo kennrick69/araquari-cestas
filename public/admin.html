@@ -337,13 +337,8 @@ function autoEnableSound() {
     document.addEventListener(evt, autoEnableSound, {once: false, passive: true});
 });
 
-// Also try on load (won't work without interaction, but worth trying)
+// Also show reminder if not enabled after 3s
 window.addEventListener('load', () => {
-    // Try to enable immediately (works if user already interacted)
-    try {
-        enableSound();
-    } catch(e) {}
-    // Show subtle reminder if still not enabled after 3s
     setTimeout(() => {
         if(!soundEnabled) {
             const banner = document.getElementById('sound-banner');
@@ -357,19 +352,20 @@ function enableSound() {
     try {
         if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if(audioCtx.state === 'suspended') audioCtx.resume();
-        // Play a silent sound to unlock audio
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.01;
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-        soundEnabled = true;
-        document.getElementById('sound-banner').style.display = 'none';
-        // Remove listeners once enabled
-        ['click','touchstart','keydown','scroll'].forEach(evt => {
-            document.removeEventListener(evt, autoEnableSound);
-        });
+        // Only mark as enabled if context is actually running
+        if(audioCtx.state === 'running') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.01;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            soundEnabled = true;
+            document.getElementById('sound-banner').style.display = 'none';
+            ['click','touchstart','keydown','scroll'].forEach(evt => {
+                document.removeEventListener(evt, autoEnableSound);
+            });
+        }
     } catch(e) { console.warn('Audio not available:', e); }
 }
 
