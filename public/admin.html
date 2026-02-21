@@ -275,46 +275,59 @@ function enableSound() {
     } catch(e) { console.warn('Audio not available:', e); }
 }
 
+let alarmInterval = null;
+let titleInterval = null;
+
 function playAlertSound() {
+    if(!soundEnabled || !audioCtx) return;
+    // Stop any existing alarm first
+    stopAlarm();
+    // Start persistent alarm - plays every 1.5s until stopped
+    playAlarmChime();
+    alarmInterval = setInterval(playAlarmChime, 1500);
+    // Flash page title continuously
+    let flip = false;
+    titleInterval = setInterval(() => {
+        flip = !flip;
+        document.title = flip ? 'NOVO PEDIDO!' : 'Araquari Cestas - Admin';
+    }, 800);
+}
+
+function playAlarmChime() {
     if(!soundEnabled || !audioCtx) return;
     try {
         const now = audioCtx.currentTime;
-        // 3 ascending beeps like a notification chime
-        [0, 0.15, 0.3].forEach((delay, i) => {
+        // Urgent ascending 3-tone chime
+        [0, 0.12, 0.24].forEach((delay, i) => {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = 600 + (i * 200); // 600, 800, 1000 Hz
-            gain.gain.setValueAtTime(0.3, now + delay);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.12);
+            osc.type = 'square';
+            osc.frequency.value = 700 + (i * 250);
+            gain.gain.setValueAtTime(0.35, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.1);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start(now + delay);
-            osc.stop(now + delay + 0.15);
+            osc.stop(now + delay + 0.12);
         });
-        // Repeat 3 times with pauses
-        setTimeout(playAlertSound2, 800);
-        setTimeout(playAlertSound2, 1600);
+        // Final high sustained tone for urgency
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.value = 1200;
+        gain2.gain.setValueAtTime(0.3, now + 0.4);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.4);
+        osc2.stop(now + 1.0);
     } catch(e) {}
 }
 
-function playAlertSound2() {
-    if(!soundEnabled || !audioCtx) return;
-    try {
-        const now = audioCtx.currentTime;
-        [0, 0.15, 0.3].forEach((delay, i) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = 600 + (i * 200);
-            gain.gain.setValueAtTime(0.25, now + delay);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.12);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(now + delay);
-            osc.stop(now + delay + 0.15);
-        });
-    } catch(e) {}
+function stopAlarm() {
+    if(alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+    if(titleInterval) { clearInterval(titleInterval); titleInterval = null; }
+    document.title = 'Araquari Cestas - Painel Admin';
 }
 
 function detectNewOrders(pedidos) {
@@ -345,8 +358,7 @@ function detectNewOrders(pedidos) {
         newOrders.forEach(p => showOrderToast(p));
 
         // Update page title
-        document.title = `🔔 ${newOrders.length} NOVO(S) PEDIDO(S)!`;
-        setTimeout(() => { document.title = 'Araquari Cestas - Painel Admin'; }, 10000);
+        document.title = `NOVO(S) PEDIDO(S)!`;
     }
 
     // Update known codes (add new ones, keep accumulating)
@@ -360,23 +372,30 @@ function showOrderToast(p) {
     const endereco = [p.endereco_rua, p.endereco_numero, p.endereco_bairro].filter(Boolean).join(', ');
     toast.innerHTML = `
         <div class="toast-header">
-            <span style="font-size:18px">🛒</span>
             <span class="toast-badge">Novo Pedido</span>
-            <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+            <button class="toast-close" onclick="dismissToast(this)">X</button>
         </div>
-        <div class="toast-title">${p.codigo} — ${p.cesta_nome}</div>
+        <div class="toast-title">${p.codigo} - ${p.cesta_nome}</div>
         <div class="toast-body">
             <strong>${p.recebedor_nome}</strong><br>
-            📍 ${endereco || 'Endereco nao informado'}<br>
-            📱 ${p.recebedor_telefone || '-'}<br>
-            💰 R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} · ${PAY_LABELS[p.pagamento_metodo] || p.pagamento_metodo}
+            ${endereco || 'Endereco nao informado'}<br>
+            Tel: ${p.recebedor_telefone || '-'}<br>
+            R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} - ${PAY_LABELS[p.pagamento_metodo] || p.pagamento_metodo}
         </div>
-        <button class="toast-accept" onclick="quickAccept(${p.id}, this)">✅ Aceitar Pedido</button>
+        <button class="toast-accept" onclick="quickAccept(${p.id}, this)">Aceitar Pedido</button>
     `;
     container.prepend(toast);
+    // Toast persists until accepted or manually dismissed - no auto-remove
+}
 
-    // Auto-remove after 60s
-    setTimeout(() => { if(toast.parentElement) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); } }, 60000);
+function dismissToast(btn) {
+    const toast = btn.closest('.toast');
+    if(toast) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }
+    // If no more toasts, stop alarm
+    setTimeout(() => {
+        const remaining = document.querySelectorAll('.toast:not(.hide)');
+        if(remaining.length === 0) stopAlarm();
+    }, 500);
 }
 
 async function quickAccept(pedidoId, btn) {
@@ -390,8 +409,9 @@ async function quickAccept(pedidoId, btn) {
         });
         const data = await res.json();
         if(data.success) {
-            btn.textContent = '✅ Confirmado!';
+            btn.textContent = 'Confirmado!';
             btn.style.background = 'var(--text3)';
+            stopAlarm();
             loadDashboard();
             loadPedidos();
             setTimeout(() => btn.closest('.toast').remove(), 1500);
@@ -586,6 +606,17 @@ async function openDetail(id) {
                 <div class="modal-row"><span class="label">Atualizado</span><span class="value">${new Date(p.atualizado_em).toLocaleString('pt-BR')}</span></div>
             </div>
 
+            <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Mensagens WhatsApp</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                    ${buildWhatsAppBtn(p, 'aceito', 'Pedido aceito', `Ol\u00e1, ${p.recebedor_nome}! Seu pedido ${p.codigo} da ${p.cesta_nome} foi recebido e aceito com sucesso. Estamos preparando tudo com muito cuidado para voc\u00ea. Em breve iniciaremos a separa\u00e7\u00e3o dos itens. Agradecemos a prefer\u00eancia! Araquari Cestas.`)}
+                    ${buildWhatsAppBtn(p, 'separacao', 'Em separa\u00e7\u00e3o', `Ol\u00e1, ${p.recebedor_nome}! Temos boas not\u00edcias: a sua ${p.cesta_nome} (pedido ${p.codigo}) j\u00e1 est\u00e1 sendo preparada. Nossa equipe est\u00e1 selecionando cada item com aten\u00e7\u00e3o. Avisaremos assim que estiver pronta para o envio. Araquari Cestas.`)}
+                    ${buildWhatsAppBtn(p, 'caminho', 'Saiu para entrega', `Ol\u00e1, ${p.recebedor_nome}! Sua ${p.cesta_nome} (pedido ${p.codigo}) acabou de sair para entrega. Nosso entregador est\u00e1 a caminho do endere\u00e7o informado. Por gentileza, fique atento para receb\u00ea-la. Qualquer d\u00favida, estamos \u00e0 disposi\u00e7\u00e3o. Araquari Cestas.`)}
+                    ${buildWhatsAppBtn(p, 'entregue', 'Entrega confirmada', `Ol\u00e1, ${p.recebedor_nome}! Confirmamos que a sua ${p.cesta_nome} (pedido ${p.codigo}) foi entregue com sucesso. Esperamos que aproveite cada item! Caso precise de algo, n\u00e3o hesite em nos procurar. Obrigado por escolher a Araquari Cestas. At\u00e9 a pr\u00f3xima!`)}
+                    ${buildWhatsAppBtn(p, 'problema', 'Informar problema', `Ol\u00e1, ${p.recebedor_nome}! Referente ao seu pedido ${p.codigo}, precisamos informar que ocorreu uma pend\u00eancia no processamento. Por favor, entre em contato conosco para que possamos resolver da melhor forma poss\u00edvel. Pedimos desculpas pelo transtorno. Araquari Cestas.`)}
+                </div>
+            </div>
+
             ${hist.length > 0 ? `
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Historico</div>
@@ -648,6 +679,21 @@ async function updateStatus(id) {
     } catch(e) {
         alert('Erro ao atualizar status');
     }
+}
+
+function buildWhatsAppBtn(p, tipo, label, mensagem) {
+    const tel = (p.recebedor_telefone || '').replace(/\D/g, '');
+    const telFormatado = tel.startsWith('55') ? tel : '55' + tel;
+    const url = `https://wa.me/${telFormatado}?text=${encodeURIComponent(mensagem)}`;
+    const cores = {
+        aceito: '#3DA33D',
+        separacao: '#E8850C',
+        caminho: '#9b59b6',
+        entregue: '#2ecc71',
+        problema: '#e74c3c'
+    };
+    const cor = cores[tipo] || '#3498db';
+    return `<a href="${url}" target="_blank" style="display:block;padding:10px 14px;background:${cor}18;border:1px solid ${cor}40;border-radius:10px;color:${cor};font-size:12px;font-weight:700;text-decoration:none;text-align:center;transition:.2s" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">${label}</a>`;
 }
 
 function closeDetail() {
