@@ -63,7 +63,7 @@ router.get('/dashboard', async (req, res) => {
 // ══════════════════════════════════════
 router.get('/pedidos', async (req, res) => {
     try {
-        const { status, cesta, busca, limite, pagina } = req.query;
+        const { status, cesta, busca, limite, pagina, excluir_status } = req.query;
         const lim = Math.min(parseInt(limite) || 50, 100);
         const offset = ((parseInt(pagina) || 1) - 1) * lim;
 
@@ -74,6 +74,12 @@ router.get('/pedidos', async (req, res) => {
         if (status) {
             where.push(`status = $${idx++}`);
             params.push(status);
+        }
+        if (excluir_status) {
+            const excluidos = excluir_status.split(',');
+            const placeholders = excluidos.map(() => `$${idx++}`);
+            where.push(`status NOT IN (${placeholders.join(',')})`);
+            params.push(...excluidos);
         }
         if (cesta) {
             where.push(`cesta_tipo = $${idx++}`);

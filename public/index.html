@@ -400,6 +400,27 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
     #splash { max-width:430px; left:50%; transform:translateX(-50%); }
     #splash.hide { transform:translateX(-50%) scale(1.1); }
 }
+/* ═══ DONATION MODE (golden theme) ═══ */
+body.donation-mode .bottom-sheet { background:linear-gradient(180deg, #1a1400 0%, #0a0a0f 40%) !important; border-top:2px solid rgba(212,175,55,0.4) !important; }
+body.donation-mode .sheet-title { color:#D4AF37 !important; }
+body.donation-mode .sheet-sub { color:rgba(212,175,55,0.7) !important; }
+body.donation-mode .basket-card { border-color:rgba(212,175,55,0.25) !important; background:rgba(212,175,55,0.04) !important; }
+body.donation-mode .basket-card:hover, body.donation-mode .basket-card.selected { border-color:#D4AF37 !important; box-shadow:0 0 20px rgba(212,175,55,0.15) !important; }
+body.donation-mode .basket-price-val { color:#D4AF37 !important; }
+body.donation-mode .basket-price-sub { color:rgba(212,175,55,0.6) !important; }
+body.donation-mode .app-header { background:linear-gradient(180deg, rgba(26,20,0,0.95), transparent) !important; }
+body.donation-mode .header-logo span { color:#D4AF37 !important; }
+body.donation-mode .detail-name { color:#D4AF37 !important; }
+body.donation-mode .detail-price { color:#D4AF37 !important; }
+body.donation-mode .btn-primary { background:#D4AF37 !important; color:#1a1400 !important; }
+body.donation-mode .detail-footer { border-top-color:rgba(212,175,55,0.2) !important; }
+body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
+.donation-banner { background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04)); border:1px solid rgba(212,175,55,0.25); border-radius:12px; padding:12px 16px; margin-bottom:16px; text-align:center; }
+.donation-banner-text { font-size:13px; color:#D4AF37; font-weight:700; }
+.donation-banner-sub { font-size:11px; color:rgba(212,175,55,0.7); margin-top:4px; line-height:1.5; }
+.btn-donate { background:linear-gradient(135deg,#D4AF37,#b8962e) !important; color:#1a1400 !important; font-weight:800 !important; border:none; }
+.btn-donate-outline { background:transparent; border:1.5px solid #D4AF37; color:#D4AF37; font-weight:700; }
+.btn-donate-outline:hover { background:rgba(212,175,55,0.1); }
 </style>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
@@ -456,9 +477,16 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
             <div class="sheet-title">Escolha sua cesta 🛒</div>
             <div class="sheet-sub">Selecione o tipo e peça agora</div>
 
-            <!-- Compare button -->
-            <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="width:auto;padding:8px 14px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar cestas</button>
+            <!-- Action buttons row -->
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
+                <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta</button>
+            </div>
+
+            <!-- Donation mode banner (hidden by default) -->
+            <div class="donation-banner" id="donation-mode-banner" style="display:none">
+                <div class="donation-banner-text">&#x2764;&#xFE0F; Modo Doa&#xE7;&#xE3;o Ativado</div>
+                <div class="donation-banner-sub">Escolha a cesta que deseja doar. N&#xF3;s encontraremos uma fam&#xED;lia que precisa na regi&#xE3;o de Araquari.</div>
             </div>
 
             <!-- Basket cards -->
@@ -509,14 +537,6 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                 *Imagens ilustrativas. As marcas e valores podem sofrer alterações de acordo com a disponibilidade.
             </div>
 
-            <!-- Donation section -->
-            <div onclick="startDonation()" style="margin-top:16px;cursor:pointer;background:linear-gradient(135deg,#1a3a1a,#0d2e0d);border:1px solid rgba(61,163,61,0.3);border-radius:16px;padding:18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(61,163,61,.15)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                <div style="font-size:32px;margin-bottom:6px">&#x2764;&#xFE0F;</div>
-                <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Doe uma cesta</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;max-width:280px;margin:0 auto">Ajude uma familia que precisa. Escolha uma cesta e n&#xF3;s nos encarregamos de encontrar quem mais necessita na regi&#xE3;o de Araquari.</div>
-                <div style="margin-top:12px;display:inline-block;background:var(--green);color:#fff;padding:8px 24px;border-radius:10px;font-size:13px;font-weight:800">Quero doar</div>
-            </div>
-
             <div style="height:12px"></div>
         </div>
     </div>
@@ -555,11 +575,11 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
     <!-- ═══ SCREEN: PAYMENT ═══ -->
     <div id="screen-payment" class="screen" style="background:var(--bg);overflow-y:auto">
-        <div class="back-btn" onclick="showScreen('home')">←</div>
+        <div class="back-btn" onclick="goBackFromDetail()">←</div>
 
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
-            <div class="sheet-title">Pagamento 💳</div>
-            <div class="sheet-sub">Escolha como deseja pagar</div>
+            <div class="sheet-title" id="payment-title">Pagamento 💳</div>
+            <div class="sheet-sub" id="payment-sub">Escolha como deseja pagar</div>
 
             <!-- Order summary -->
             <div class="summary" id="payment-summary"></div>
@@ -639,7 +659,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
     <!-- ═══ SCREEN: BASKET DETAIL ═══ -->
     <div id="screen-detail" class="screen" style="background:var(--bg);overflow-y:auto">
-        <div class="back-btn" onclick="showScreen('home')">←</div>
+        <div class="back-btn" onclick="goBackFromDetail()">←</div>
         <div id="detail-content"></div>
         <div class="detail-footer" id="detail-footer"></div>
     </div>
@@ -1010,8 +1030,7 @@ function showScreen(id) {
     }
 
     if(id === 'home') {
-        state.isDonation = false;
-        state.donorContact = null;
+        exitDonationMode();
     }
 
     if(id === 'payment') renderPaymentSummary();
@@ -1019,6 +1038,25 @@ function showScreen(id) {
 
 function goToMap() {
     showScreen('map');
+}
+
+function goBackFromDetail() {
+    // Keep donation mode active when going back
+    const wasDonation = state.isDonation;
+    showScreen('home');
+    if(wasDonation) {
+        state.isDonation = true;
+        document.body.classList.add('donation-mode');
+        document.getElementById('donation-mode-banner').style.display = 'block';
+        const btn = document.getElementById('btn-toggle-donate');
+        btn.innerHTML = '<img src="assets/img/nav-cesta.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Voltar a comprar';
+        btn.className = 'btn btn-sm btn-donate';
+        btn.style.flex = '1'; btn.style.padding = '8px 12px'; btn.style.fontSize = '12px'; btn.style.borderRadius = '10px';
+        const title = document.querySelector('#home-sheet .sheet-title');
+        const sub = document.querySelector('#home-sheet .sheet-sub');
+        if(title) title.innerHTML = 'Doe uma cesta \u2764\uFE0F';
+        if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
+    }
 }
 
 // ═══════════════════════════════════════
@@ -1046,16 +1084,27 @@ function renderDetail() {
     const imgBlock = b.img ? `<div class="detail-img-wrap"><img src="${b.img}" alt="${b.name}" onclick="openLightbox('${b.img}')"></div>` : '';
     const pkgBlock = b.packaging ? `<div class="detail-packaging">Embalagem: ${b.packaging}</div>` : '';
 
+    const donationHero = state.isDonation ? `
+        <div style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.25);border-radius:14px;padding:16px;margin:0 20px 16px;text-align:center">
+            <div style="font-size:28px;margin-bottom:6px">\u2764\uFE0F</div>
+            <div style="font-size:15px;font-weight:800;color:#D4AF37">Voc\u00EA est\u00E1 doando esta cesta</div>
+            <div style="font-size:12px;color:rgba(212,175,55,0.7);margin-top:6px;line-height:1.5">
+                Esta cesta ser\u00E1 entregue a uma fam\u00EDlia em situa\u00E7\u00E3o de vulnerabilidade na regi\u00E3o de Araquari.
+                N\u00F3s cuidamos de tudo!
+            </div>
+        </div>` : '';
+
     document.getElementById('detail-content').innerHTML = `
         <div class="detail-hero">
-            <div class="detail-name">${b.name}</div>
+            <div class="detail-name">${state.isDonation ? '\u2764\uFE0F ' : ''}${b.name}</div>
             <div class="detail-desc">${b.desc}</div>
             <div class="detail-price-row">
                 <div class="detail-price">R$ ${b.price.toFixed(2).replace('.',',')}</div>
-                <div class="detail-price-pix">PIX R$ ${pixPrice}</div>
+                ${state.isDonation ? '' : '<div class="detail-price-pix">PIX R$ ' + pixPrice + '</div>'}
             </div>
         </div>
 
+        ${donationHero}
         ${imgBlock}
 
         <div class="detail-section-label">Itens da cesta (${b.items.length})</div>
@@ -1064,7 +1113,7 @@ function renderDetail() {
             ${b.items.map(item => `
                 <div class="detail-item">
                     <div class="detail-item-left">
-                        <div class="detail-item-dot"></div>
+                        <div class="detail-item-dot" ${state.isDonation ? 'style="background:#D4AF37"' : ''}></div>
                         <div class="detail-item-name">${item.name}</div>
                     </div>
                     <div class="detail-item-qty">${item.qty}</div>
@@ -1075,19 +1124,19 @@ function renderDetail() {
         ${pkgBlock}
         <div style="padding:14px 20px 0;font-size:10px;color:var(--text3);line-height:1.5;font-weight:500">
             *Imagens meramente ilustrativas.<br>
-            **As marcas e quantidades dos produtos podem sofrer alterações sem aviso prévio, de acordo com a disponibilidade em estoque.
+            **As marcas e quantidades dos produtos podem sofrer altera\u00E7\u00F5es sem aviso pr\u00E9vio, de acordo com a disponibilidade em estoque.
         </div>
         <div style="height:80px"></div>
     `;
 
     document.getElementById('detail-footer').innerHTML = `
         <div class="qty-selector">
-            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <button class="qty-btn" onclick="changeQty(-1)">\u2212</button>
             <span class="qty-val" id="qty-display">${state.qty}</span>
             <button class="qty-btn" onclick="changeQty(1)">+</button>
         </div>
-        <button class="btn btn-primary" style="flex:1" onclick="proceedFromDetail()">
-            ${state.isDonation ? 'Doar' : 'Pedir'} · R$ ${totalPrice}
+        <button class="btn ${state.isDonation ? 'btn-donate' : 'btn-primary'}" style="flex:1" onclick="proceedFromDetail()">
+            ${state.isDonation ? '\u2764\uFE0F Doar' : 'Pedir'} \u00B7 R$ ${totalPrice}
         </button>
     `;
 }
@@ -1155,21 +1204,49 @@ function proceedToDonationPayment() {
     renderPaymentSummary();
 }
 
-function startDonation() {
-    state.isDonation = true;
-    // Show basket selection - user picks which basket to donate
-    showScreen('home');
-    // Scroll to baskets
-    setTimeout(() => {
-        const sheet = document.getElementById('home-sheet');
-        if(sheet) sheet.scrollTop = 0;
-    }, 100);
-    // Visual feedback
-    document.querySelectorAll('.basket-card').forEach(c => {
-        c.style.boxShadow = '0 0 0 2px var(--green)';
-        setTimeout(() => c.style.boxShadow = '', 2000);
-    });
-    alert('Selecione a cesta que deseja doar. Nós encontraremos uma família que precisa na região de Araquari!');
+function toggleDonationMode() {
+    state.isDonation = !state.isDonation;
+    const body = document.body;
+    const banner = document.getElementById('donation-mode-banner');
+    const btn = document.getElementById('btn-toggle-donate');
+    const title = document.querySelector('#home-sheet .sheet-title');
+    const sub = document.querySelector('#home-sheet .sheet-sub');
+
+    if(state.isDonation) {
+        body.classList.add('donation-mode');
+        banner.style.display = 'block';
+        btn.innerHTML = '<img src="assets/img/nav-cesta.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Voltar a comprar';
+        btn.className = 'btn btn-sm btn-donate';
+        btn.style.flex = '1';
+        btn.style.padding = '8px 12px';
+        btn.style.fontSize = '12px';
+        btn.style.borderRadius = '10px';
+        if(title) title.innerHTML = 'Doe uma cesta &#x2764;&#xFE0F;';
+        if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
+    } else {
+        exitDonationMode();
+    }
+}
+
+function exitDonationMode() {
+    state.isDonation = false;
+    state.donorContact = null;
+    document.body.classList.remove('donation-mode');
+    const banner = document.getElementById('donation-mode-banner');
+    const btn = document.getElementById('btn-toggle-donate');
+    const title = document.querySelector('#home-sheet .sheet-title');
+    const sub = document.querySelector('#home-sheet .sheet-sub');
+    if(banner) banner.style.display = 'none';
+    if(btn) {
+        btn.innerHTML = '<img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta';
+        btn.className = 'btn btn-sm btn-donate-outline';
+        btn.style.flex = '1';
+        btn.style.padding = '8px 12px';
+        btn.style.fontSize = '12px';
+        btn.style.borderRadius = '10px';
+    }
+    if(title) title.innerHTML = 'Escolha sua cesta \uD83D\uDED2';
+    if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
 }
 
 // ═══════════════════════════════════════
@@ -1234,6 +1311,13 @@ function shakeInput(id) {
 // ═══════════════════════════════════════
 function renderPaymentSummary() {
     if(!state.basket) return;
+
+    // Update payment screen title for donation mode
+    const payTitle = document.getElementById('payment-title');
+    const paySub = document.getElementById('payment-sub');
+    if(payTitle) payTitle.innerHTML = state.isDonation ? '\u2764\uFE0F Finalizar Doa\u00E7\u00E3o' : 'Pagamento \uD83D\uDCB3';
+    if(paySub) paySub.textContent = state.isDonation ? 'Escolha como deseja pagar sua doa\u00E7\u00E3o' : 'Escolha como deseja pagar';
+
     const b = BASKETS[state.basket];
     const subtotal = b.price * state.qty;
     const isPix = state.payMethod === 'pix';
@@ -1278,6 +1362,14 @@ function renderPaymentSummary() {
 }
 
 function selectPay(method) {
+    // Check minimum for boleto (Mercado Pago requires >= R$5)
+    if((method === 'boleto' || method === 'boleto30') && state.basket) {
+        const total = BASKETS[state.basket].price * state.qty;
+        if(total < 5) {
+            alert('Valor m\u00EDnimo para boleto \u00E9 R$ 5,00. Escolha PIX ou cart\u00E3o de cr\u00E9dito.');
+            return;
+        }
+    }
     state.payMethod = method;
     document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
     document.getElementById('pay-' + method).classList.add('selected');
@@ -1288,9 +1380,11 @@ function selectPay(method) {
     if(method === 'boleto30') {
         document.getElementById('btn-pay').textContent = '📩 Enviar para Análise';
     } else if(state.isDonation) {
-        document.getElementById('btn-pay').textContent = 'Finalizar Doação';
+        document.getElementById('btn-pay').textContent = '\u2764\uFE0F Finalizar Doa\u00E7\u00E3o';
+        document.getElementById('btn-pay').className = 'btn btn-donate';
     } else {
         document.getElementById('btn-pay').textContent = 'Finalizar Pedido';
+        document.getElementById('btn-pay').className = 'btn btn-primary';
     }
 
     renderPaymentSummary();
