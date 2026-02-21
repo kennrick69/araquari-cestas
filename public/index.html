@@ -421,6 +421,25 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 .btn-donate { background:linear-gradient(135deg,#D4AF37,#b8962e) !important; color:#1a1400 !important; font-weight:800 !important; border:none; }
 .btn-donate-outline { background:transparent; border:1.5px solid #D4AF37; color:#D4AF37; font-weight:700; }
 .btn-donate-outline:hover { background:rgba(212,175,55,0.1); }
+/* ═══ TOAST & CONFIRM MODAL ═══ */
+.app-toast { position:fixed; top:0; left:50%; transform:translateX(-50%) translateY(-100%); z-index:99999; padding:14px 20px; border-radius:0 0 16px 16px; font-size:13px; font-weight:700; max-width:400px; width:100%; text-align:center; transition:transform .35s cubic-bezier(.22,1,.36,1); line-height:1.5; box-shadow:0 8px 30px rgba(0,0,0,.4); }
+.app-toast.show { transform:translateX(-50%) translateY(0); }
+.app-toast.success { background:linear-gradient(135deg,#1a3a1a,#0d2e0d); color:#34c759; border-bottom:2px solid #34c759; }
+.app-toast.error { background:linear-gradient(135deg,#3a1a1a,#2e0d0d); color:#ff453a; border-bottom:2px solid #ff453a; }
+.app-toast.warning { background:linear-gradient(135deg,#3a2e1a,#2e200d); color:#E8850C; border-bottom:2px solid #E8850C; }
+.app-toast.info { background:linear-gradient(135deg,#1a2a3a,#0d1e2e); color:#64d2ff; border-bottom:2px solid #64d2ff; }
+.confirm-overlay { position:fixed; inset:0; z-index:99998; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .25s; }
+.confirm-overlay.show { opacity:1; pointer-events:auto; }
+.confirm-box { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:28px 24px 20px; max-width:320px; width:90%; text-align:center; transform:scale(.9); transition:transform .25s; }
+.confirm-overlay.show .confirm-box { transform:scale(1); }
+.confirm-icon { font-size:36px; margin-bottom:10px; }
+.confirm-title { font-size:15px; font-weight:800; color:var(--text); margin-bottom:6px; }
+.confirm-msg { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:18px; }
+.confirm-btns { display:flex; gap:10px; }
+.confirm-btns .btn { flex:1; padding:12px; font-size:13px; font-weight:800; border-radius:12px; border:none; cursor:pointer; }
+.confirm-btn-cancel { background:var(--border); color:var(--text); }
+.confirm-btn-ok { background:var(--orange); color:#fff; }
+.confirm-btn-danger { background:var(--red); color:#fff; }
 </style>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
@@ -623,6 +642,14 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 </div>
             </div>
 
+            <!-- CPF for boleto à vista (hidden by default) -->
+            <div id="boleto-cpf-area" style="display:none;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">CPF do pagador <span class="req">*</span></label>
+                    <input class="form-input" placeholder="000.000.000-00" id="input-cpf-boleto" inputmode="numeric" oninput="this.value=maskCPF(this.value)">
+                </div>
+            </div>
+
             <!-- Boleto 30 dias: document upload area (hidden by default) -->
             <div id="boleto30-area" style="display:none">
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Documentos obrigatórios</div>
@@ -798,7 +825,52 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     </div>
 </div>
 
+<!-- Toast notification -->
+<div class="app-toast" id="app-toast"></div>
+
+<!-- Confirm modal -->
+<div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirm-icon"></div>
+        <div class="confirm-title" id="confirm-title"></div>
+        <div class="confirm-msg" id="confirm-msg"></div>
+        <div class="confirm-btns">
+            <button class="btn confirm-btn-cancel" id="confirm-cancel">Cancelar</button>
+            <button class="btn confirm-btn-ok" id="confirm-ok">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script>
+// ═══════════════════════════════════════
+// TOAST & CONFIRM
+// ═══════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type='info', duration=3500) {
+    const t = document.getElementById('app-toast');
+    t.className = 'app-toast ' + type;
+    const icons = {success:'\u2705',error:'\u274C',warning:'\u26A0\uFE0F',info:'\u2139\uFE0F'};
+    t.innerHTML = (icons[type]||'') + ' ' + msg;
+    clearTimeout(toastTimer);
+    requestAnimationFrame(() => { t.classList.add('show'); });
+    toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+}
+function showConfirm(title, msg, onOk, opts={}) {
+    const ov = document.getElementById('confirm-overlay');
+    document.getElementById('confirm-icon').textContent = opts.icon || '\u26A0\uFE0F';
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    okBtn.textContent = opts.okText || 'Confirmar';
+    okBtn.className = 'btn ' + (opts.danger ? 'confirm-btn-danger' : 'confirm-btn-ok');
+    cancelBtn.textContent = opts.cancelText || 'Cancelar';
+    ov.classList.add('show');
+    const close = () => { ov.classList.remove('show'); okBtn.onclick = null; cancelBtn.onclick = null; };
+    okBtn.onclick = () => { close(); if(onOk) onOk(); };
+    cancelBtn.onclick = close;
+}
+
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
@@ -1006,7 +1078,7 @@ function centerOnUser() {
             userLat = pos.coords.latitude;
             userLng = pos.coords.longitude;
             map.setView([userLat, userLng], 17, { animate:true });
-        }, () => alert('Não foi possível obter sua localização.'), { enableHighAccuracy:true });
+        }, () => showToast('N\u00E3o foi poss\u00EDvel obter sua localiza\u00E7\u00E3o.', 'error'), { enableHighAccuracy:true });
     }
 }
 
@@ -1366,7 +1438,7 @@ function selectPay(method) {
     if((method === 'boleto' || method === 'boleto30') && state.basket) {
         const total = BASKETS[state.basket].price * state.qty;
         if(total < 5) {
-            alert('Valor m\u00EDnimo para boleto \u00E9 R$ 5,00. Escolha PIX ou cart\u00E3o de cr\u00E9dito.');
+            showToast('Valor m00EDnimo para boleto 00E9 R$ 5,00. Escolha PIX ou cart00E3o.', 'warning');
             return;
         }
     }
@@ -1375,6 +1447,7 @@ function selectPay(method) {
     document.getElementById('pay-' + method).classList.add('selected');
 
     document.getElementById('boleto30-area').style.display = method === 'boleto30' ? 'block' : 'none';
+    document.getElementById('boleto-cpf-area').style.display = method === 'boleto' ? 'block' : 'none';
     document.getElementById('btn-pay').disabled = false;
 
     if(method === 'boleto30') {
@@ -1402,16 +1475,16 @@ function handleUpload(type, el) {
 
 async function finalizePay() {
     if(!state.payMethod) return;
-    if(!state.address) { alert('Defina o endereço de entrega primeiro.'); return; }
+    if(!state.address) { showToast('Defina o endere00E7o de entrega primeiro.', 'warning'); return; }
 
     const btn = document.getElementById('btn-pay');
     const originalText = btn.textContent;
 
     if(state.payMethod === 'boleto30') {
         const cpf = document.getElementById('input-cpf')?.value || '';
-        if(cpf.length < 14) { alert('Preencha o CPF corretamente.'); return; }
+        if(cpf.length < 14) { showToast('Preencha o CPF corretamente.', 'warning'); return; }
         if(!state.uploads.doc || !state.uploads.res) {
-            alert('Envie todos os documentos obrigatórios.'); return;
+            showToast('Envie todos os documentos obrigat00F3rios.', 'warning'); return;
         }
     }
 
@@ -1498,7 +1571,7 @@ async function finalizePay() {
 
     } catch(err) {
         console.error('Erro ao finalizar pedido:', err);
-        alert('Erro ao enviar pedido: ' + err.message + '\nTente novamente.');
+        showToast('Erro ao enviar pedido: ' + err.message, 'error', 5000);
         btn.disabled = false;
         btn.textContent = originalText;
     }
@@ -1604,6 +1677,15 @@ function startPixPolling(codigo) {
 }
 
 async function processBoletoPayment(codigo) {
+    // Get CPF
+    const cpfEl = document.getElementById('input-cpf-boleto');
+    const cpf = cpfEl ? cpfEl.value.replace(/\D/g, '') : '';
+    if(cpf.length !== 11) {
+        showToast('Informe um CPF v00E1lido para gerar o boleto.', 'warning');
+        shakeInput('input-cpf-boleto');
+        return;
+    }
+
     showScreen('status');
     const el = document.getElementById('status-content');
     el.innerHTML = `
@@ -1617,7 +1699,7 @@ async function processBoletoPayment(codigo) {
         const res = await fetch('/api/pagamento/boleto/' + codigo, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dias: 3 })
+            body: JSON.stringify({ dias: 3, cpf: cpf })
         });
         const data = await res.json();
 

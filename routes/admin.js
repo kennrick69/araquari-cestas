@@ -25,14 +25,16 @@ router.get('/dashboard', async (req, res) => {
         const [totais, hoje_stats, por_status, por_cesta] = await Promise.all([
             pool.query(`SELECT 
                 COUNT(*) as total_pedidos,
-                COALESCE(SUM(total), 0) as receita_total,
+                COALESCE(SUM(CASE WHEN status NOT IN ('novo','analise','cancelado') THEN total ELSE 0 END), 0) as receita_total,
+                COALESCE(SUM(CASE WHEN status IN ('novo','analise') THEN total ELSE 0 END), 0) as receita_pendente,
                 COUNT(CASE WHEN status = 'analise' THEN 1 END) as pendentes_analise,
                 COUNT(CASE WHEN status = 'novo' THEN 1 END) as nao_pagos
             FROM pedidos`),
 
             pool.query(`SELECT 
-                COUNT(*) as pedidos_hoje,
-                COALESCE(SUM(total), 0) as receita_hoje
+                COUNT(CASE WHEN status NOT IN ('novo','analise','cancelado') THEN 1 END) as pedidos_hoje,
+                COALESCE(SUM(CASE WHEN status NOT IN ('novo','analise','cancelado') THEN total ELSE 0 END), 0) as receita_hoje,
+                COALESCE(SUM(CASE WHEN status IN ('novo','analise') THEN total ELSE 0 END), 0) as receita_pendente_hoje
             FROM pedidos WHERE DATE(criado_em) = $1`, [hoje]),
 
             pool.query(`SELECT status, COUNT(*) as qtd FROM pedidos GROUP BY status ORDER BY qtd DESC`),
@@ -44,10 +46,12 @@ router.get('/dashboard', async (req, res) => {
         res.json({
             total_pedidos: parseInt(totais.rows[0].total_pedidos),
             receita_total: parseFloat(totais.rows[0].receita_total),
+            receita_pendente: parseFloat(totais.rows[0].receita_pendente),
             pendentes_analise: parseInt(totais.rows[0].pendentes_analise),
             nao_pagos: parseInt(totais.rows[0].nao_pagos),
             pedidos_hoje: parseInt(hoje_stats.rows[0].pedidos_hoje),
             receita_hoje: parseFloat(hoje_stats.rows[0].receita_hoje),
+            receita_pendente_hoje: parseFloat(hoje_stats.rows[0].receita_pendente_hoje),
             por_status: por_status.rows,
             por_cesta: por_cesta.rows
         });

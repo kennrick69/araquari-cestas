@@ -130,6 +130,25 @@ tr:hover{background:#ffffff05}
 /* Alert flash on topbar */
 .topbar.alert-flash{animation:alertFlash 1s ease 3}
 @keyframes alertFlash{0%,100%{border-bottom-color:var(--border)}50%{border-bottom-color:var(--green)}}
+/* ═══ TOAST & CONFIRM MODAL ═══ */
+.app-toast{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);z-index:99999;padding:14px 20px;border-radius:0 0 16px 16px;font-size:13px;font-weight:700;max-width:500px;width:100%;text-align:center;transition:transform .35s cubic-bezier(.22,1,.36,1);line-height:1.5;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.app-toast.show{transform:translateX(-50%) translateY(0)}
+.app-toast.success{background:linear-gradient(135deg,#1a3a1a,#0d2e0d);color:#34c759;border-bottom:2px solid #34c759}
+.app-toast.error{background:linear-gradient(135deg,#3a1a1a,#2e0d0d);color:#ff453a;border-bottom:2px solid #ff453a}
+.app-toast.warning{background:linear-gradient(135deg,#3a2e1a,#2e200d);color:#E8850C;border-bottom:2px solid #E8850C}
+.app-toast.info{background:linear-gradient(135deg,#1a2a3a,#0d1e2e);color:#64d2ff;border-bottom:2px solid #64d2ff}
+.confirm-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.confirm-overlay.show{opacity:1;pointer-events:auto}
+.confirm-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px 24px 20px;max-width:380px;width:90%;text-align:center;transform:scale(.9);transition:transform .25s}
+.confirm-overlay.show .confirm-box{transform:scale(1)}
+.confirm-icon{font-size:36px;margin-bottom:10px}
+.confirm-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px}
+.confirm-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px}
+.confirm-btns{display:flex;gap:10px}
+.confirm-btns .cbtn{flex:1;padding:12px;font-size:13px;font-weight:800;border-radius:12px;border:none;cursor:pointer}
+.cbtn-cancel{background:var(--border);color:var(--text)}
+.cbtn-ok{background:var(--orange);color:#fff}
+.cbtn-danger{background:#ff453a;color:#fff}
 </style>
 </head>
 <body>
@@ -161,8 +180,9 @@ tr:hover{background:#ffffff05}
 
     <!-- KPIs -->
     <div class="kpi-grid" id="kpi-grid">
-        <div class="kpi"><div class="kpi-label">Pedidos Hoje</div><div class="kpi-value" id="kpi-hoje">-</div></div>
-        <div class="kpi"><div class="kpi-label">Receita Hoje</div><div class="kpi-value" id="kpi-receita-hoje" style="color:var(--green)">-</div></div>
+        <div class="kpi"><div class="kpi-label">Pedidos Hoje (pagos)</div><div class="kpi-value" id="kpi-hoje">-</div></div>
+        <div class="kpi"><div class="kpi-label">Receita Hoje (confirmada)</div><div class="kpi-value" id="kpi-receita-hoje" style="color:var(--green)">-</div></div>
+        <div class="kpi"><div class="kpi-label">Receita Pendente</div><div class="kpi-value" id="kpi-receita-pendente" style="color:var(--orange)">-</div></div>
         <div class="kpi"><div class="kpi-label">Total Pedidos</div><div class="kpi-value" id="kpi-total">-</div></div>
         <div class="kpi"><div class="kpi-label">Pendentes Analise</div><div class="kpi-value" id="kpi-analise" style="color:var(--yellow)">-</div></div>
         <div class="kpi"><div class="kpi-label">Aguardando Pagamento</div><div class="kpi-value" id="kpi-nao-pagos" style="color:var(--blue)">-</div></div>
@@ -243,7 +263,47 @@ tr:hover{background:#ffffff05}
     🔔 Toque aqui para ativar alertas sonoros
 </div>
 
+<!-- App Toast -->
+<div class="app-toast" id="app-toast"></div>
+<!-- Confirm Modal -->
+<div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirm-icon"></div>
+        <div class="confirm-title" id="confirm-title"></div>
+        <div class="confirm-msg" id="confirm-msg"></div>
+        <div class="confirm-btns">
+            <button class="cbtn cbtn-cancel" id="confirm-cancel">Cancelar</button>
+            <button class="cbtn cbtn-ok" id="confirm-ok">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script>
+let _toastTimer = null;
+function showToast(msg, type='info', dur=3500) {
+    const t = document.getElementById('app-toast');
+    t.className = 'app-toast ' + type;
+    const icons = {success:'\u2705',error:'\u274C',warning:'\u26A0\uFE0F',info:'\u2139\uFE0F'};
+    t.innerHTML = (icons[type]||'') + ' ' + msg;
+    clearTimeout(_toastTimer);
+    requestAnimationFrame(() => t.classList.add('show'));
+    _toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+function showConfirm(title, msg, onOk, opts={}) {
+    const ov = document.getElementById('confirm-overlay');
+    document.getElementById('confirm-icon').textContent = opts.icon || '\u26A0\uFE0F';
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    okBtn.textContent = opts.okText || 'Confirmar';
+    okBtn.className = 'cbtn ' + (opts.danger ? 'cbtn-danger' : 'cbtn-ok');
+    cancelBtn.textContent = opts.cancelText || 'Cancelar';
+    ov.classList.add('show');
+    const close = () => { ov.classList.remove('show'); okBtn.onclick = null; cancelBtn.onclick = null; };
+    okBtn.onclick = () => { close(); if(onOk) onOk(); };
+    cancelBtn.onclick = close;
+}
 let TOKEN = localStorage.getItem('admin_token') || '';
 let currentPage = 1;
 let currentTab = 'pedidos';
@@ -504,6 +564,7 @@ async function loadDashboard() {
 function renderDashboard(d) {
     document.getElementById('kpi-hoje').textContent = d.pedidos_hoje;
     document.getElementById('kpi-receita-hoje').textContent = 'R$ '+d.receita_hoje.toFixed(2).replace('.',',');
+    document.getElementById('kpi-receita-pendente').textContent = 'R$ '+(d.receita_pendente || 0).toFixed(2).replace('.',',');
     document.getElementById('kpi-total').textContent = d.total_pedidos;
     document.getElementById('kpi-analise').textContent = d.pendentes_analise;
     document.getElementById('kpi-nao-pagos').textContent = d.nao_pagos || 0;
@@ -690,7 +751,7 @@ async function openDetail(id) {
 async function updateStatus(id) {
     const status = document.getElementById('new-status').value;
     const obs = document.getElementById('obs-status').value;
-    if(!status) { alert('Selecione um status'); return; }
+    if(!status) { showToast('Selecione um status', 'warning'); return; }
 
     try {
         const res = await fetch(API+'/pedidos/'+id+'/status', {
@@ -700,47 +761,49 @@ async function updateStatus(id) {
         });
         const data = await res.json();
         if(data.success) {
-            alert('Status atualizado: ' + data.message);
+            showToast('Status atualizado com sucesso!', 'success');
             openDetail(id);
             loadPedidos();
             loadDashboard();
         } else {
-            alert('Erro: ' + data.error);
+            showToast('Erro: ' + data.error, 'error');
         }
     } catch(e) {
-        alert('Erro ao atualizar status');
+        showToast('Erro ao atualizar status', 'error');
     }
 }
 
 async function quickStatus(pedidoId, status, btn) {
-    if(!confirm('Marcar pedido como ' + STATUS_LABELS[status] + '?')) return;
-    btn.disabled = true;
-    btn.textContent = '...';
-    try {
-        const res = await fetch(API+'/pedidos/'+pedidoId+'/status', {
-            method: 'PATCH',
-            headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
-            body: JSON.stringify({status, observacao:'Atualizado via painel'})
-        });
-        const data = await res.json();
-        if(data.success) { loadDashboard(); loadPedidos(); }
-        else { alert('Erro: ' + data.error); btn.disabled = false; btn.textContent = 'Entregue'; }
-    } catch(e) { alert('Erro ao atualizar'); btn.disabled = false; btn.textContent = 'Entregue'; }
+    showConfirm('Alterar Status', 'Marcar pedido como ' + STATUS_LABELS[status] + '?', async () => {
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+            const res = await fetch(API+'/pedidos/'+pedidoId+'/status', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+                body: JSON.stringify({status, observacao:'Atualizado via painel'})
+            });
+            const data = await res.json();
+            if(data.success) { showToast('Status atualizado!', 'success'); loadDashboard(); loadPedidos(); }
+            else { showToast('Erro: ' + data.error, 'error'); btn.disabled = false; btn.textContent = 'Entregue'; }
+        } catch(e) { showToast('Erro ao atualizar', 'error'); btn.disabled = false; btn.textContent = 'Entregue'; }
+    }, {icon:'\u2705', okText:'Confirmar'});
 }
 
 async function quickDelete(pedidoId, btn) {
-    if(!confirm('Tem certeza que deseja EXCLUIR este pedido? Esta acao nao pode ser desfeita.')) return;
-    btn.disabled = true;
-    btn.textContent = '...';
-    try {
-        const res = await fetch(API+'/pedidos/'+pedidoId, {
-            method: 'DELETE',
-            headers: {'x-admin-token':TOKEN}
-        });
-        const data = await res.json();
-        if(data.success) { loadDashboard(); loadPedidos(); }
-        else { alert('Erro: ' + data.error); btn.disabled = false; btn.textContent = 'Excluir'; }
-    } catch(e) { alert('Erro ao excluir'); btn.disabled = false; btn.textContent = 'Excluir'; }
+    showConfirm('Excluir Pedido', 'Tem certeza que deseja EXCLUIR este pedido? Esta a\u00E7\u00E3o n\u00E3o pode ser desfeita.', async () => {
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+            const res = await fetch(API+'/pedidos/'+pedidoId, {
+                method: 'DELETE',
+                headers: {'x-admin-token':TOKEN}
+            });
+            const data = await res.json();
+            if(data.success) { showToast('Pedido exclu\u00EDdo!', 'success'); loadDashboard(); loadPedidos(); }
+            else { showToast('Erro: ' + data.error, 'error'); btn.disabled = false; btn.textContent = 'Excluir'; }
+        } catch(e) { showToast('Erro ao excluir', 'error'); btn.disabled = false; btn.textContent = 'Excluir'; }
+    }, {icon:'\uD83D\uDDD1\uFE0F', okText:'Excluir', danger:true});
 }
 
 function buildWhatsAppBtn(p, tipo, label, mensagem) {

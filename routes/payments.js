@@ -56,11 +56,18 @@ router.post('/boleto/:codigo', async (req, res) => {
             return res.status(503).json({ error: 'Gateway de pagamento nao configurado' });
         }
 
-        const { dias } = req.body;
+        const { dias, cpf } = req.body;
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });
 
         const pedido = result.rows[0];
+        if (cpf) pedido.cpf = cpf;
+
+        // Save CPF to database if provided
+        if (cpf) {
+            await pool.query('UPDATE pedidos SET cpf = $1 WHERE codigo = $2', [cpf, pedido.codigo]);
+        }
+
         const boleto = await mp.criarBoleto(pedido, dias || 3);
 
         await pool.query(
