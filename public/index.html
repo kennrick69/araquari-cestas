@@ -285,7 +285,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 .status-step:last-child::before { display:none; }
 .status-step.active::before { background:var(--orange); }
 .status-step.done::before { background:var(--green); }
-.step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:var(--card); border:2px solid var(--border); }
+.step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:var(--card); border:2px solid var(--border); overflow:hidden; }
 .status-step.done .step-dot { background:var(--green); border-color:var(--green); }
 .status-step.active .step-dot { background:var(--orange); border-color:var(--orange); animation:pulse 2s infinite; }
 .step-text { padding-top:4px; }
@@ -446,8 +446,8 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                 <span>Araquari Cestas</span>
             </div>
             <div class="header-right">
-                <div class="header-btn" onclick="showScreen('orders')">📦</div>
-                <div class="header-btn">👤</div>
+                <div class="header-btn" onclick="showScreen('orders')"><img src="assets/img/nav-pedidos.png" style="width:22px;height:22px"></div>
+                <div class="header-btn"><img src="assets/img/nav-conta.png" style="width:22px;height:22px"></div>
             </div>
         </div>
 
@@ -458,13 +458,13 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
             <!-- Compare button -->
             <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="width:auto;padding:8px 14px;font-size:12px;border-radius:10px">📊 Comparar cestas</button>
+                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="width:auto;padding:8px 14px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar cestas</button>
             </div>
 
             <!-- Basket cards -->
             <div class="basket-cards">
                 <div class="basket-card" onclick="selectBasket('x')" id="card-x">
-                    <div class="basket-icon" style="background:rgba(52,199,89,0.12)">🍚</div>
+                    <div class="basket-icon" style="background:rgba(52,199,89,0.12)"><img src="assets/img/icon-cesta-x.svg" style="width:36px;height:36px"></div>
                     <div class="basket-info">
                         <div class="basket-name">Cesta X</div>
                         <div class="basket-desc">Essencial · 11 itens</div>
@@ -477,7 +477,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                 </div>
 
                 <div class="basket-card" onclick="selectBasket('confort')" id="card-confort">
-                    <div class="basket-icon" style="background:rgba(232,133,12,0.12)">🛒</div>
+                    <div class="basket-icon" style="background:rgba(232,133,12,0.12)"><img src="assets/img/icon-cesta-confort.svg" style="width:36px;height:36px"></div>
                     <div class="basket-info">
                         <div class="basket-name">Cesta Confort</div>
                         <div class="basket-desc">Família · 14 itens</div>
@@ -491,7 +491,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                 </div>
 
                 <div class="basket-card" onclick="selectBasket('plus')" id="card-plus">
-                    <div class="basket-icon" style="background:rgba(255,217,61,0.12)">👑</div>
+                    <div class="basket-icon" style="background:rgba(255,217,61,0.12)"><img src="assets/img/icon-cesta-plus.svg" style="width:36px;height:36px"></div>
                     <div class="basket-info">
                         <div class="basket-name">Cesta Plus</div>
                         <div class="basket-desc">Premium · 33 itens</div>
@@ -533,7 +533,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
         <!-- GPS button -->
         <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto">
-            <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)">🎯</div>
+            <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)"><img src="assets/img/nav-gps.png" style="width:24px;height:24px"></div>
         </div>
 
         <div class="bottom-sheet" style="max-height:50vh;pointer-events:auto">
@@ -568,7 +568,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
             <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Forma de pagamento</div>
             <div class="pay-methods">
                 <div class="pay-method" onclick="selectPay('pix')" id="pay-pix">
-                    <div class="pay-emoji">📱</div>
+                    <div class="pay-emoji"><img src="assets/img/pay-pix.png" style="width:32px;height:32px"></div>
                     <div class="pay-info">
                         <div class="pay-name">PIX</div>
                         <div class="pay-desc">Aprovação instantânea</div>
@@ -577,7 +577,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('cartao')" id="pay-cartao">
-                    <div class="pay-emoji">💳</div>
+                    <div class="pay-emoji"><img src="assets/img/pay-cartao.png" style="width:32px;height:32px"></div>
                     <div class="pay-info">
                         <div class="pay-name">Cartão de Crédito</div>
                         <div class="pay-desc">Até 3x sem juros</div>
@@ -585,7 +585,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('boleto')" id="pay-boleto">
-                    <div class="pay-emoji">📄</div>
+                    <div class="pay-emoji"><img src="assets/img/pay-boleto.png" style="width:32px;height:32px"></div>
                     <div class="pay-info">
                         <div class="pay-name">Boleto à Vista</div>
                         <div class="pay-desc">Vencimento 3 dias úteis</div>
@@ -593,7 +593,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('boleto30')" id="pay-boleto30">
-                    <div class="pay-emoji">📅</div>
+                    <div class="pay-emoji"><img src="assets/img/pay-boleto30.png" style="width:32px;height:32px"></div>
                     <div class="pay-info">
                         <div class="pay-name">Boleto 30 Dias</div>
                         <div class="pay-desc">Pague em até 30 dias</div>
@@ -617,12 +617,12 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
                 <label class="file-upload" id="upload-doc">
                     <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('doc',this)">
-                    <div class="upload-icon">📎</div>
+                    <div class="upload-icon"><img src="assets/img/nav-upload.png" style="width:22px;height:22px"></div>
                     <p>RG ou CNH (foto ou PDF)</p>
                 </label>
                 <label class="file-upload" id="upload-res">
                     <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('res',this)">
-                    <div class="upload-icon">📎</div>
+                    <div class="upload-icon"><img src="assets/img/nav-upload.png" style="width:22px;height:22px"></div>
                     <p>Comprovante de Residência</p>
                 </label>
             </div>
@@ -669,7 +669,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 <div class="modal-overlay" id="modal-address">
     <div class="modal">
         <div style="text-align:center;margin-bottom:20px">
-            <div style="font-size:40px;margin-bottom:8px">📍</div>
+            <div style="margin-bottom:8px"><img src="assets/img/nav-local.png" style="width:48px;height:48px"></div>
             <div style="font-size:18px;font-weight:800">Confirme o endereço</div>
         </div>
 
@@ -1419,7 +1419,7 @@ async function processPixPayment(codigo) {
     showScreen('status');
     const el = document.getElementById('status-content');
     el.innerHTML = `
-        <div class="status-icon">📱</div>
+        <div class="status-icon"><img src="assets/img/pay-pix.png" style="width:64px;height:64px"></div>
         <div class="status-title">Pagamento PIX</div>
         <div class="status-sub">Gerando QR Code...</div>
         <div style="text-align:center"><div class="spin" style="margin:20px auto"></div></div>
@@ -1432,7 +1432,7 @@ async function processPixPayment(codigo) {
         if(!res.ok || !data.success) throw new Error(data.error || 'Erro ao gerar PIX');
 
         el.innerHTML = `
-            <div style="font-size:40px;margin-bottom:8px">📱</div>
+            <div style="margin-bottom:8px"><img src="assets/img/pay-pix.png" style="width:48px;height:48px"></div>
             <div class="status-title">Pague com PIX</div>
             <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Escaneie o QR Code ou copie o código</div>
             <div class="pix-box">
@@ -1513,7 +1513,7 @@ async function processBoletoPayment(codigo) {
     showScreen('status');
     const el = document.getElementById('status-content');
     el.innerHTML = `
-        <div class="status-icon">📄</div>
+        <div class="status-icon"><img src="assets/img/pay-boleto.png" style="width:64px;height:64px"></div>
         <div class="status-title">Gerando Boleto</div>
         <div class="status-sub">Aguarde...</div>
         <div style="text-align:center"><div class="spin" style="margin:20px auto"></div></div>
@@ -1530,7 +1530,7 @@ async function processBoletoPayment(codigo) {
         if(!res.ok || !data.success) throw new Error(data.error || 'Erro ao gerar boleto');
 
         el.innerHTML = `
-            <div style="font-size:40px;margin-bottom:8px">📄</div>
+            <div style="margin-bottom:8px"><img src="assets/img/pay-boleto.png" style="width:48px;height:48px"></div>
             <div class="status-title">Boleto Gerado!</div>
             <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Vencimento: ${data.vencimento || '3 dias uteis'}</div>
             <div class="boleto-box">
@@ -1568,7 +1568,7 @@ function showCardForm(codigo) {
     const total = (b.price * state.qty).toFixed(2).replace('.',',');
 
     el.innerHTML = `
-        <div style="font-size:40px;margin-bottom:8px">💳</div>
+        <div style="margin-bottom:8px"><img src="assets/img/pay-cartao.png" style="width:48px;height:48px"></div>
         <div class="status-title">Cartão de Crédito</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
         <div class="card-form-box">
@@ -1659,7 +1659,7 @@ function showStatus(type) {
 
     if(type === 'analise') {
         el.innerHTML = `
-            <div class="status-icon">🔍</div>
+            <div class="status-icon"><img src="assets/img/status-aguardando.png" style="width:64px;height:64px"></div>
             <div class="status-title">Em An\u00E1lise</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
@@ -1667,10 +1667,10 @@ function showStatus(type) {
             </div>
             <div class="status-sub">Seus documentos foram enviados e estão sendo analisados. Você receberá uma notificação assim que for aprovado.</div>
             <div class="status-steps">
-                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
-                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
-                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
-                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
+                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
+                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
+                <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
+                <div class="status-step"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
             </div>
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
@@ -1724,7 +1724,7 @@ function showStatus(type) {
         `;
     } else {
         el.innerHTML = `
-            <div class="status-icon">📦</div>
+            <div class="status-icon"><img src="assets/img/status-pronto.png" style="width:64px;height:64px"></div>
             <div class="status-title">Pedido Criado!</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
@@ -1732,12 +1732,12 @@ function showStatus(type) {
             </div>
             <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
             <div class="status-steps" id="live-steps">
-                <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
-                <div class="status-step active"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
-                <div class="status-step"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
-                <div class="status-step"><div class="step-dot">📦</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
-                <div class="status-step"><div class="step-dot">🏍️</div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
-                <div class="status-step"><div class="step-dot">🏠</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
+                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
+                <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
+                <div class="status-step"><div class="step-dot"><img src="assets/img/status-separacao.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step"><div class="step-dot"><img src="assets/img/status-pronto.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
+                <div class="status-step"><div class="step-dot"><img src="assets/img/status-caminho.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
+                <div class="status-step"><div class="step-dot"><img src="assets/img/status-entregue.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
             </div>
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
@@ -1786,19 +1786,19 @@ function startStatusPolling(codigo) {
                 step.classList.remove('done', 'active');
                 if(i < targetStep) {
                     step.classList.add('done');
-                    step.querySelector('.step-dot').textContent = '✓';
+                    step.querySelector('.step-dot').innerHTML = '<img src="assets/img/status-confirmado.png" style="width:28px;height:28px">';
                 } else if(i === targetStep) {
                     step.classList.add('active');
                 }
             });
 
             // Update title
-            const titles = { 'novo':'Pedido Criado!', 'confirmado':'Confirmado!', 'separacao':'Em Separacao!', 'pronto':'Pronto p/ Entrega!', 'a_caminho':'A Caminho!', 'entregue':'Entregue! 🎉' };
-            const icons = { 'novo':'📦', 'confirmado':'✅', 'separacao':'👨‍🍳', 'pronto':'📦', 'a_caminho':'🏍️', 'entregue':'🏠' };
+            const titles = { 'novo':'Pedido Criado!', 'confirmado':'Confirmado!', 'separacao':'Em Separa\u00E7\u00E3o!', 'pronto':'Pronto p/ Entrega!', 'a_caminho':'A Caminho!', 'entregue':'Entregue!' };
+            const iconImgs = { 'novo':'status-pronto', 'confirmado':'status-confirmado', 'separacao':'status-separacao', 'pronto':'status-pronto', 'a_caminho':'status-caminho', 'entregue':'status-entregue' };
             const titleEl = document.querySelector('#status-content .status-title');
             const iconEl = document.querySelector('#status-content .status-icon');
             if(titleEl) titleEl.textContent = titles[pedido.status] || pedido.status;
-            if(iconEl) iconEl.textContent = icons[pedido.status] || '📦';
+            if(iconEl) iconEl.innerHTML = '<img src="assets/img/' + (iconImgs[pedido.status] || 'status-pronto') + '.png" style="width:64px;height:64px">';
 
             // Stop polling when delivered or cancelled
             if(pedido.status === 'entregue' || pedido.status === 'cancelado') {

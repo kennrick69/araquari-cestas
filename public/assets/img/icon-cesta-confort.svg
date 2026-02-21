@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <style>
+      .stroke{stroke:#F97316;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;fill:none}
+      .fill{fill:#F97316}
+      .soft{fill:#F97316;opacity:.12}
+    </style>
+  </defs>
+
+  <circle cx="60" cy="60" r="50" class="soft"></circle>
+
+  <!-- handle -->
+  <path d="M38 48c3-14 15-24 22-24s19 10 22 24" class="stroke"></path>
+
+  <!-- basket body -->
+  <path d="M28 52h64l-6 44H34l-6-44z" class="stroke"></path>
+  <path d="M34 96h52" class="stroke"></path>
+
+  <!-- weave -->
+  <path d="M40 60h40M38 70h44M36 80h48" class="stroke" opacity=".55"></path>
+
+  <!-- badge (heart centered) -->
+  <circle cx="88" cy="36" r="14" class="fill"></circle>
+  <path d="M88 45
+           C88 45 78 39.5 78 33.2
+           C78 29.6 80.6 27 84 27
+           C86 27 87.6 28 88 29.6
+           C88.4 28 90 27 92 27
+           C95.4 27 98 29.6 98 33.2
+           C98 39.5 88 45 88 45 Z" fill="#fff"></path>
+</svg>
