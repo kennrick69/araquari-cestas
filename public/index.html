@@ -709,6 +709,51 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
     </div>
 </div>
 
+<!-- ═══ DONATION CONTACT MODAL ═══ -->
+<div class="modal-overlay" id="modal-donation-contact">
+    <div class="modal" style="max-width:380px">
+        <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:48px;margin-bottom:8px">&#x2764;&#xFE0F;</div>
+            <div style="font-size:18px;font-weight:800;color:var(--green)">Que lindo gesto!</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:8px;line-height:1.6">
+                Gostaria de saber qual fam&#xED;lia foi beneficiada e onde a cesta foi entregue?
+            </div>
+        </div>
+
+        <div id="donation-contact-fields" style="display:none">
+            <div style="background:rgba(61,163,61,0.08);border:1px solid rgba(61,163,61,0.2);border-radius:12px;padding:14px;margin-bottom:16px">
+                <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:4px">&#x1F4E9; Como funciona:</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.6">
+                    Assim que a cesta for entregue, enviaremos pelo WhatsApp os dados da fam&#xED;lia beneficiada, foto da entrega e localiza&#xE7;&#xE3;o.
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Seu nome</label>
+                <input class="form-input" placeholder="Como devemos te chamar?" id="input-donor-name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Seu WhatsApp</label>
+                <input class="form-input" placeholder="(00) 00000-0000" id="input-donor-phone" inputmode="tel" oninput="this.value=maskPhone(this.value)">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="confirmDonationContact()">
+                Continuar para pagamento
+            </button>
+            <button class="btn btn-dark" style="width:100%;margin-top:8px;font-size:12px" onclick="skipDonationContact()">
+                Prefiro n&#xE3;o informar
+            </button>
+        </div>
+
+        <div id="donation-contact-buttons">
+            <button class="btn btn-primary" style="width:100%;padding:14px" onclick="showDonationContactFields()">
+                Sim, quero saber!
+            </button>
+            <button class="btn btn-dark" style="width:100%;margin-top:10px;font-size:13px" onclick="skipDonationContact()">
+                N&#xE3;o precisa, apenas quero doar &#x2764;&#xFE0F;
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ LIGHTBOX ═══ -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">✕</button>
@@ -750,7 +795,8 @@ const state = {
     uploads: { doc:false, res:false },
     uploadFiles: { doc:null, res:null },
     pedidoCodigo: null,
-    isDonation: false
+    isDonation: false,
+    donorContact: null
 };
 
 const BASKETS = {
@@ -965,6 +1011,7 @@ function showScreen(id) {
 
     if(id === 'home') {
         state.isDonation = false;
+        state.donorContact = null;
     }
 
     if(id === 'payment') renderPaymentSummary();
@@ -1052,28 +1099,60 @@ function changeQty(delta) {
 
 function proceedFromDetail() {
     if(state.isDonation) {
-        // Donation: skip address, set donation data, go to payment
-        state.address = {
-            main: 'Doação - Araquari Cestas',
-            sub: 'A família beneficiada será escolhida pela equipe',
-            ref: 'Doação solidária', comp: '', num: 'S/N',
-            recebedor: 'Família beneficiada (Araquari Cestas)',
-            telefone: '(47) 00000-0000'
-        };
-        state.addressFull = {
-            road: 'Doação solidária', main: 'Doação - Araquari Cestas',
-            sub: 'Araquari, SC', area: 'Centro', city: 'Araquari',
-            state: 'SC', houseNum: 'S/N'
-        };
-        state.lat = -26.3726;
-        state.lng = -48.7213;
-        showScreen('payment');
-        renderPaymentSummary();
+        // Show donation contact modal first
+        document.getElementById('modal-donation-contact').classList.add('show');
+        document.getElementById('donation-contact-fields').style.display = 'none';
+        document.getElementById('donation-contact-buttons').style.display = 'block';
+        document.getElementById('input-donor-name').value = '';
+        document.getElementById('input-donor-phone').value = '';
     } else if(state.address) {
         showScreen('payment');
     } else {
         goToMap();
     }
+}
+
+function showDonationContactFields() {
+    document.getElementById('donation-contact-buttons').style.display = 'none';
+    document.getElementById('donation-contact-fields').style.display = 'block';
+    document.getElementById('input-donor-name').focus();
+}
+
+function confirmDonationContact() {
+    const nome = document.getElementById('input-donor-name').value.trim();
+    const fone = document.getElementById('input-donor-phone').value.trim();
+    if(!nome) { shakeInput('input-donor-name'); return; }
+    if(fone.length < 14) { shakeInput('input-donor-phone'); return; }
+    state.donorContact = { nome, telefone: fone };
+    proceedToDonationPayment();
+}
+
+function skipDonationContact() {
+    state.donorContact = null;
+    proceedToDonationPayment();
+}
+
+function proceedToDonationPayment() {
+    document.getElementById('modal-donation-contact').classList.remove('show');
+    const donorInfo = state.donorContact
+        ? 'DOADOR: ' + state.donorContact.nome + ' | WhatsApp: ' + state.donorContact.telefone + ' | Deseja receber info da entrega'
+        : 'Doador anônimo';
+    state.address = {
+        main: 'Doação - Araquari Cestas',
+        sub: 'A família beneficiada será escolhida pela equipe',
+        ref: donorInfo, comp: '', num: 'S/N',
+        recebedor: 'Família beneficiada (Araquari Cestas)',
+        telefone: state.donorContact ? state.donorContact.telefone : '(47) 00000-0000'
+    };
+    state.addressFull = {
+        road: 'Doação solidária', main: 'Doação - Araquari Cestas',
+        sub: 'Araquari, SC', area: 'Centro', city: 'Araquari',
+        state: 'SC', houseNum: 'S/N'
+    };
+    state.lat = -26.3726;
+    state.lng = -48.7213;
+    showScreen('payment');
+    renderPaymentSummary();
 }
 
 function startDonation() {
@@ -1170,6 +1249,12 @@ function renderPaymentSummary() {
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">DESTINO DA DOA\u00C7\u00C3O</div>
             <div style="font-size:13px;font-weight:700;color:var(--green)">Fam\u00EDlia beneficiada em Araquari</div>
             <div style="font-size:11px;color:var(--text2);margin-top:4px">A equipe Araquari Cestas ir\u00E1 selecionar e entregar a cesta para quem mais precisa</div>
+            ${state.donorContact ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:2px">SEUS DADOS PARA ACOMPANHAMENTO</div>
+                <div style="font-size:13px;font-weight:700">${state.donorContact.nome}</div>
+                <div style="font-size:11px;color:var(--text2)">${state.donorContact.telefone}</div>
+                <div style="font-size:10px;color:var(--green);margin-top:4px">\u2705 Voc\u00EA ser\u00E1 notificado quando a cesta for entregue</div>
+            </div>` : ''}
         </div>` : (state.address ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">ENTREGAR EM</div>
             <div style="font-size:13px;font-weight:700">${state.address.main}</div>
@@ -1623,7 +1708,9 @@ function showStatus(type) {
             </div>
 
             <div style="font-size:12px;color:var(--text3);text-align:center;max-width:300px;margin:12px auto;line-height:1.6">
-                Fa\u00E7a uma captura de tela deste comprovante para seus registros. A fam\u00EDlia beneficiada ser\u00E1 escolhida e notificada pela nossa equipe.
+                ${state.donorContact
+                    ? 'Voc\u00EA ser\u00E1 notificado pelo WhatsApp (' + state.donorContact.telefone + ') assim que a cesta for entregue \u00E0 fam\u00EDlia beneficiada.'
+                    : 'Fa\u00E7a uma captura de tela deste comprovante para seus registros. A fam\u00EDlia beneficiada ser\u00E1 escolhida e notificada pela nossa equipe.'}
             </div>
 
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
