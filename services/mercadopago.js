@@ -63,6 +63,7 @@ class MercadoPago {
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
+            external_reference: pedido.codigo,
             payment_method_id: 'pix',
             payer: {
                 email: pedido.email || 'cliente@araquaricestas.com',
@@ -107,6 +108,7 @@ class MercadoPago {
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
+            external_reference: pedido.codigo,
             payment_method_id: 'bolbradesco',
             payer: {
                 email: pedido.email || 'cliente@araquaricestas.com',
@@ -159,6 +161,7 @@ class MercadoPago {
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
+            external_reference: pedido.codigo,
             payment_method_id: pedido.card_payment_method || undefined,
             token: token,
             installments: parcelas,
