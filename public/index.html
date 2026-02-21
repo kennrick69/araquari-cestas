@@ -509,6 +509,14 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
                 *Imagens ilustrativas. As marcas e valores podem sofrer alterações de acordo com a disponibilidade.
             </div>
 
+            <!-- Donation section -->
+            <div onclick="startDonation()" style="margin-top:16px;cursor:pointer;background:linear-gradient(135deg,#1a3a1a,#0d2e0d);border:1px solid rgba(61,163,61,0.3);border-radius:16px;padding:18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(61,163,61,.15)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="font-size:32px;margin-bottom:6px">&#x2764;&#xFE0F;</div>
+                <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Doe uma cesta</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;max-width:280px;margin:0 auto">Ajude uma familia que precisa. Escolha uma cesta e n&#xF3;s nos encarregamos de encontrar quem mais necessita na regi&#xE3;o de Araquari.</div>
+                <div style="margin-top:12px;display:inline-block;background:var(--green);color:#fff;padding:8px 24px;border-radius:10px;font-size:13px;font-weight:800">Quero doar</div>
+            </div>
+
             <div style="height:12px"></div>
         </div>
     </div>
@@ -641,17 +649,17 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
         <div class="back-btn" onclick="showScreen('home')">←</div>
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
             <div class="sheet-title">Meus Pedidos 📦</div>
-            <div class="sheet-sub">Consulte pelo codigo ou telefone</div>
+            <div class="sheet-sub">Consulte pelo código ou telefone</div>
 
             <div class="form-group" style="margin-top:16px">
-                <input class="form-input" placeholder="Codigo do pedido ou telefone" id="input-busca-pedido" style="text-align:center;font-weight:700;letter-spacing:0.5px">
+                <input class="form-input" placeholder="Código do pedido ou telefone" id="input-busca-pedido" style="text-align:center;font-weight:700;letter-spacing:0.5px">
             </div>
             <button class="btn btn-primary" onclick="buscarPedidos()" style="margin-bottom:20px">Buscar</button>
 
             <div id="orders-list" style="text-align:center;padding:20px;color:var(--text3)">
                 <div style="font-size:56px;margin-bottom:12px">📭</div>
                 <p style="font-weight:600">Nenhum pedido ainda</p>
-                <p style="font-size:12px;margin-top:4px">Digite seu telefone ou codigo do pedido acima</p>
+                <p style="font-size:12px;margin-top:4px">Digite seu telefone ou código do pedido acima</p>
             </div>
         </div>
     </div>
@@ -741,7 +749,8 @@ const state = {
     qty: 1,
     uploads: { doc:false, res:false },
     uploadFiles: { doc:null, res:null },
-    pedidoCodigo: null
+    pedidoCodigo: null,
+    isDonation: false
 };
 
 const BASKETS = {
@@ -954,6 +963,10 @@ function showScreen(id) {
         pinShadow.style.display = 'none';
     }
 
+    if(id === 'home') {
+        state.isDonation = false;
+    }
+
     if(id === 'payment') renderPaymentSummary();
 }
 
@@ -1027,7 +1040,7 @@ function renderDetail() {
             <button class="qty-btn" onclick="changeQty(1)">+</button>
         </div>
         <button class="btn btn-primary" style="flex:1" onclick="proceedFromDetail()">
-            Pedir · R$ ${totalPrice}
+            ${state.isDonation ? 'Doar' : 'Pedir'} · R$ ${totalPrice}
         </button>
     `;
 }
@@ -1038,11 +1051,46 @@ function changeQty(delta) {
 }
 
 function proceedFromDetail() {
-    if(state.address) {
+    if(state.isDonation) {
+        // Donation: skip address, set donation data, go to payment
+        state.address = {
+            main: 'Doação - Araquari Cestas',
+            sub: 'A família beneficiada será escolhida pela equipe',
+            ref: 'Doação solidária', comp: '', num: 'S/N',
+            recebedor: 'Família beneficiada (Araquari Cestas)',
+            telefone: '(47) 00000-0000'
+        };
+        state.addressFull = {
+            road: 'Doação solidária', main: 'Doação - Araquari Cestas',
+            sub: 'Araquari, SC', area: 'Centro', city: 'Araquari',
+            state: 'SC', houseNum: 'S/N'
+        };
+        state.lat = -26.3726;
+        state.lng = -48.7213;
+        showScreen('payment');
+        renderPaymentSummary();
+    } else if(state.address) {
         showScreen('payment');
     } else {
         goToMap();
     }
+}
+
+function startDonation() {
+    state.isDonation = true;
+    // Show basket selection - user picks which basket to donate
+    showScreen('home');
+    // Scroll to baskets
+    setTimeout(() => {
+        const sheet = document.getElementById('home-sheet');
+        if(sheet) sheet.scrollTop = 0;
+    }, 100);
+    // Visual feedback
+    document.querySelectorAll('.basket-card').forEach(c => {
+        c.style.boxShadow = '0 0 0 2px var(--green)';
+        setTimeout(() => c.style.boxShadow = '', 2000);
+    });
+    alert('Selecione a cesta que deseja doar. Nós encontraremos uma família que precisa na região de Araquari!');
 }
 
 // ═══════════════════════════════════════
@@ -1113,12 +1161,16 @@ function renderPaymentSummary() {
     const discount = isPix ? subtotal * 0.05 : 0;
     const total = subtotal - discount;
 
-    document.getElementById('payment-summary').innerHTML = `
-        <div class="summary-row"><span>${b.emoji} ${b.name} × ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
-        <div class="summary-row"><span>🚚 Entrega</span><span style="color:var(--green)">Grátis</span></div>
-        ${isPix ? `<div class="summary-row"><span>📱 Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
-        <div class="summary-row summary-total"><span style="font-weight:800;color:var(--text)">Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
-        ${state.address ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+    const donationBadge = state.isDonation ? `<div style="background:rgba(61,163,61,0.12);border:1px solid rgba(61,163,61,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center">
+        <div style="font-size:14px;font-weight:800;color:var(--green)">&#x2764;&#xFE0F; Voc\u00EA est\u00E1 fazendo uma doa\u00E7\u00E3o!</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">N\u00F3s encontraremos uma fam\u00EDlia que precisa na regi\u00E3o de Araquari</div>
+    </div>` : '';
+
+    const addressBlock = state.isDonation ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">DESTINO DA DOA\u00C7\u00C3O</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green)">Fam\u00EDlia beneficiada em Araquari</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">A equipe Araquari Cestas ir\u00E1 selecionar e entregar a cesta para quem mais precisa</div>
+        </div>` : (state.address ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">ENTREGAR EM</div>
             <div style="font-size:13px;font-weight:700">${state.address.main}</div>
             <div style="font-size:11px;color:var(--text3)">${state.address.sub}</div>
@@ -1128,7 +1180,15 @@ function renderPaymentSummary() {
                 <div style="font-size:13px;font-weight:700">${state.address.recebedor}</div>
                 <div style="font-size:11px;color:var(--text2)">${state.address.telefone}</div>
             </div>
-        </div>` : ''}
+        </div>` : '');
+
+    document.getElementById('payment-summary').innerHTML = `
+        ${donationBadge}
+        <div class="summary-row"><span>${b.emoji} ${b.name} \u00D7 ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
+        <div class="summary-row"><span>${state.isDonation ? '\u2764\uFE0F Doa\u00E7\u00E3o' : '\uD83D\uDE9A Entrega'}</span><span style="color:var(--green)">Gr\u00E1tis</span></div>
+        ${isPix ? `<div class="summary-row"><span>\uD83D\uDCF1 Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
+        <div class="summary-row summary-total"><span style="font-weight:800;color:var(--text)">Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
+        ${addressBlock}
     `;
 }
 
@@ -1142,8 +1202,10 @@ function selectPay(method) {
 
     if(method === 'boleto30') {
         document.getElementById('btn-pay').textContent = '📩 Enviar para Análise';
+    } else if(state.isDonation) {
+        document.getElementById('btn-pay').textContent = 'Finalizar Doação';
     } else {
-        document.getElementById('btn-pay').textContent = '✓ Finalizar Pedido';
+        document.getElementById('btn-pay').textContent = 'Finalizar Pedido';
     }
 
     renderPaymentSummary();
@@ -1161,7 +1223,7 @@ function handleUpload(type, el) {
 
 async function finalizePay() {
     if(!state.payMethod) return;
-    if(!state.address) { alert('Defina o endereco de entrega primeiro.'); return; }
+    if(!state.address) { alert('Defina o endereço de entrega primeiro.'); return; }
 
     const btn = document.getElementById('btn-pay');
     const originalText = btn.textContent;
@@ -1170,7 +1232,7 @@ async function finalizePay() {
         const cpf = document.getElementById('input-cpf')?.value || '';
         if(cpf.length < 14) { alert('Preencha o CPF corretamente.'); return; }
         if(!state.uploads.doc || !state.uploads.res) {
-            alert('Envie todos os documentos obrigatorios.'); return;
+            alert('Envie todos os documentos obrigatórios.'); return;
         }
     }
 
@@ -1287,13 +1349,13 @@ async function processPixPayment(codigo) {
         el.innerHTML = `
             <div style="font-size:40px;margin-bottom:8px">📱</div>
             <div class="status-title">Pague com PIX</div>
-            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Escaneie o QR Code ou copie o codigo</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Escaneie o QR Code ou copie o código</div>
             <div class="pix-box">
                 <div class="pix-qr">
-                    <img src="data:image/png;base64,${data.qrcodeBase64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponivel.<br>Use o codigo abaixo.</div>'">
+                    <img src="data:image/png;base64,${data.qrcodeBase64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponível.<br>Use o código abaixo.</div>'">
                 </div>
                 <div class="pix-code" id="pix-code-text">${data.qrcode || data.qr_code || ''}</div>
-                <button class="pix-copy-btn" onclick="copyPixCode()">📋 Copiar codigo PIX</button>
+                <button class="pix-copy-btn" onclick="copyPixCode()">📋 Copiar código PIX</button>
             </div>
             <div class="payment-waiting" id="pix-waiting">
                 <div class="spin-sm"></div> Aguardando pagamento...
@@ -1302,10 +1364,10 @@ async function processPixPayment(codigo) {
                 O pedido sera confirmado automaticamente apos o pagamento
             </div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
             </div>
-            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ja paguei — ver status do pedido ▸</button>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Já paguei — ver status do pedido ▸</button>
         `;
 
         // Poll for payment confirmation
@@ -1318,10 +1380,10 @@ async function processPixPayment(codigo) {
             <div class="status-title">Erro no PIX</div>
             <div class="status-sub">${err.message}</div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--orange);margin-top:4px">${codigo}</div>
             </div>
-            <div class="status-sub" style="font-size:12px">Seu pedido foi criado. Voce pode pagar depois acessando "Meus Pedidos".</div>
+            <div class="status-sub" style="font-size:12px">Seu pedido foi criado. Você pode pagar depois acessando "Meus Pedidos".</div>
             <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px">Ver status do pedido</button>
         `;
     }
@@ -1332,13 +1394,13 @@ function copyPixCode() {
     if(!code) return;
     navigator.clipboard.writeText(code).then(() => {
         const btn = document.querySelector('.pix-copy-btn');
-        if(btn) { btn.textContent = '✅ Codigo copiado!'; setTimeout(() => btn.textContent = '📋 Copiar codigo PIX', 2000); }
+        if(btn) { btn.textContent = '✅ Código copiado!'; setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000); }
     }).catch(() => {
         // Fallback
         const ta = document.createElement('textarea');
         ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
         const btn = document.querySelector('.pix-copy-btn');
-        if(btn) { btn.textContent = '✅ Codigo copiado!'; setTimeout(() => btn.textContent = '📋 Copiar codigo PIX', 2000); }
+        if(btn) { btn.textContent = '✅ Código copiado!'; setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000); }
     });
 }
 
@@ -1390,10 +1452,10 @@ async function processBoletoPayment(codigo) {
                 ${data.boletoBarcode ? `<div class="boleto-barcode">${data.boletoBarcode}</div>` : ''}
                 ${data.boletoUrl ? `<a href="${data.boletoUrl}" target="_blank" class="boleto-link-btn">📄 Abrir Boleto</a>` : ''}
                 ${data.boletoPdf ? `<a href="${data.boletoPdf}" target="_blank" class="boleto-link-btn" style="margin-top:8px;background:var(--green)">📥 Baixar PDF</a>` : ''}
-                ${data.boletoBarcode ? `<button class="pix-copy-btn" style="background:var(--orange)" onclick="navigator.clipboard.writeText('${data.boletoBarcode}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar codigo de barras',2000)">📋 Copiar codigo de barras</button>` : ''}
+                ${data.boletoBarcode ? `<button class="pix-copy-btn" style="background:var(--orange)" onclick="navigator.clipboard.writeText('${data.boletoBarcode}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar código de barras',2000)">📋 Copiar código de barras</button>` : ''}
             </div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
             </div>
             <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ver status do pedido ▸</button>
@@ -1406,7 +1468,7 @@ async function processBoletoPayment(codigo) {
             <div class="status-title">Erro no Boleto</div>
             <div class="status-sub">${err.message}</div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--orange);margin-top:4px">${codigo}</div>
             </div>
             <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px">Ver status do pedido</button>
@@ -1422,11 +1484,11 @@ function showCardForm(codigo) {
 
     el.innerHTML = `
         <div style="font-size:40px;margin-bottom:8px">💳</div>
-        <div class="status-title">Cartao de Credito</div>
+        <div class="status-title">Cartão de Crédito</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
         <div class="card-form-box">
-            <input class="card-input" id="card-number" placeholder="Numero do cartao" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
-            <input class="card-input" id="card-name" placeholder="Nome no cartao" style="text-transform:uppercase">
+            <input class="card-input" id="card-number" placeholder="Número do cartão" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
+            <input class="card-input" id="card-name" placeholder="Nome no cartão" style="text-transform:uppercase">
             <div class="card-row">
                 <input class="card-input" id="card-expiry" placeholder="MM/AA" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
                 <input class="card-input" id="card-cvv" placeholder="CVV" maxlength="4" type="password">
@@ -1441,7 +1503,7 @@ function showCardForm(codigo) {
         </div>
         <div id="card-status" style="text-align:center;margin-top:12px"></div>
         <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
             <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
         </div>
     `;
@@ -1468,7 +1530,7 @@ async function processCardPayment(codigo) {
         const parcelas = parseInt(document.getElementById('card-parcelas').value) || 1;
 
         if(!cardNumber || !cardName || expiry.length !== 2 || !cvv || !email) {
-            throw new Error('Preencha todos os campos do cartao');
+            throw new Error('Preencha todos os campos do cartão');
         }
 
         // Create card token via MP SDK
@@ -1513,42 +1575,79 @@ function showStatus(type) {
     if(type === 'analise') {
         el.innerHTML = `
             <div class="status-icon">🔍</div>
-            <div class="status-title">Em Analise</div>
+            <div class="status-title">Em An\u00E1lise</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:18px;font-weight:900;color:var(--orange);margin-top:4px;letter-spacing:1px">${codigo}</div>
             </div>
-            <div class="status-sub">Seus documentos foram enviados e estao sendo analisados. Voce recebera uma notificacao assim que for aprovado.</div>
+            <div class="status-sub">Seus documentos foram enviados e estão sendo analisados. Você receberá uma notificação assim que for aprovado.</div>
             <div class="status-steps">
                 <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
                 <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
-                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em analise de credito</div><div class="step-desc">Prazo: ate 24h uteis</div></div></div>
-                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovacao</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
+                <div class="status-step active"><div class="step-dot">🔍</div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
+                <div class="status-step"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
             </div>
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
                 <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Enquanto espera seu alimento...</div>
-                <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bencao de Maria, Mae de Jesus</div>
-                <div style="font-size:11px;color:#a594d6">Baixe gratis o app Converse com Maria</div>
+                <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bênção de Maria, Mãe de Jesus</div>
+                <div style="font-size:11px;color:#a594d6">Baixe grátis o app Converse com Maria</div>
                 <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800">Baixar no Google Play ▸</div>
             </a>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao inicio</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
         `;
         // Poll for status updates
         startStatusPolling(codigo);
+    } else if(state.isDonation) {
+        const dataHora = new Date().toLocaleString('pt-BR');
+        el.innerHTML = `
+            <div style="font-size:60px;margin-bottom:12px">&#x2764;&#xFE0F;</div>
+            <div class="status-title" style="color:var(--green)">Doa\u00E7\u00E3o Registrada!</div>
+            <div class="status-sub">Obrigado pelo seu gesto de solidariedade. A equipe Araquari Cestas ir\u00E1 encontrar uma fam\u00EDlia que precisa e entregar a cesta em seu nome.</div>
+
+            <div style="background:var(--card);border:2px solid var(--green);border-radius:16px;padding:24px 20px;margin:16px auto;max-width:340px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">Comprovante de Doa\u00E7\u00E3o</div>
+                <div style="width:60px;height:2px;background:var(--green);margin:0 auto 12px"></div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">C\u00F3digo</div>
+                <div style="font-size:18px;font-weight:900;color:var(--green);letter-spacing:1px;margin-bottom:12px">${codigo}</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Cesta doada</div>
+                <div style="font-size:15px;font-weight:800;margin-bottom:12px">${b.name}</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Valor</div>
+                <div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:12px">R$ ${(b.price * state.qty).toFixed(2).replace('.',',')}</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Data e hora</div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:12px">${dataHora}</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Destino</div>
+                <div style="font-size:13px;font-weight:700">Fam\u00EDlia beneficiada - Araquari/SC</div>
+                <div style="width:60px;height:2px;background:var(--green);margin:16px auto 8px"></div>
+                <div style="font-size:10px;color:var(--text3);line-height:1.5">Araquari Cestas<br>Solidariedade que alimenta</div>
+            </div>
+
+            <div style="font-size:12px;color:var(--text3);text-align:center;max-width:300px;margin:12px auto;line-height:1.6">
+                Fa\u00E7a uma captura de tela deste comprovante para seus registros. A fam\u00EDlia beneficiada ser\u00E1 escolhida e notificada pela nossa equipe.
+            </div>
+
+            <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="font-size:28px;margin-bottom:6px">\uD83D\uDE4F\u2728</div>
+                <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Um gesto lindo merece uma b\u00EAn\u00E7\u00E3o...</div>
+                <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Converse com Maria, M\u00E3e de Jesus</div>
+                <div style="font-size:11px;color:#a594d6">Baixe gr\u00E1tis o app Converse com Maria</div>
+                <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800">Baixar no Google Play \u25B8</div>
+            </a>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">\u2190 Voltar ao in\u00EDcio</button>
+        `;
     } else {
         el.innerHTML = `
             <div class="status-icon">📦</div>
             <div class="status-title">Pedido Criado!</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px;letter-spacing:1px">${codigo}</div>
             </div>
             <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
             <div class="status-steps" id="live-steps">
                 <div class="status-step done"><div class="step-dot">✓</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
-                <div class="status-step active"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando confirmacao</div><div class="step-desc">Verificando pagamento</div></div></div>
-                <div class="status-step"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separacao</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step active"><div class="step-dot">⏳</div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
+                <div class="status-step"><div class="step-dot">👨‍🍳</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
                 <div class="status-step"><div class="step-dot">📦</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
                 <div class="status-step"><div class="step-dot">🏍️</div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
                 <div class="status-step"><div class="step-dot">🏠</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
@@ -1556,11 +1655,11 @@ function showStatus(type) {
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                 <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
                 <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Enquanto espera seu alimento...</div>
-                <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bencao de Maria, Mae de Jesus</div>
-                <div style="font-size:11px;color:#a594d6">Baixe gratis o app Converse com Maria</div>
+                <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bênção de Maria, Mãe de Jesus</div>
+                <div style="font-size:11px;color:#a594d6">Baixe grátis o app Converse com Maria</div>
                 <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800">Baixar no Google Play ▸</div>
             </a>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao inicio</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
         `;
         // Poll for status updates
         startStatusPolling(codigo);
@@ -1740,15 +1839,15 @@ async function buscarPedidos() {
                 <div style="text-align:center;padding:30px;color:var(--text3)">
                     <div style="font-size:40px;margin-bottom:8px">🔍</div>
                     <p style="font-weight:600">Nenhum pedido encontrado</p>
-                    <p style="font-size:12px;margin-top:4px">Verifique o codigo ou telefone digitado</p>
+                    <p style="font-size:12px;margin-top:4px">Verifique o código ou telefone digitado</p>
                 </div>`;
             return;
         }
 
         const statusLabels = {
-            'novo':'Novo', 'confirmado':'Confirmado', 'separacao':'Em Separacao',
+            'novo':'Novo', 'confirmado':'Confirmado', 'separacao':'Em Separação',
             'pronto':'Pronto', 'a_caminho':'A Caminho', 'entregue':'Entregue',
-            'cancelado':'Cancelado', 'analise':'Em Analise', 'aprovado':'Aprovado', 'recusado':'Recusado'
+            'cancelado':'Cancelado', 'analise':'Em Análise', 'aprovado':'Aprovado', 'recusado':'Recusado'
         };
         const statusColors = {
             'novo':'var(--orange)', 'confirmado':'var(--green)', 'separacao':'var(--orange)',
