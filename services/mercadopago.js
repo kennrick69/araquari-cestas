@@ -105,10 +105,13 @@ class MercadoPago {
             throw new Error('CPF do pagador \u00E9 obrigat\u00F3rio para gerar boleto');
         }
 
+        const tel = (pedido.recebedor_telefone || '').replace(/\D/g, '');
+
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
             external_reference: pedido.codigo,
+            statement_descriptor: 'ARAQUARI CESTAS',
             payment_method_id: 'bolbradesco',
             payer: {
                 email: pedido.email || 'cliente@araquaricestas.com',
@@ -125,6 +128,38 @@ class MercadoPago {
                     neighborhood: pedido.endereco_bairro || 'Centro',
                     city: pedido.endereco_cidade || 'Araquari',
                     federal_unit: pedido.endereco_estado || 'SC'
+                }
+            },
+            additional_info: {
+                items: [{
+                    id: pedido.cesta_tipo || 'cesta',
+                    title: pedido.cesta_nome || 'Cesta',
+                    description: `${pedido.cesta_nome} x${pedido.quantidade || 1}`,
+                    quantity: pedido.quantidade || 1,
+                    unit_price: parseFloat(pedido.cesta_preco || pedido.total),
+                    category_id: 'food'
+                }],
+                payer: {
+                    first_name: partes[0] || 'Cliente',
+                    last_name: partes.slice(1).join(' ') || 'Araquari',
+                    phone: {
+                        area_code: tel.slice(0, 2) || '47',
+                        number: tel.slice(2) || ''
+                    },
+                    address: {
+                        zip_code: pedido.cep || '89245000',
+                        street_name: pedido.endereco_rua || '',
+                        street_number: parseInt(pedido.endereco_numero) || 0
+                    }
+                },
+                shipments: {
+                    receiver_address: {
+                        zip_code: pedido.cep || '89245000',
+                        street_name: pedido.endereco_rua || '',
+                        street_number: parseInt(pedido.endereco_numero) || 0,
+                        city_name: pedido.endereco_cidade || 'Araquari',
+                        state_name: pedido.endereco_estado || 'SC'
+                    }
                 }
             },
             date_of_expiration: vencimento.toISOString()
@@ -157,12 +192,13 @@ class MercadoPago {
 
         const nome = pedido.recebedor_nome || 'Cliente';
         const partes = nome.split(' ');
+        const cpfLimpo = pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '';
 
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
             external_reference: pedido.codigo,
-            payment_method_id: pedido.card_payment_method || undefined,
+            statement_descriptor: 'ARAQUARI CESTAS',
             token: token,
             installments: parcelas,
             payer: {
@@ -171,13 +207,53 @@ class MercadoPago {
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {
                     type: 'CPF',
-                    number: pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '00000000000'
+                    number: cpfLimpo || '00000000000'
+                },
+                address: {
+                    zip_code: pedido.cep || '89245000',
+                    street_name: pedido.endereco_rua || '',
+                    street_number: pedido.endereco_numero || '0',
+                    neighborhood: pedido.endereco_bairro || '',
+                    city: pedido.endereco_cidade || 'Araquari',
+                    federal_unit: pedido.endereco_estado || 'SC'
+                }
+            },
+            additional_info: {
+                items: [{
+                    id: pedido.cesta_tipo || 'cesta',
+                    title: pedido.cesta_nome || 'Cesta',
+                    description: `${pedido.cesta_nome} x${pedido.quantidade || 1}`,
+                    quantity: pedido.quantidade || 1,
+                    unit_price: parseFloat(pedido.cesta_preco || pedido.total),
+                    category_id: 'food'
+                }],
+                payer: {
+                    first_name: partes[0] || 'Cliente',
+                    last_name: partes.slice(1).join(' ') || 'Araquari',
+                    phone: {
+                        area_code: (pedido.recebedor_telefone || '').replace(/\D/g, '').slice(0, 2) || '47',
+                        number: (pedido.recebedor_telefone || '').replace(/\D/g, '').slice(2) || ''
+                    },
+                    address: {
+                        zip_code: pedido.cep || '89245000',
+                        street_name: pedido.endereco_rua || '',
+                        street_number: parseInt(pedido.endereco_numero) || 0
+                    }
+                },
+                shipments: {
+                    receiver_address: {
+                        zip_code: pedido.cep || '89245000',
+                        street_name: pedido.endereco_rua || '',
+                        street_number: parseInt(pedido.endereco_numero) || 0,
+                        city_name: pedido.endereco_cidade || 'Araquari',
+                        state_name: pedido.endereco_estado || 'SC'
+                    }
                 }
             }
         };
 
-        // Remover undefined
-        if (!body.payment_method_id) delete body.payment_method_id;
+        // Remover payment_method_id se não definido
+        if (pedido.card_payment_method) body.payment_method_id = pedido.card_payment_method;
 
         const data = await this._request('POST', '/v1/payments', body, idempotency);
 

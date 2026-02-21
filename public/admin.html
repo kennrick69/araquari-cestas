@@ -324,16 +324,39 @@ let isFirstLoad = true;
 let soundEnabled = false;
 let audioCtx = null;
 
-// Show sound banner on load (browsers block autoplay)
+// Auto-enable sound on ANY user interaction (click, scroll, keypress, touch)
+function autoEnableSound() {
+    if(soundEnabled) return;
+    enableSound();
+    // Also request push notification permission
+    if('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+['click','touchstart','keydown','scroll'].forEach(evt => {
+    document.addEventListener(evt, autoEnableSound, {once: false, passive: true});
+});
+
+// Also try on load (won't work without interaction, but worth trying)
 window.addEventListener('load', () => {
+    // Try to enable immediately (works if user already interacted)
+    try {
+        enableSound();
+    } catch(e) {}
+    // Show subtle reminder if still not enabled after 3s
     setTimeout(() => {
-        if(!soundEnabled) document.getElementById('sound-banner').style.display = 'block';
-    }, 2000);
+        if(!soundEnabled) {
+            const banner = document.getElementById('sound-banner');
+            banner.style.display = 'block';
+            banner.textContent = '\uD83D\uDD14 Toque em qualquer lugar para ativar alertas sonoros';
+        }
+    }, 3000);
 });
 
 function enableSound() {
     try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') audioCtx.resume();
         // Play a silent sound to unlock audio
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -343,6 +366,10 @@ function enableSound() {
         osc.start(); osc.stop(audioCtx.currentTime + 0.05);
         soundEnabled = true;
         document.getElementById('sound-banner').style.display = 'none';
+        // Remove listeners once enabled
+        ['click','touchstart','keydown','scroll'].forEach(evt => {
+            document.removeEventListener(evt, autoEnableSound);
+        });
     } catch(e) { console.warn('Audio not available:', e); }
 }
 
@@ -441,6 +468,20 @@ function detectNewOrders(pedidos) {
         // Flash topbar
         document.querySelector('.topbar').classList.add('alert-flash');
         setTimeout(() => document.querySelector('.topbar').classList.remove('alert-flash'), 3000);
+
+        // Browser push notification (works even with tab in background)
+        if(Notification.permission === 'granted') {
+            alertOrders.forEach(p => {
+                try {
+                    new Notification('\uD83D\uDCE6 Novo Pedido Confirmado!', {
+                        body: `${p.codigo} - ${p.cesta_nome} - R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}`,
+                        icon: '/assets/img/logo.png',
+                        tag: 'order-' + p.codigo,
+                        requireInteraction: true
+                    });
+                } catch(e) {}
+            });
+        }
 
         // Show toast for each confirmed order
         alertOrders.forEach(p => showOrderToast(p));

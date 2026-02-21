@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
             endereco_referencia, endereco_bairro, endereco_cidade,
             endereco_estado, latitude, longitude,
             recebedor_nome, recebedor_telefone,
-            pagamento_metodo, desconto, total, cpf
+            pagamento_metodo, desconto, total, cpf, email
         } = req.body;
 
         // Validações básicas
@@ -68,9 +68,9 @@ router.post('/', async (req, res) => {
                 endereco_estado, latitude, longitude,
                 recebedor_nome, recebedor_telefone,
                 pagamento_metodo, pagamento_status, desconto, total,
-                cpf, status
+                cpf, email, status
             ) VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23
             ) RETURNING *`,
             [
                 codigo, cesta_tipo, cesta_nome, cesta_preco, quantidade || 1,
@@ -79,7 +79,7 @@ router.post('/', async (req, res) => {
                 uf, latitude, longitude,
                 recebedor_nome, recebedor_telefone,
                 pagamento_metodo, pagamento_status, desconto || 0, total,
-                cpf || null, status
+                cpf || null, email || null, status
             ]
         );
 

@@ -642,11 +642,16 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 </div>
             </div>
 
-            <!-- CPF for boleto à vista (hidden by default) -->
-            <div id="boleto-cpf-area" style="display:none;margin-bottom:14px">
+            <!-- Dados do pagador (boleto/cartão - hidden by default) -->
+            <div id="payer-data-area" style="display:none;margin-bottom:14px">
+                <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Dados do pagador</div>
+                <div class="form-group" style="margin-bottom:8px">
+                    <label class="form-label">CPF <span class="req">*</span></label>
+                    <input class="form-input" placeholder="000.000.000-00" id="input-cpf-payer" inputmode="numeric" maxlength="14" oninput="this.value=maskCPF(this.value)">
+                </div>
                 <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label">CPF do pagador <span class="req">*</span></label>
-                    <input class="form-input" placeholder="000.000.000-00" id="input-cpf-boleto" inputmode="numeric" oninput="this.value=maskCPF(this.value)">
+                    <label class="form-label">E-mail <span class="req">*</span></label>
+                    <input class="form-input" placeholder="seu@email.com" id="input-email-payer" type="email">
                 </div>
             </div>
 
@@ -660,6 +665,11 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 <div class="form-group">
                     <label class="form-label">CPF <span class="req">*</span></label>
                     <input class="form-input" placeholder="000.000.000-00" id="input-cpf" oninput="this.value=maskCPF(this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">E-mail <span class="req">*</span></label>
+                    <input class="form-input" placeholder="seu@email.com" id="input-email-boleto30" type="email">
                 </div>
 
                 <label class="file-upload" id="upload-doc">
@@ -1447,7 +1457,7 @@ function selectPay(method) {
     document.getElementById('pay-' + method).classList.add('selected');
 
     document.getElementById('boleto30-area').style.display = method === 'boleto30' ? 'block' : 'none';
-    document.getElementById('boleto-cpf-area').style.display = method === 'boleto' ? 'block' : 'none';
+    document.getElementById('payer-data-area').style.display = (method === 'boleto' || method === 'cartao') ? 'block' : 'none';
     document.getElementById('btn-pay').disabled = false;
 
     if(method === 'boleto30') {
@@ -1483,16 +1493,24 @@ async function finalizePay() {
     if(state.payMethod === 'boleto30') {
         const cpf = document.getElementById('input-cpf')?.value || '';
         if(cpf.length < 14) { showToast('Preencha o CPF corretamente.', 'warning'); return; }
+        const email30 = document.getElementById('input-email-boleto30')?.value || '';
+        if(!email30 || !email30.includes('@')) { showToast('Preencha o e-mail corretamente.', 'warning'); return; }
         if(!state.uploads.doc || !state.uploads.res) {
             showToast('Envie todos os documentos obrigat\u00F3rios.', 'warning'); return;
         }
     }
 
-    if(state.payMethod === 'boleto') {
-        const cpfBoleto = document.getElementById('input-cpf-boleto')?.value || '';
-        if(cpfBoleto.replace(/\D/g,'').length !== 11) {
-            showToast('Informe o CPF do pagador para gerar o boleto.', 'warning');
-            shakeInput('input-cpf-boleto');
+    if(state.payMethod === 'boleto' || state.payMethod === 'cartao') {
+        const cpfPayer = document.getElementById('input-cpf-payer')?.value || '';
+        if(cpfPayer.replace(/\D/g,'').length !== 11) {
+            showToast('Informe o CPF do pagador.', 'warning');
+            shakeInput('input-cpf-payer');
+            return;
+        }
+        const emailPayer = document.getElementById('input-email-payer')?.value || '';
+        if(!emailPayer || !emailPayer.includes('@')) {
+            showToast('Informe o e-mail do pagador.', 'warning');
+            shakeInput('input-email-payer');
             return;
         }
     }
@@ -1530,7 +1548,8 @@ async function finalizePay() {
             pagamento_metodo: state.payMethod,
             desconto: discount,
             total: total,
-            cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : state.payMethod === 'boleto' ? (document.getElementById('input-cpf-boleto')?.value || '') : null
+            cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-cpf-payer')?.value || '') : null,
+            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));
@@ -1686,14 +1705,9 @@ function startPixPolling(codigo) {
 }
 
 async function processBoletoPayment(codigo) {
-    // Get CPF
-    const cpfEl = document.getElementById('input-cpf-boleto');
-    const cpf = cpfEl ? cpfEl.value.replace(/\D/g, '') : '';
-    if(cpf.length !== 11) {
-        showToast('Informe um CPF v00E1lido para gerar o boleto.', 'warning');
-        shakeInput('input-cpf-boleto');
-        return;
-    }
+    // CPF and email already validated in finalizePay, just grab values
+    const cpf = (document.getElementById('input-cpf-payer')?.value || '').replace(/\D/g, '');
+    const email = document.getElementById('input-email-payer')?.value || '';
 
     showScreen('status');
     const el = document.getElementById('status-content');
@@ -1708,7 +1722,7 @@ async function processBoletoPayment(codigo) {
         const res = await fetch('/api/pagamento/boleto/' + codigo, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dias: 3, cpf: cpf })
+            body: JSON.stringify({ dias: 3, cpf: cpf, email: email })
         });
         const data = await res.json();
 
@@ -1757,18 +1771,17 @@ function showCardForm(codigo) {
         <div class="status-title">Cartão de Crédito</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
         <div class="card-form-box">
-            <input class="card-input" id="card-number" placeholder="Número do cartão" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
-            <input class="card-input" id="card-name" placeholder="Nome no cartão" style="text-transform:uppercase">
+            <input class="card-input" id="card-number" placeholder="Número do cartão" inputmode="numeric" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
+            <input class="card-input" id="card-name" placeholder="Nome impresso no cartão" style="text-transform:uppercase">
             <div class="card-row">
-                <input class="card-input" id="card-expiry" placeholder="MM/AA" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
-                <input class="card-input" id="card-cvv" placeholder="CVV" maxlength="4" type="password">
+                <input class="card-input" id="card-expiry" placeholder="MM/AA" inputmode="numeric" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
+                <input class="card-input" id="card-cvv" placeholder="CVV" inputmode="numeric" maxlength="4" type="password">
             </div>
             <select class="card-input" id="card-parcelas" style="color:var(--text)">
                 <option value="1">1x de R$ ${total} (sem juros)</option>
                 <option value="2">2x de R$ ${(b.price * state.qty / 2).toFixed(2).replace('.',',')} (sem juros)</option>
                 <option value="3">3x de R$ ${(b.price * state.qty / 3).toFixed(2).replace('.',',')} (sem juros)</option>
             </select>
-            <input class="card-input" id="card-email" placeholder="E-mail do titular" type="email">
             <button class="card-pay-btn" id="card-submit-btn" onclick="processCardPayment('${codigo}')">Pagar R$ ${total}</button>
         </div>
         <div id="card-status" style="text-align:center;margin-top:12px"></div>
@@ -1796,11 +1809,14 @@ async function processCardPayment(codigo) {
         const expiry = document.getElementById('card-expiry').value.split('/');
         const cardName = document.getElementById('card-name').value;
         const cvv = document.getElementById('card-cvv').value;
-        const email = document.getElementById('card-email').value;
         const parcelas = parseInt(document.getElementById('card-parcelas').value) || 1;
 
-        if(!cardNumber || !cardName || expiry.length !== 2 || !cvv || !email) {
-            throw new Error('Preencha todos os campos do cartão');
+        // Reuse CPF and email already filled in payer-data-area
+        const cpf = (document.getElementById('input-cpf-payer')?.value || '').replace(/\D/g,'');
+        const email = document.getElementById('input-email-payer')?.value || '';
+
+        if(!cardNumber || !cardName || expiry.length !== 2 || !cvv) {
+            throw new Error('Preencha todos os campos do cart\u00E3o');
         }
 
         // Create card token via MP SDK
@@ -1811,27 +1827,44 @@ async function processCardPayment(codigo) {
             cardExpirationYear: '20' + expiry[1],
             securityCode: cvv,
             identificationType: 'CPF',
-            identificationNumber: '00000000000'
+            identificationNumber: cpf
         });
 
         if(!cardToken || !cardToken.id) throw new Error('Erro ao tokenizar cartao');
 
-        // Send to backend
+        // Send to backend with all data
         const res = await fetch('/api/pagamento/cartao/' + codigo, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: cardToken.id, parcelas, email })
+            body: JSON.stringify({ token: cardToken.id, parcelas, email, cpf })
         });
         const data = await res.json();
 
-        if(!res.ok || !data.success) throw new Error(data.error || 'Pagamento recusado');
+        if(!res.ok || !data.success) {
+            const detail = data.statusDetail || data.error || 'Pagamento recusado';
+            const msgMap = {
+                'cc_rejected_bad_filled_card_number': 'N\u00FAmero do cart\u00E3o inv\u00E1lido',
+                'cc_rejected_bad_filled_date': 'Data de validade inv\u00E1lida',
+                'cc_rejected_bad_filled_other': 'Dados do cart\u00E3o incorretos',
+                'cc_rejected_bad_filled_security_code': 'C\u00F3digo de seguran\u00E7a inv\u00E1lido',
+                'cc_rejected_blacklist': 'Cart\u00E3o n\u00E3o permitido',
+                'cc_rejected_call_for_authorize': 'Ligue para sua operadora e autorize o pagamento',
+                'cc_rejected_card_disabled': 'Cart\u00E3o desabilitado. Ative com a operadora.',
+                'cc_rejected_duplicated_payment': 'Pagamento duplicado. Tente em alguns minutos.',
+                'cc_rejected_high_risk': 'Pagamento recusado por pol\u00EDtica de seguran\u00E7a',
+                'cc_rejected_insufficient_amount': 'Saldo insuficiente',
+                'cc_rejected_max_attempts': 'Limite de tentativas atingido. Tente outro cart\u00E3o.',
+                'cc_rejected_other_reason': 'Pagamento recusado pela operadora'
+            };
+            throw new Error(msgMap[detail] || detail);
+        }
 
-        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
+        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">\u2705 Pagamento aprovado!</div>';
         setTimeout(() => showStatus('separacao'), 1500);
 
     } catch(err) {
         console.error('Erro cartao:', err);
-        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">❌ ${err.message}</div>`;
+        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">\u274C ${err.message}</div>`;
         btn.disabled = false;
         btn.textContent = 'Tentar novamente';
     }

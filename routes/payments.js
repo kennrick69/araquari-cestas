@@ -56,16 +56,23 @@ router.post('/boleto/:codigo', async (req, res) => {
             return res.status(503).json({ error: 'Gateway de pagamento nao configurado' });
         }
 
-        const { dias, cpf } = req.body;
+        const { dias, cpf, email } = req.body;
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });
 
         const pedido = result.rows[0];
         if (cpf) pedido.cpf = cpf;
+        if (email) pedido.email = email;
 
-        // Save CPF to database if provided
-        if (cpf) {
-            await pool.query('UPDATE pedidos SET cpf = $1 WHERE codigo = $2', [cpf, pedido.codigo]);
+        // Save CPF and email to database
+        const updates = [];
+        const vals = [];
+        let idx = 1;
+        if (cpf) { updates.push(`cpf = $${idx++}`); vals.push(cpf); }
+        if (email) { updates.push(`email = $${idx++}`); vals.push(email); }
+        if (updates.length > 0) {
+            vals.push(pedido.codigo);
+            await pool.query(`UPDATE pedidos SET ${updates.join(', ')} WHERE codigo = $${idx}`, vals);
         }
 
         const boleto = await mp.criarBoleto(pedido, dias || 3);
@@ -100,17 +107,32 @@ router.post('/cartao/:codigo', async (req, res) => {
             return res.status(503).json({ error: 'Gateway de pagamento nao configurado' });
         }
 
-        const { token, parcelas, email } = req.body;
+        const { token, parcelas, email, cpf } = req.body;
         if (!token) return res.status(400).json({ error: 'Token do cartao obrigatorio' });
 
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });
 
         const pedido = result.rows[0];
+        if (cpf) pedido.cpf = cpf;
+        if (email) pedido.email = email;
+
+        // Save CPF/email to database
+        if (cpf || email) {
+            const updates = [];
+            const vals = [];
+            let idx = 1;
+            if (cpf) { updates.push(`cpf = $${idx++}`); vals.push(cpf); }
+            if (email) { updates.push(`email = $${idx++}`); vals.push(email); }
+            vals.push(pedido.codigo);
+            await pool.query(`UPDATE pedidos SET ${updates.join(', ')} WHERE codigo = $${idx}`, vals);
+        }
+
         const cartao = await mp.criarCartao(pedido, token, parcelas || 1, email);
 
-        const novoStatus = cartao.status === 'approved' ? 'confirmado' : 'novo';
-        const pagStatus = cartao.status === 'approved' ? 'aprovado' : 'pendente';
+        const isApproved = cartao.status === 'approved';
+        const novoStatus = isApproved ? 'confirmado' : 'novo';
+        const pagStatus = isApproved ? 'aprovado' : (cartao.status === 'rejected' ? 'rejeitado' : 'pendente');
 
         await pool.query(
             'UPDATE pedidos SET gateway_id = $1, gateway_data = $2, pagamento_status = $3, status = $4 WHERE codigo = $5',
@@ -124,7 +146,16 @@ router.post('/cartao/:codigo', async (req, res) => {
             );
         }
 
-        console.log(`Cartao para ${pedido.codigo}: status=${cartao.status}, parcelas=${cartao.parcelas}`);
+        console.log(`Cartao para ${pedido.codigo}: status=${cartao.status}, detail=${cartao.statusDetail}, parcelas=${cartao.parcelas}`);
+
+        if (!isApproved) {
+            return res.status(400).json({
+                success: false,
+                status: cartao.status,
+                statusDetail: cartao.statusDetail,
+                error: `Pagamento ${cartao.status}: ${cartao.statusDetail}`
+            });
+        }
 
         res.json({
             success: true,

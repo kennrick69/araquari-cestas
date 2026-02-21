@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     
     -- Boleto 30 dias (campos extras)
     cpf VARCHAR(14),
+    email VARCHAR(255),
     doc_identidade VARCHAR(255),               -- caminho do arquivo
     doc_residencia VARCHAR(255),               -- caminho do arquivo
     
