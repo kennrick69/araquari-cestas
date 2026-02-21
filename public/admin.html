@@ -103,6 +103,28 @@ tr:hover{background:#ffffff05}
 .hist-item{display:flex;gap:12px;padding:8px 0;font-size:12px;border-bottom:1px solid var(--border)}
 .hist-item:last-child{border:none}
 .hist-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);margin-top:4px;flex-shrink:0}
+
+/* Notification Toast */
+.toast-container{position:fixed;top:60px;right:16px;z-index:300;display:flex;flex-direction:column;gap:10px;max-width:380px;width:calc(100% - 32px)}
+.toast{background:#1a2e1a;border:2px solid var(--green);border-radius:14px;padding:16px;animation:toastIn .4s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);cursor:pointer;transition:opacity .3s}
+.toast.hide{opacity:0;transform:translateX(100%)}
+@keyframes toastIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
+.toast-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.toast-badge{background:var(--green);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
+.toast-close{margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px}
+.toast-title{font-size:15px;font-weight:800;color:var(--green);margin-bottom:4px}
+.toast-body{font-size:12px;color:var(--text2);line-height:1.5}
+.toast-body strong{color:var(--text);font-weight:700}
+.toast-accept{margin-top:10px;width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer}
+.toast-accept:hover{opacity:.9}
+
+/* Sound enable banner */
+.sound-banner{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;z-index:250;box-shadow:0 4px 20px rgba(232,133,12,.4);animation:pulse 2s infinite;display:none;text-align:center;white-space:nowrap}
+@keyframes pulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.03)}}
+
+/* Alert flash on topbar */
+.topbar.alert-flash{animation:alertFlash 1s ease 3}
+@keyframes alertFlash{0%,100%{border-bottom-color:var(--border)}50%{border-bottom-color:var(--green)}}
 </style>
 </head>
 <body>
@@ -204,6 +226,14 @@ tr:hover{background:#ffffff05}
     <div class="modal" id="modal-content"></div>
 </div>
 
+<!-- Notification Toasts -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Sound Enable Banner -->
+<div class="sound-banner" id="sound-banner" onclick="enableSound()">
+    🔔 Toque aqui para ativar alertas sonoros
+</div>
+
 <script>
 let TOKEN = localStorage.getItem('admin_token') || '';
 let currentPage = 1;
@@ -214,6 +244,166 @@ const STATUS_LABELS = {
     'cancelado':'Cancelado','analise':'Em Analise','aprovado':'Aprovado','recusado':'Recusado'
 };
 const PAY_LABELS = {'pix':'PIX','cartao':'Cartao','boleto':'Boleto','boleto30':'Boleto 30d'};
+
+// ═══════════════════════════════════════
+// NEW ORDER NOTIFICATION SYSTEM
+// ═══════════════════════════════════════
+let knownOrderCodes = new Set();
+let isFirstLoad = true;
+let soundEnabled = false;
+let audioCtx = null;
+
+// Show sound banner on load (browsers block autoplay)
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        if(!soundEnabled) document.getElementById('sound-banner').style.display = 'block';
+    }, 2000);
+});
+
+function enableSound() {
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Play a silent sound to unlock audio
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.01;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        soundEnabled = true;
+        document.getElementById('sound-banner').style.display = 'none';
+    } catch(e) { console.warn('Audio not available:', e); }
+}
+
+function playAlertSound() {
+    if(!soundEnabled || !audioCtx) return;
+    try {
+        const now = audioCtx.currentTime;
+        // 3 ascending beeps like a notification chime
+        [0, 0.15, 0.3].forEach((delay, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 600 + (i * 200); // 600, 800, 1000 Hz
+            gain.gain.setValueAtTime(0.3, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.12);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.15);
+        });
+        // Repeat 3 times with pauses
+        setTimeout(playAlertSound2, 800);
+        setTimeout(playAlertSound2, 1600);
+    } catch(e) {}
+}
+
+function playAlertSound2() {
+    if(!soundEnabled || !audioCtx) return;
+    try {
+        const now = audioCtx.currentTime;
+        [0, 0.15, 0.3].forEach((delay, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 600 + (i * 200);
+            gain.gain.setValueAtTime(0.25, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.12);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.15);
+        });
+    } catch(e) {}
+}
+
+function detectNewOrders(pedidos) {
+    const currentCodes = new Set(pedidos.map(p => p.codigo));
+
+    if(isFirstLoad) {
+        // First load: just store codes, no alerts
+        knownOrderCodes = currentCodes;
+        isFirstLoad = false;
+        return;
+    }
+
+    // Find new orders (codes not seen before)
+    const newOrders = pedidos.filter(p => !knownOrderCodes.has(p.codigo));
+
+    if(newOrders.length > 0) {
+        // Play alert sound
+        playAlertSound();
+
+        // Vibrate on mobile
+        if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+
+        // Flash topbar
+        document.querySelector('.topbar').classList.add('alert-flash');
+        setTimeout(() => document.querySelector('.topbar').classList.remove('alert-flash'), 3000);
+
+        // Show toast for each new order
+        newOrders.forEach(p => showOrderToast(p));
+
+        // Update page title
+        document.title = `🔔 ${newOrders.length} NOVO(S) PEDIDO(S)!`;
+        setTimeout(() => { document.title = 'Araquari Cestas - Painel Admin'; }, 10000);
+    }
+
+    // Update known codes (add new ones, keep accumulating)
+    currentCodes.forEach(c => knownOrderCodes.add(c));
+}
+
+function showOrderToast(p) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    const endereco = [p.endereco_rua, p.endereco_numero, p.endereco_bairro].filter(Boolean).join(', ');
+    toast.innerHTML = `
+        <div class="toast-header">
+            <span style="font-size:18px">🛒</span>
+            <span class="toast-badge">Novo Pedido</span>
+            <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+        </div>
+        <div class="toast-title">${p.codigo} — ${p.cesta_nome}</div>
+        <div class="toast-body">
+            <strong>${p.recebedor_nome}</strong><br>
+            📍 ${endereco || 'Endereco nao informado'}<br>
+            📱 ${p.recebedor_telefone || '-'}<br>
+            💰 R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} · ${PAY_LABELS[p.pagamento_metodo] || p.pagamento_metodo}
+        </div>
+        <button class="toast-accept" onclick="quickAccept(${p.id}, this)">✅ Aceitar Pedido</button>
+    `;
+    container.prepend(toast);
+
+    // Auto-remove after 60s
+    setTimeout(() => { if(toast.parentElement) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); } }, 60000);
+}
+
+async function quickAccept(pedidoId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Confirmando...';
+    try {
+        const res = await fetch(API+'/pedidos/'+pedidoId+'/status', {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+            body: JSON.stringify({status:'confirmado', observacao:'Aceito via painel'})
+        });
+        const data = await res.json();
+        if(data.success) {
+            btn.textContent = '✅ Confirmado!';
+            btn.style.background = 'var(--text3)';
+            loadDashboard();
+            loadPedidos();
+            setTimeout(() => btn.closest('.toast').remove(), 1500);
+        } else {
+            btn.textContent = 'Erro - tente no painel';
+            btn.disabled = false;
+        }
+    } catch(e) {
+        btn.textContent = 'Erro - tente no painel';
+        btn.disabled = false;
+    }
+}
 
 // Auth
 function doLogin() {
@@ -304,6 +494,9 @@ async function loadPedidos() {
     try {
         const res = await fetch(API+'/pedidos?'+params, {headers:{'x-admin-token':TOKEN}});
         const data = await res.json();
+
+        // Detect new orders and alert
+        detectNewOrders(data.pedidos || []);
 
         if(data.pedidos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">Nenhum pedido encontrado</td></tr>';
@@ -466,13 +659,13 @@ document.getElementById('modal-detail').addEventListener('click', function(e) {
     if(e.target === this) closeDetail();
 });
 
-// Auto-refresh every 30s
+// Auto-refresh every 15s (order detection)
 setInterval(() => {
     if(TOKEN && document.getElementById('admin-panel').style.display !== 'none') {
         loadDashboard();
         loadPedidos();
     }
-}, 30000);
+}, 15000);
 </script>
 </body>
 </html>

@@ -257,6 +257,27 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 .status-icon { font-size:80px; margin-bottom:20px; animation:pulse 2s infinite; }
 .status-title { font-size:24px; font-weight:800; margin-bottom:8px; text-align:center; }
 .status-sub { font-size:14px; color:var(--text2); text-align:center; max-width:300px; line-height:1.7; font-weight:600; margin-bottom:32px; }
+
+/* ── PAYMENT PROCESSING ── */
+.pix-box { background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px auto;max-width:340px;text-align:center; }
+.pix-qr { width:220px;height:220px;margin:12px auto;border-radius:12px;background:#fff;padding:8px;display:flex;align-items:center;justify-content:center; }
+.pix-qr img { width:100%;height:100%;object-fit:contain; }
+.pix-code { background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px;word-break:break-all;color:var(--text2);margin:12px 0;max-height:60px;overflow:hidden;text-overflow:ellipsis; }
+.pix-copy-btn { width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:8px; }
+.pix-copy-btn:active { transform:scale(0.97); }
+.boleto-box { background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px auto;max-width:340px;text-align:center; }
+.boleto-barcode { background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;word-break:break-all;color:var(--text2);margin:12px 0; }
+.boleto-link-btn { display:block;width:100%;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-top:8px; }
+.card-form-box { background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px auto;max-width:340px; }
+.card-input { width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px; }
+.card-input:focus { outline:none;border-color:var(--orange); }
+.card-input::placeholder { color:var(--text3); }
+.card-row { display:flex;gap:8px; }
+.card-row .card-input { flex:1; }
+.card-pay-btn { width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px; }
+.card-pay-btn:disabled { background:var(--text3);cursor:not-allowed; }
+.payment-waiting { display:flex;align-items:center;gap:8px;justify-content:center;margin:12px 0;font-size:13px;color:var(--green);font-weight:700; }
+.payment-waiting .spin-sm { width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;display:inline-block; }
 .status-steps { width:100%; max-width:340px; margin-bottom:32px; }
 .status-step { display:flex; align-items:flex-start; gap:14px; position:relative; padding-bottom:24px; }
 .status-step:last-child { padding-bottom:0; }
@@ -380,6 +401,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
     #splash.hide { transform:translateX(-50%) scale(1.1); }
 }
 </style>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
 
@@ -1218,9 +1240,17 @@ async function finalizePay() {
             });
         }
 
-        // Show status screen
+        // Process payment based on method
+        btn.textContent = 'Processando pagamento...';
+
         if(state.payMethod === 'boleto30') {
             showStatus('analise');
+        } else if(state.payMethod === 'pix') {
+            await processPixPayment(data.pedido.codigo);
+        } else if(state.payMethod === 'boleto') {
+            await processBoletoPayment(data.pedido.codigo);
+        } else if(state.payMethod === 'cartao') {
+            showCardForm(data.pedido.codigo);
         } else {
             showStatus('separacao');
         }
@@ -1234,8 +1264,246 @@ async function finalizePay() {
 }
 
 // ═══════════════════════════════════════
-// STATUS
+// PAYMENT PROCESSING (Mercado Pago)
 // ═══════════════════════════════════════
+let pixPollInterval = null;
+
+async function processPixPayment(codigo) {
+    showScreen('status');
+    const el = document.getElementById('status-content');
+    el.innerHTML = `
+        <div class="status-icon">📱</div>
+        <div class="status-title">Pagamento PIX</div>
+        <div class="status-sub">Gerando QR Code...</div>
+        <div style="text-align:center"><div class="spin" style="margin:20px auto"></div></div>
+    `;
+
+    try {
+        const res = await fetch('/api/pagamento/pix/' + codigo, { method: 'POST' });
+        const data = await res.json();
+
+        if(!res.ok || !data.success) throw new Error(data.error || 'Erro ao gerar PIX');
+
+        el.innerHTML = `
+            <div style="font-size:40px;margin-bottom:8px">📱</div>
+            <div class="status-title">Pague com PIX</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Escaneie o QR Code ou copie o codigo</div>
+            <div class="pix-box">
+                <div class="pix-qr">
+                    <img src="data:image/png;base64,${data.imagemQrcode || data.qr_code_base64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponivel.<br>Use o codigo abaixo.</div>'">
+                </div>
+                <div class="pix-code" id="pix-code-text">${data.qrcode || data.qr_code || ''}</div>
+                <button class="pix-copy-btn" onclick="copyPixCode()">📋 Copiar codigo PIX</button>
+            </div>
+            <div class="payment-waiting" id="pix-waiting">
+                <div class="spin-sm"></div> Aguardando pagamento...
+            </div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">
+                O pedido sera confirmado automaticamente apos o pagamento
+            </div>
+            <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
+            </div>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ja paguei — ver status do pedido ▸</button>
+        `;
+
+        // Poll for payment confirmation
+        startPixPolling(codigo);
+
+    } catch(err) {
+        console.error('Erro PIX:', err);
+        el.innerHTML = `
+            <div class="status-icon">⚠️</div>
+            <div class="status-title">Erro no PIX</div>
+            <div class="status-sub">${err.message}</div>
+            <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:16px;font-weight:900;color:var(--orange);margin-top:4px">${codigo}</div>
+            </div>
+            <div class="status-sub" style="font-size:12px">Seu pedido foi criado. Voce pode pagar depois acessando "Meus Pedidos".</div>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px">Ver status do pedido</button>
+        `;
+    }
+}
+
+function copyPixCode() {
+    const code = document.getElementById('pix-code-text')?.textContent || '';
+    if(!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.pix-copy-btn');
+        if(btn) { btn.textContent = '✅ Codigo copiado!'; setTimeout(() => btn.textContent = '📋 Copiar codigo PIX', 2000); }
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        const btn = document.querySelector('.pix-copy-btn');
+        if(btn) { btn.textContent = '✅ Codigo copiado!'; setTimeout(() => btn.textContent = '📋 Copiar codigo PIX', 2000); }
+    });
+}
+
+function startPixPolling(codigo) {
+    if(pixPollInterval) clearInterval(pixPollInterval);
+    let attempts = 0;
+    pixPollInterval = setInterval(async () => {
+        attempts++;
+        if(attempts > 120) { clearInterval(pixPollInterval); return; } // Stop after 10min
+        try {
+            const res = await fetch('/api/pagamento/status/' + codigo);
+            if(!res.ok) return;
+            const data = await res.json();
+            if(data.pagamento_status === 'aprovado' || data.pagamento_status === 'approved') {
+                clearInterval(pixPollInterval);
+                const waiting = document.getElementById('pix-waiting');
+                if(waiting) waiting.innerHTML = '<span style="color:var(--green);font-weight:800">✅ Pagamento confirmado!</span>';
+                setTimeout(() => showStatus('separacao'), 1500);
+            }
+        } catch(e) {}
+    }, 5000);
+}
+
+async function processBoletoPayment(codigo) {
+    showScreen('status');
+    const el = document.getElementById('status-content');
+    el.innerHTML = `
+        <div class="status-icon">📄</div>
+        <div class="status-title">Gerando Boleto</div>
+        <div class="status-sub">Aguarde...</div>
+        <div style="text-align:center"><div class="spin" style="margin:20px auto"></div></div>
+    `;
+
+    try {
+        const res = await fetch('/api/pagamento/boleto/' + codigo, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dias: 3 })
+        });
+        const data = await res.json();
+
+        if(!res.ok || !data.success) throw new Error(data.error || 'Erro ao gerar boleto');
+
+        el.innerHTML = `
+            <div style="font-size:40px;margin-bottom:8px">📄</div>
+            <div class="status-title">Boleto Gerado!</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Vencimento: ${data.vencimento || '3 dias uteis'}</div>
+            <div class="boleto-box">
+                ${data.boletoBarcode ? `<div class="boleto-barcode">${data.boletoBarcode}</div>` : ''}
+                ${data.boletoUrl ? `<a href="${data.boletoUrl}" target="_blank" class="boleto-link-btn">📄 Abrir Boleto</a>` : ''}
+                ${data.boletoPdf ? `<a href="${data.boletoPdf}" target="_blank" class="boleto-link-btn" style="margin-top:8px;background:var(--green)">📥 Baixar PDF</a>` : ''}
+                ${data.boletoBarcode ? `<button class="pix-copy-btn" style="background:var(--orange)" onclick="navigator.clipboard.writeText('${data.boletoBarcode}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar codigo de barras',2000)">📋 Copiar codigo de barras</button>` : ''}
+            </div>
+            <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
+            </div>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ver status do pedido ▸</button>
+        `;
+
+    } catch(err) {
+        console.error('Erro Boleto:', err);
+        el.innerHTML = `
+            <div class="status-icon">⚠️</div>
+            <div class="status-title">Erro no Boleto</div>
+            <div class="status-sub">${err.message}</div>
+            <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+                <div style="font-size:16px;font-weight:900;color:var(--orange);margin-top:4px">${codigo}</div>
+            </div>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px">Ver status do pedido</button>
+        `;
+    }
+}
+
+function showCardForm(codigo) {
+    showScreen('status');
+    const el = document.getElementById('status-content');
+    const b = BASKETS[state.basket];
+    const total = (b.price * state.qty).toFixed(2).replace('.',',');
+
+    el.innerHTML = `
+        <div style="font-size:40px;margin-bottom:8px">💳</div>
+        <div class="status-title">Cartao de Credito</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
+        <div class="card-form-box">
+            <input class="card-input" id="card-number" placeholder="Numero do cartao" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
+            <input class="card-input" id="card-name" placeholder="Nome no cartao" style="text-transform:uppercase">
+            <div class="card-row">
+                <input class="card-input" id="card-expiry" placeholder="MM/AA" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
+                <input class="card-input" id="card-cvv" placeholder="CVV" maxlength="4" type="password">
+            </div>
+            <select class="card-input" id="card-parcelas" style="color:var(--text)">
+                <option value="1">1x de R$ ${total} (sem juros)</option>
+                <option value="2">2x de R$ ${(b.price * state.qty / 2).toFixed(2).replace('.',',')} (sem juros)</option>
+                <option value="3">3x de R$ ${(b.price * state.qty / 3).toFixed(2).replace('.',',')} (sem juros)</option>
+            </select>
+            <input class="card-input" id="card-email" placeholder="E-mail do titular" type="email">
+            <button class="card-pay-btn" id="card-submit-btn" onclick="processCardPayment('${codigo}')">Pagar R$ ${total}</button>
+        </div>
+        <div id="card-status" style="text-align:center;margin-top:12px"></div>
+        <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Codigo do Pedido</div>
+            <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
+        </div>
+    `;
+}
+
+async function processCardPayment(codigo) {
+    const btn = document.getElementById('card-submit-btn');
+    const statusEl = document.getElementById('card-status');
+    btn.disabled = true;
+    btn.textContent = 'Processando...';
+    statusEl.innerHTML = '<div class="payment-waiting"><div class="spin-sm"></div> Processando pagamento...</div>';
+
+    try {
+        // Get MP public key
+        const keyRes = await fetch('/api/pagamento/public-key');
+        const keyData = await keyRes.json();
+        const mp = new MercadoPago(keyData.publicKey || keyData.public_key);
+
+        const cardNumber = document.getElementById('card-number').value.replace(/\s/g,'');
+        const expiry = document.getElementById('card-expiry').value.split('/');
+        const cardName = document.getElementById('card-name').value;
+        const cvv = document.getElementById('card-cvv').value;
+        const email = document.getElementById('card-email').value;
+        const parcelas = parseInt(document.getElementById('card-parcelas').value) || 1;
+
+        if(!cardNumber || !cardName || expiry.length !== 2 || !cvv || !email) {
+            throw new Error('Preencha todos os campos do cartao');
+        }
+
+        // Create card token via MP SDK
+        const cardToken = await mp.createCardToken({
+            cardNumber: cardNumber,
+            cardholderName: cardName,
+            cardExpirationMonth: expiry[0],
+            cardExpirationYear: '20' + expiry[1],
+            securityCode: cvv,
+            identificationType: 'CPF',
+            identificationNumber: '00000000000'
+        });
+
+        if(!cardToken || !cardToken.id) throw new Error('Erro ao tokenizar cartao');
+
+        // Send to backend
+        const res = await fetch('/api/pagamento/cartao/' + codigo, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: cardToken.id, parcelas, email })
+        });
+        const data = await res.json();
+
+        if(!res.ok || !data.success) throw new Error(data.error || 'Pagamento recusado');
+
+        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
+        setTimeout(() => showStatus('separacao'), 1500);
+
+    } catch(err) {
+        console.error('Erro cartao:', err);
+        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">❌ ${err.message}</div>`;
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+    }
+}
 function showStatus(type) {
     showScreen('status');
     const b = BASKETS[state.basket];
