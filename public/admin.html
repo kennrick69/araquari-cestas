@@ -160,12 +160,14 @@ tr:hover{background:#ffffff05}
         <div class="kpi"><div class="kpi-label">Receita Hoje</div><div class="kpi-value" id="kpi-receita-hoje" style="color:var(--green)">-</div></div>
         <div class="kpi"><div class="kpi-label">Total Pedidos</div><div class="kpi-value" id="kpi-total">-</div></div>
         <div class="kpi"><div class="kpi-label">Pendentes Analise</div><div class="kpi-value" id="kpi-analise" style="color:var(--yellow)">-</div></div>
+        <div class="kpi"><div class="kpi-label">Aguardando Pagamento</div><div class="kpi-value" id="kpi-nao-pagos" style="color:var(--blue)">-</div></div>
     </div>
 
     <!-- Tabs -->
     <div class="tabs">
         <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">Pedidos</div>
         <div class="tab" data-tab="analise" onclick="switchTab('analise')">Boleto 30d</div>
+        <div class="tab" data-tab="naopagos" onclick="switchTab('naopagos')" style="border-color:var(--blue)">Aguardando Pagamento</div>
     </div>
 
     <!-- Filters -->
@@ -249,6 +251,7 @@ const PAY_LABELS = {'pix':'PIX','cartao':'Cartao','boleto':'Boleto','boleto30':'
 // NEW ORDER NOTIFICATION SYSTEM
 // ═══════════════════════════════════════
 let knownOrderCodes = new Set();
+let knownOrderStatuses = {};
 let isFirstLoad = true;
 let soundEnabled = false;
 let audioCtx = null;
@@ -331,20 +334,37 @@ function stopAlarm() {
 }
 
 function detectNewOrders(pedidos) {
-    const currentCodes = new Set(pedidos.map(p => p.codigo));
-
     if(isFirstLoad) {
-        // First load: just store codes, no alerts
-        knownOrderCodes = currentCodes;
+        // First load: store all codes and statuses, no alerts
+        pedidos.forEach(p => {
+            knownOrderCodes.add(p.codigo);
+            knownOrderStatuses[p.codigo] = p.status;
+        });
         isFirstLoad = false;
         return;
     }
 
-    // Find new orders (codes not seen before)
-    const newOrders = pedidos.filter(p => !knownOrderCodes.has(p.codigo));
+    const alertOrders = [];
 
-    if(newOrders.length > 0) {
-        // Play alert sound
+    pedidos.forEach(p => {
+        const prevStatus = knownOrderStatuses[p.codigo];
+
+        // Alert case 1: Brand new order that already has payment confirmed (not "novo")
+        if(!knownOrderCodes.has(p.codigo) && p.status !== 'novo') {
+            alertOrders.push(p);
+        }
+        // Alert case 2: Known order that just changed from "novo" to confirmed/paid status
+        else if(prevStatus === 'novo' && p.status !== 'novo') {
+            alertOrders.push(p);
+        }
+
+        // Update tracking
+        knownOrderCodes.add(p.codigo);
+        knownOrderStatuses[p.codigo] = p.status;
+    });
+
+    if(alertOrders.length > 0) {
+        // Play persistent alarm
         playAlertSound();
 
         // Vibrate on mobile
@@ -354,15 +374,12 @@ function detectNewOrders(pedidos) {
         document.querySelector('.topbar').classList.add('alert-flash');
         setTimeout(() => document.querySelector('.topbar').classList.remove('alert-flash'), 3000);
 
-        // Show toast for each new order
-        newOrders.forEach(p => showOrderToast(p));
+        // Show toast for each confirmed order
+        alertOrders.forEach(p => showOrderToast(p));
 
         // Update page title
         document.title = `NOVO(S) PEDIDO(S)!`;
     }
-
-    // Update known codes (add new ones, keep accumulating)
-    currentCodes.forEach(c => knownOrderCodes.add(c));
 }
 
 function showOrderToast(p) {
@@ -481,6 +498,7 @@ function renderDashboard(d) {
     document.getElementById('kpi-receita-hoje').textContent = 'R$ '+d.receita_hoje.toFixed(2).replace('.',',');
     document.getElementById('kpi-total').textContent = d.total_pedidos;
     document.getElementById('kpi-analise').textContent = d.pendentes_analise;
+    document.getElementById('kpi-nao-pagos').textContent = d.nao_pagos || 0;
 }
 
 // Tabs
@@ -489,6 +507,8 @@ function switchTab(tab) {
     document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
     if(tab === 'analise') {
         document.getElementById('filter-status').value = 'analise';
+    } else if(tab === 'naopagos') {
+        document.getElementById('filter-status').value = 'novo';
     } else {
         document.getElementById('filter-status').value = '';
     }

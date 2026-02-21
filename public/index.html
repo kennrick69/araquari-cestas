@@ -1290,7 +1290,7 @@ async function processPixPayment(codigo) {
             <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Escaneie o QR Code ou copie o codigo</div>
             <div class="pix-box">
                 <div class="pix-qr">
-                    <img src="data:image/png;base64,${data.imagemQrcode || data.qr_code_base64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponivel.<br>Use o codigo abaixo.</div>'">
+                    <img src="data:image/png;base64,${data.qrcodeBase64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponivel.<br>Use o codigo abaixo.</div>'">
                 </div>
                 <div class="pix-code" id="pix-code-text">${data.qrcode || data.qr_code || ''}</div>
                 <button class="pix-copy-btn" onclick="copyPixCode()">📋 Copiar codigo PIX</button>
@@ -1352,7 +1352,7 @@ function startPixPolling(codigo) {
             const res = await fetch('/api/pagamento/status/' + codigo);
             if(!res.ok) return;
             const data = await res.json();
-            if(data.pagamento_status === 'aprovado' || data.pagamento_status === 'approved') {
+            if(data.pagamentoAprovado || data.status === 'approved') {
                 clearInterval(pixPollInterval);
                 const waiting = document.getElementById('pix-waiting');
                 if(waiting) waiting.innerHTML = '<span style="color:var(--green);font-weight:800">✅ Pagamento confirmado!</span>';

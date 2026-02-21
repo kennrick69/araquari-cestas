@@ -26,7 +26,8 @@ router.get('/dashboard', async (req, res) => {
             pool.query(`SELECT 
                 COUNT(*) as total_pedidos,
                 COALESCE(SUM(total), 0) as receita_total,
-                COUNT(CASE WHEN status = 'analise' THEN 1 END) as pendentes_analise
+                COUNT(CASE WHEN status = 'analise' THEN 1 END) as pendentes_analise,
+                COUNT(CASE WHEN status = 'novo' THEN 1 END) as nao_pagos
             FROM pedidos`),
 
             pool.query(`SELECT 
@@ -44,6 +45,7 @@ router.get('/dashboard', async (req, res) => {
             total_pedidos: parseInt(totais.rows[0].total_pedidos),
             receita_total: parseFloat(totais.rows[0].receita_total),
             pendentes_analise: parseInt(totais.rows[0].pendentes_analise),
+            nao_pagos: parseInt(totais.rows[0].nao_pagos),
             pedidos_hoje: parseInt(hoje_stats.rows[0].pedidos_hoje),
             receita_hoje: parseFloat(hoje_stats.rows[0].receita_hoje),
             por_status: por_status.rows,
