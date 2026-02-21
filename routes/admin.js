@@ -229,4 +229,19 @@ router.put('/config', async (req, res) => {
     }
 });
 
+// ══════════════════════════════════════
+// DELETE /api/admin/pedidos/:id — Excluir pedido
+// ══════════════════════════════════════
+router.delete('/pedidos/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM pedidos_log WHERE pedido_id = $1', [req.params.id]);
+        const result = await pool.query('DELETE FROM pedidos WHERE id = $1 RETURNING codigo', [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });
+        res.json({ success: true, message: 'Pedido ' + result.rows[0].codigo + ' excluido' });
+    } catch (err) {
+        console.error('Erro ao excluir:', err.message);
+        res.status(500).json({ error: 'Erro ao excluir pedido' });
+    }
+});
+
 module.exports = router;

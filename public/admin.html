@@ -117,6 +117,11 @@ tr:hover{background:#ffffff05}
 .toast-body strong{color:var(--text);font-weight:700}
 .toast-accept{margin-top:10px;width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer}
 .toast-accept:hover{opacity:.9}
+.toast-actions{display:flex;gap:6px;margin-top:10px}
+.toast-actions button{flex:1;padding:9px 6px;border:none;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer;color:#fff;transition:.2s}
+.toast-actions button:hover{opacity:.85}
+.toast-clear-all{background:var(--border);color:var(--text2);border:none;padding:8px 16px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:8px;display:none}
+.toast-clear-all:hover{background:var(--text3);color:#fff}
 
 /* Sound enable banner */
 .sound-banner{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;z-index:250;box-shadow:0 4px 20px rgba(232,133,12,.4);animation:pulse 2s infinite;display:none;text-align:center;white-space:nowrap}
@@ -229,7 +234,9 @@ tr:hover{background:#ffffff05}
 </div>
 
 <!-- Notification Toasts -->
-<div class="toast-container" id="toast-container"></div>
+<div class="toast-container" id="toast-container">
+    <button class="toast-clear-all" id="toast-clear-all" onclick="clearAllToasts()">Limpar todas as notificacoes</button>
+</div>
 
 <!-- Sound Enable Banner -->
 <div class="sound-banner" id="sound-banner" onclick="enableSound()">
@@ -553,7 +560,7 @@ async function loadPedidos() {
                 <td style="font-weight:800;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</td>
                 <td><span class="badge badge-${p.status}">${STATUS_LABELS[p.status]||p.status}</span></td>
                 <td style="color:var(--text3);font-size:12px">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td>
-                <td><button class="btn btn-sm btn-orange" onclick="openDetail(${p.id})">Ver</button></td>
+                <td style="white-space:nowrap;display:flex;gap:4px"><button class="btn btn-sm btn-orange" onclick="openDetail(${p.id})">Ver</button><button class="btn btn-sm btn-green" onclick="quickStatus(${p.id},'entregue',this)">Entregue</button><button class="btn btn-sm btn-red" onclick="quickDelete(${p.id},this)">Excluir</button></td>
             </tr>
         `).join('');
 
@@ -699,6 +706,37 @@ async function updateStatus(id) {
     } catch(e) {
         alert('Erro ao atualizar status');
     }
+}
+
+async function quickStatus(pedidoId, status, btn) {
+    if(!confirm('Marcar pedido como ' + STATUS_LABELS[status] + '?')) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+        const res = await fetch(API+'/pedidos/'+pedidoId+'/status', {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+            body: JSON.stringify({status, observacao:'Atualizado via painel'})
+        });
+        const data = await res.json();
+        if(data.success) { loadDashboard(); loadPedidos(); }
+        else { alert('Erro: ' + data.error); btn.disabled = false; btn.textContent = 'Entregue'; }
+    } catch(e) { alert('Erro ao atualizar'); btn.disabled = false; btn.textContent = 'Entregue'; }
+}
+
+async function quickDelete(pedidoId, btn) {
+    if(!confirm('Tem certeza que deseja EXCLUIR este pedido? Esta acao nao pode ser desfeita.')) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+        const res = await fetch(API+'/pedidos/'+pedidoId, {
+            method: 'DELETE',
+            headers: {'x-admin-token':TOKEN}
+        });
+        const data = await res.json();
+        if(data.success) { loadDashboard(); loadPedidos(); }
+        else { alert('Erro: ' + data.error); btn.disabled = false; btn.textContent = 'Excluir'; }
+    } catch(e) { alert('Erro ao excluir'); btn.disabled = false; btn.textContent = 'Excluir'; }
 }
 
 function buildWhatsAppBtn(p, tipo, label, mensagem) {
