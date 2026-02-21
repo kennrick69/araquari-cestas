@@ -1484,7 +1484,16 @@ async function finalizePay() {
         const cpf = document.getElementById('input-cpf')?.value || '';
         if(cpf.length < 14) { showToast('Preencha o CPF corretamente.', 'warning'); return; }
         if(!state.uploads.doc || !state.uploads.res) {
-            showToast('Envie todos os documentos obrigat00F3rios.', 'warning'); return;
+            showToast('Envie todos os documentos obrigat\u00F3rios.', 'warning'); return;
+        }
+    }
+
+    if(state.payMethod === 'boleto') {
+        const cpfBoleto = document.getElementById('input-cpf-boleto')?.value || '';
+        if(cpfBoleto.replace(/\D/g,'').length !== 11) {
+            showToast('Informe o CPF do pagador para gerar o boleto.', 'warning');
+            shakeInput('input-cpf-boleto');
+            return;
         }
     }
 
@@ -1521,7 +1530,7 @@ async function finalizePay() {
             pagamento_metodo: state.payMethod,
             desconto: discount,
             total: total,
-            cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : null
+            cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : state.payMethod === 'boleto' ? (document.getElementById('input-cpf-boleto')?.value || '') : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));

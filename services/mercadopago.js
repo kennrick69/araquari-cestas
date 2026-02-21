@@ -99,6 +99,10 @@ class MercadoPago {
 
         const nome = pedido.recebedor_nome || 'Cliente';
         const partes = nome.split(' ');
+        const cpfLimpo = pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '';
+        if(!cpfLimpo || cpfLimpo.length !== 11) {
+            throw new Error('CPF do pagador \u00E9 obrigat\u00F3rio para gerar boleto');
+        }
 
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
@@ -110,7 +114,7 @@ class MercadoPago {
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {
                     type: 'CPF',
-                    number: pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '00000000000'
+                    number: cpfLimpo
                 },
                 address: {
                     zip_code: pedido.cep || '89245000',
