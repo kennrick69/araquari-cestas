@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
             endereco_referencia, endereco_bairro, endereco_cidade,
             endereco_estado, latitude, longitude,
             recebedor_nome, recebedor_telefone,
-            pagamento_metodo, desconto, total, cpf, email
+            pagamento_metodo, desconto, total, cpf, email, payer_address
         } = req.body;
 
         // Validações básicas

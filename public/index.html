@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
@@ -124,7 +124,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 /* ── APP CONTAINER ── */
 #app { position:fixed; inset:0; display:flex; flex-direction:column; }
-.screen { position:absolute; inset:0; display:none; flex-direction:column; }
+.screen { position:absolute; inset:0; display:none; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
 .screen.active { display:flex; animation:screenIn 0.4s ease-out; }
 @keyframes screenIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
 
@@ -651,9 +651,14 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <label class="form-label">CPF <span class="req">*</span></label>
                     <input class="form-input" placeholder="000.000.000-00" id="input-cpf-payer" inputmode="numeric" maxlength="14" oninput="this.value=maskCPF(this.value)">
                 </div>
-                <div class="form-group" style="margin-bottom:0">
+                <div class="form-group" style="margin-bottom:8px">
                     <label class="form-label">E-mail <span class="req">*</span></label>
                     <input class="form-input" placeholder="seu@email.com" id="input-email-payer" type="email">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">CEP do pagador <span class="req">*</span></label>
+                    <input class="form-input" placeholder="00000-000" id="input-cep-payer" inputmode="numeric" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').slice(0,9); if(this.value.replace(/\D/g,'').length===8) fetchPayerCep(this.value);">
+                    <div id="payer-cep-info" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
                 </div>
             </div>
 
@@ -1097,7 +1102,10 @@ function centerOnUser() {
 // ═══════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════
-function showScreen(id) {
+// Navigation history stack for Android back button
+const navStack = ['home'];
+
+function showScreen(id, addToHistory = true) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + id).classList.add('active');
 
@@ -1118,7 +1126,28 @@ function showScreen(id) {
     }
 
     if(id === 'payment') renderPaymentSummary();
+
+    // Push to history stack (Android back button support)
+    if(addToHistory && navStack[navStack.length - 1] !== id) {
+        navStack.push(id);
+        history.pushState({ screen: id }, '', '');
+    }
 }
+
+// Handle Android back button / browser back
+window.addEventListener('popstate', function(e) {
+    if(navStack.length > 1) {
+        navStack.pop();
+        const prevScreen = navStack[navStack.length - 1];
+        showScreen(prevScreen, false);
+    } else {
+        // Already at home, push state again to prevent exit
+        history.pushState({ screen: 'home' }, '', '');
+    }
+});
+
+// Initialize first history state
+history.replaceState({ screen: 'home' }, '', '');
 
 function goToMap() {
     showScreen('map');
@@ -1515,6 +1544,12 @@ async function finalizePay() {
             shakeInput('input-email-payer');
             return;
         }
+        const cepPayer = (document.getElementById('input-cep-payer')?.value || '').replace(/\D/g,'');
+        if(cepPayer.length !== 8) {
+            showToast('Informe o CEP do pagador.', 'warning');
+            shakeInput('input-cep-payer');
+            return;
+        }
     }
 
     // Disable button and show loading
@@ -1551,7 +1586,8 @@ async function finalizePay() {
             desconto: discount,
             total: total,
             cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-cpf-payer')?.value || '') : null,
-            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null
+            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null,
+            payer_address: (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? payerAddress : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));
@@ -1724,7 +1760,7 @@ async function processBoletoPayment(codigo) {
         const res = await fetch('/api/pagamento/boleto/' + codigo, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dias: 3, cpf: cpf, email: email })
+            body: JSON.stringify({ dias: 3, cpf: cpf, email: email, payer_address: payerAddress || {} })
         });
         const data = await res.json();
 
@@ -1797,12 +1833,12 @@ function showCardForm(codigo) {
     `;
 
     // Initialize MP CardForm with Secure Fields
-    initCardForm(codigo, totalNum, cpf, email);
+    initCardForm(codigo, totalNum, cpf, email, payerAddress);
 }
 
 let mpCardFormInstance = null;
 
-async function initCardForm(codigo, amount, cpf, email) {
+async function initCardForm(codigo, amount, cpf, email, billingAddr) {
     try {
         const keyRes = await fetch('/api/pagamento/public-key');
         const keyData = await keyRes.json();
@@ -1880,7 +1916,8 @@ async function initCardForm(codigo, amount, cpf, email) {
                                 email: email || formData.cardholderEmail,
                                 cpf: cpf || formData.identificationNumber,
                                 payment_method_id: formData.paymentMethodId,
-                                issuer_id: formData.issuerId
+                                issuer_id: formData.issuerId,
+                                payer_address: billingAddr || {}
                             })
                         });
                         const data = await res.json();
@@ -2246,6 +2283,36 @@ async function buscarPedidos() {
 // ═══════════════════════════════════════
 const maskCPF = v => v.replace(/\D/g,"").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2").slice(0,14);
 const maskPhone = v => v.replace(/\D/g,"").replace(/(\d{2})(\d)/,"($1) $2").replace(/(\d{5})(\d)/,"$1-$2").slice(0,15);
+
+// Payer address (billing) - separate from delivery address
+let payerAddress = {};
+
+async function fetchPayerCep(cep) {
+    const cepClean = cep.replace(/\D/g, '');
+    const infoEl = document.getElementById('payer-cep-info');
+    if(cepClean.length !== 8) return;
+    infoEl.textContent = 'Buscando...';
+    try {
+        const res = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
+        const data = await res.json();
+        if(data.erro) {
+            infoEl.textContent = 'CEP n\u00E3o encontrado';
+            payerAddress = { zip_code: cepClean };
+            return;
+        }
+        payerAddress = {
+            zip_code: cepClean,
+            street_name: data.logradouro || '',
+            neighborhood: data.bairro || '',
+            city: data.localidade || '',
+            federal_unit: data.uf || ''
+        };
+        infoEl.innerHTML = `<span style="color:var(--green)">\u2705 ${data.logradouro ? data.logradouro + ', ' : ''}${data.bairro || ''} - ${data.localidade}/${data.uf}</span>`;
+    } catch(e) {
+        infoEl.textContent = 'Erro ao buscar CEP';
+        payerAddress = { zip_code: cepClean };
+    }
+}
 
 function abreviarEstado(nome) {
     const map = {'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'};

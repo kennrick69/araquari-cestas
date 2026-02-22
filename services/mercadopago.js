@@ -28,9 +28,47 @@ class MercadoPagoService {
         return !!(this.accessToken && this.client);
     }
 
+    // Helper: get billing address (payer_address) or fallback to delivery address
+    _billingAddress(pedido) {
+        const pa = pedido.payer_address || {};
+        return {
+            zip_code: pa.zip_code || '89245000',
+            street_name: pa.street_name || pedido.endereco_rua || 'Rua Principal',
+            street_number: pa.street_number || pedido.endereco_numero || 'S/N',
+            neighborhood: pa.neighborhood || pedido.endereco_bairro || 'Centro',
+            city: pa.city || pedido.endereco_cidade || 'Araquari',
+            federal_unit: pa.federal_unit || pedido.endereco_estado || 'SC'
+        };
+    }
+
+    // Helper: get delivery address (always from pedido)
+    _deliveryAddress(pedido) {
+        return {
+            zip_code: '89245000',
+            street_name: pedido.endereco_rua || '',
+            street_number: parseInt(pedido.endereco_numero) || 0,
+            city_name: pedido.endereco_cidade || 'Araquari',
+            state_name: pedido.endereco_estado || 'SC'
+        };
+    }
+
+    // Helper: payer name parts
+    _payerName(pedido) {
+        const nome = pedido.recebedor_nome || 'Cliente';
+        const partes = nome.split(' ');
+        return { first: partes[0] || 'Cliente', last: partes.slice(1).join(' ') || 'Araquari' };
+    }
+
+    // Helper: phone parts
+    _phone(pedido) {
+        const tel = (pedido.recebedor_telefone || '').replace(/\D/g, '');
+        return { area_code: tel.slice(0, 2) || '47', number: tel.slice(2) || '' };
+    }
+
     // PIX
     async criarPix(pedido) {
         const idempotency = `pix-${pedido.codigo}-${Date.now()}`;
+        const { first, last } = this._payerName(pedido);
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
             description: `${pedido.cesta_nome} - Pedido ${pedido.codigo}`,
@@ -38,8 +76,7 @@ class MercadoPagoService {
             payment_method_id: 'pix',
             payer: {
                 email: pedido.email || 'cliente@araquaricestas.com',
-                first_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ')[0] : 'Cliente',
-                last_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ').slice(1).join(' ') || 'Araquari' : 'Araquari',
+                first_name: first, last_name: last,
                 identification: { type: 'CPF', number: pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '00000000000' }
             }
         };
@@ -58,11 +95,12 @@ class MercadoPagoService {
         const idempotency = `boleto-${pedido.codigo}-${Date.now()}`;
         const vencimento = new Date();
         vencimento.setDate(vencimento.getDate() + diasVencimento);
-        const nome = pedido.recebedor_nome || 'Cliente';
-        const partes = nome.split(' ');
+        const { first, last } = this._payerName(pedido);
         const cpfLimpo = pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '';
         if (!cpfLimpo || cpfLimpo.length !== 11) throw new Error('CPF do pagador e obrigatorio para gerar boleto');
-        const tel = (pedido.recebedor_telefone || '').replace(/\D/g, '');
+        const phone = this._phone(pedido);
+        const billing = this._billingAddress(pedido);
+        const delivery = this._deliveryAddress(pedido);
 
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
@@ -72,14 +110,14 @@ class MercadoPagoService {
             payment_method_id: 'bolbradesco',
             payer: {
                 email: pedido.email || 'cliente@araquaricestas.com',
-                first_name: partes[0] || 'Cliente', last_name: partes.slice(1).join(' ') || 'Araquari',
+                first_name: first, last_name: last,
                 identification: { type: 'CPF', number: cpfLimpo },
-                address: { zip_code: '89245000', street_name: pedido.endereco_rua || 'Rua Principal', street_number: pedido.endereco_numero || 'S/N', neighborhood: pedido.endereco_bairro || 'Centro', city: pedido.endereco_cidade || 'Araquari', federal_unit: pedido.endereco_estado || 'SC' }
+                address: billing
             },
             additional_info: {
                 items: [{ id: pedido.cesta_tipo || 'cesta', title: pedido.cesta_nome || 'Cesta', description: `${pedido.cesta_nome} x${pedido.quantidade || 1}`, quantity: pedido.quantidade || 1, unit_price: parseFloat(pedido.cesta_preco || pedido.total), category_id: 'food' }],
-                payer: { first_name: partes[0] || 'Cliente', last_name: partes.slice(1).join(' ') || 'Araquari', phone: { area_code: tel.slice(0, 2) || '47', number: tel.slice(2) || '' }, address: { zip_code: '89245000', street_name: pedido.endereco_rua || '', street_number: parseInt(pedido.endereco_numero) || 0 } },
-                shipments: { receiver_address: { zip_code: '89245000', street_name: pedido.endereco_rua || '', street_number: parseInt(pedido.endereco_numero) || 0, city_name: pedido.endereco_cidade || 'Araquari', state_name: pedido.endereco_estado || 'SC' } }
+                payer: { first_name: first, last_name: last, phone: phone, address: { zip_code: billing.zip_code, street_name: billing.street_name, street_number: parseInt(billing.street_number) || 0 } },
+                shipments: { receiver_address: delivery }
             },
             date_of_expiration: vencimento.toISOString()
         };
@@ -92,10 +130,11 @@ class MercadoPagoService {
     // CARTAO
     async criarCartao(pedido, token, parcelas = 1, email = null) {
         const idempotency = `card-${pedido.codigo}-${Date.now()}`;
-        const nome = pedido.recebedor_nome || 'Cliente';
-        const partes = nome.split(' ');
+        const { first, last } = this._payerName(pedido);
         const cpfLimpo = pedido.cpf ? pedido.cpf.replace(/\D/g, '') : '';
-        const tel = (pedido.recebedor_telefone || '').replace(/\D/g, '');
+        const phone = this._phone(pedido);
+        const billing = this._billingAddress(pedido);
+        const delivery = this._deliveryAddress(pedido);
 
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
@@ -106,18 +145,20 @@ class MercadoPagoService {
             installments: parcelas,
             payer: {
                 email: email || pedido.email || 'cliente@araquaricestas.com',
-                first_name: partes[0] || 'Cliente', last_name: partes.slice(1).join(' ') || 'Araquari',
+                first_name: first, last_name: last,
                 identification: { type: 'CPF', number: cpfLimpo || '00000000000' },
-                address: { zip_code: '89245000', street_name: pedido.endereco_rua || '', street_number: pedido.endereco_numero || '0', neighborhood: pedido.endereco_bairro || '', city: pedido.endereco_cidade || 'Araquari', federal_unit: pedido.endereco_estado || 'SC' }
+                address: billing
             },
             additional_info: {
                 items: [{ id: pedido.cesta_tipo || 'cesta', title: pedido.cesta_nome || 'Cesta', description: `${pedido.cesta_nome} x${pedido.quantidade || 1}`, quantity: pedido.quantidade || 1, unit_price: parseFloat(pedido.cesta_preco || pedido.total), category_id: 'food' }],
-                payer: { first_name: partes[0] || 'Cliente', last_name: partes.slice(1).join(' ') || 'Araquari', phone: { area_code: tel.slice(0, 2) || '47', number: tel.slice(2) || '' }, address: { zip_code: '89245000', street_name: pedido.endereco_rua || '', street_number: parseInt(pedido.endereco_numero) || 0 } },
-                shipments: { receiver_address: { zip_code: '89245000', street_name: pedido.endereco_rua || '', street_number: parseInt(pedido.endereco_numero) || 0, city_name: pedido.endereco_cidade || 'Araquari', state_name: pedido.endereco_estado || 'SC' } }
+                payer: { first_name: first, last_name: last, phone: phone, address: { zip_code: billing.zip_code, street_name: billing.street_name, street_number: parseInt(billing.street_number) || 0 } },
+                shipments: { receiver_address: delivery }
             }
         };
         if (pedido.card_payment_method) body.payment_method_id = pedido.card_payment_method;
         if (pedido.card_issuer_id) body.issuer_id = Number(pedido.card_issuer_id);
+
+        console.log('MP Cartao request:', JSON.stringify({ payer_address: billing, delivery_address: delivery, email: body.payer.email, cpf: cpfLimpo }));
 
         const data = await this.payment.create({ body, requestOptions: { idempotencyKey: idempotency } });
         return { paymentId: data.id, status: data.status, statusDetail: data.status_detail, parcelas: data.installments, valor: data.transaction_amount };
