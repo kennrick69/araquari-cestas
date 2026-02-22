@@ -137,6 +137,9 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 /* ── CENTER PIN (overlay on map) ── */
 .center-pin { position:absolute; top:50%; left:50%; transform:translate(-50%,-100%); z-index:500; font-size:42px; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5)); transition:transform 0.2s; pointer-events:none; }
 .center-pin.bounce { animation:pinBounce 0.4s ease; }
+.search-item { padding:10px 14px; font-size:13px; color:var(--text2); cursor:pointer; border-bottom:1px solid var(--border); }
+.search-item:last-child { border-bottom:none; }
+.search-item:active { background:var(--glass); }
 @keyframes pinBounce { 0%{transform:translate(-50%,-100%)} 50%{transform:translate(-50%,-120%)} 100%{transform:translate(-50%,-100%)} }
 .center-pin-shadow { position:absolute; top:50%; left:50%; transform:translate(-50%,2px); width:16px; height:6px; background:rgba(0,0,0,0.3); border-radius:50%; z-index:499; pointer-events:none; }
 
@@ -253,7 +256,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 .file-upload .file-ok { font-size:13px; color:var(--green); font-weight:700; }
 
 /* ── ORDER STATUS ── */
-.status-screen { padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100%; background:var(--bg); }
+.status-screen { padding:40px 20px 20px; display:flex; flex-direction:column; align-items:center; min-height:100%; background:var(--bg); }
 .status-icon { font-size:80px; margin-bottom:20px; animation:pulse 2s infinite; }
 .status-title { font-size:24px; font-weight:800; margin-bottom:8px; text-align:center; }
 .status-sub { font-size:14px; color:var(--text2); text-align:center; max-width:300px; line-height:1.7; font-weight:600; margin-bottom:32px; }
@@ -564,21 +567,25 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     <div id="screen-map" class="screen" style="pointer-events:none">
         <div class="back-btn" style="pointer-events:auto" onclick="showScreen('home')">←</div>
 
-        <div class="app-header" style="justify-content:center;pointer-events:none">
-            <div style="background:var(--glass);backdrop-filter:blur(20px);padding:8px 20px;border-radius:50px;border:1px solid var(--border);pointer-events:auto">
-                <span style="font-size:13px;font-weight:700">📍 Mova o mapa para ajustar</span>
-            </div>
+        <!-- Search bar -->
+        <div style="position:absolute;top:12px;left:52px;right:12px;z-index:600;pointer-events:auto">
+            <input type="text" id="map-search-input" placeholder="🔍 Buscar endereço, rua, bairro..."
+                oninput="searchAddress(this.value)"
+                onfocus="this.select()"
+                style="width:100%;padding:10px 14px;border-radius:50px;border:1px solid var(--border);background:var(--glass2);backdrop-filter:blur(20px);color:var(--text);font-size:13px;font-weight:600;outline:none">
+            <div id="search-results" style="display:none;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:14px;max-height:200px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.4)"></div>
         </div>
 
-        <!-- GPS button -->
-        <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto">
+        <!-- Map toggle + GPS buttons -->
+        <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto;display:flex;flex-direction:column;gap:8px">
+            <div class="header-btn" id="btn-map-toggle" onclick="toggleMapLayer()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px);cursor:pointer">🗺️</div>
             <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)"><img src="assets/img/nav-gps.png" style="width:24px;height:24px"></div>
         </div>
 
         <div class="bottom-sheet" style="max-height:50vh;pointer-events:auto">
             <div class="sheet-handle"></div>
             <div class="sheet-title">Onde deseja entregar? 📍</div>
-            <div class="sheet-sub">Arraste o mapa para posicionar o pin no local exato</div>
+            <div class="sheet-sub">Busque o endereço ou arraste o mapa</div>
 
             <div class="address-bar" style="cursor:default;margin-bottom:12px">
                 <div class="address-dot"></div>
@@ -690,7 +697,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     </div>
 
     <!-- ═══ SCREEN: STATUS ═══ -->
-    <div id="screen-status" class="screen">
+    <div id="screen-status" class="screen" style="overflow-y:auto">
         <div class="status-screen" id="status-content"></div>
     </div>
 
@@ -1023,16 +1030,20 @@ function initMap() {
         attributionControl: false
     }).setView([userLat, userLng], 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-    }).addTo(map);
+    // Tile layers
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+    const satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 21 });
+
+    // Default to satellite (shows buildings/houses)
+    satelliteLayer.addTo(map);
+    window._mapLayers = { street: streetLayer, satellite: satelliteLayer, current: 'satellite' };
 
     // Try to get user location
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             userLat = pos.coords.latitude;
             userLng = pos.coords.longitude;
-            map.setView([userLat, userLng], 16);
+            map.setView([userLat, userLng], 17);
         }, () => {}, { enableHighAccuracy:true, timeout:5000 });
     }
 
@@ -1044,6 +1055,54 @@ function initMap() {
     map.on('moveend', () => {
         document.getElementById('center-pin').classList.add('bounce');
     });
+}
+
+function toggleMapLayer() {
+    const layers = window._mapLayers;
+    if(layers.current === 'satellite') {
+        map.removeLayer(layers.satellite);
+        layers.street.addTo(map);
+        layers.current = 'street';
+        document.getElementById('btn-map-toggle').textContent = '🛰️';
+    } else {
+        map.removeLayer(layers.street);
+        layers.satellite.addTo(map);
+        layers.current = 'satellite';
+        document.getElementById('btn-map-toggle').textContent = '🗺️';
+    }
+}
+
+let searchTimeout = null;
+async function searchAddress(query) {
+    const resultsEl = document.getElementById('search-results');
+    if(!query || query.length < 3) { resultsEl.style.display = 'none'; return; }
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+        try {
+            resultsEl.innerHTML = '<div style="padding:10px;color:var(--text3);font-size:12px">Buscando...</div>';
+            resultsEl.style.display = 'block';
+            const res = await fetch('/api/geocode/search?q=' + encodeURIComponent(query));
+            const data = await res.json();
+            if(!data.length) {
+                resultsEl.innerHTML = '<div style="padding:10px;color:var(--text3);font-size:12px">Nenhum resultado</div>';
+                return;
+            }
+            resultsEl.innerHTML = data.map(r => {
+                const name = r.display_name.split(',').slice(0, 3).join(',');
+                return `<div class="search-item" onclick="goToSearchResult(${r.lat}, ${r.lon})">${name}</div>`;
+            }).join('');
+        } catch(e) {
+            resultsEl.style.display = 'none';
+        }
+    }, 400);
+}
+
+function goToSearchResult(lat, lng) {
+    map.setView([lat, lng], 18);
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('map-search-input').value = '';
+    document.getElementById('map-search-input').blur();
 }
 
 function onMapMove() {

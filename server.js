@@ -54,6 +54,24 @@ app.get('/api/geocode', async (req, res) => {
     }
 });
 
+// Forward geocode - search address
+app.get('/api/geocode/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if(!q) return res.status(400).json([]);
+
+        const query = encodeURIComponent(q + ', Araquari, Santa Catarina, Brasil');
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&countrycodes=br`;
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+        });
+        const data = await response.json();
+        res.json(data);
+    } catch(err) {
+        res.status(500).json([]);
+    }
+});
+
 // ══════════════════════════════════════
 // Health check
 // ══════════════════════════════════════

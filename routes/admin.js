@@ -165,10 +165,26 @@ router.patch('/pedidos/:id/status', async (req, res) => {
 
         // Atualizar status
         let updates = { status };
+        let boletoResult = null;
 
-        // Se aprovando boleto 30 dias
+        // Se aprovando boleto 30 dias → gerar boleto no MP
         if (status === 'aprovado' && pedido.rows[0].pagamento_metodo === 'boleto30') {
             updates.pagamento_status = 'aprovado';
+            updates.status = 'confirmado'; // Pula direto pra confirmado
+            
+            try {
+                const mp = require('../services/mercadopago');
+                if (mp.isConfigured()) {
+                    boletoResult = await mp.criarBoleto(pedido.rows[0], 30);
+                    updates.gateway_id = String(boletoResult.paymentId);
+                    updates.gateway_data = JSON.stringify(boletoResult);
+                    updates.pagamento_status = 'pendente'; // Aguardando pagamento do boleto
+                    console.log(`Boleto 30d gerado para pedido #${req.params.id}: ${boletoResult.boletoUrl}`);
+                }
+            } catch (boletoErr) {
+                console.error('Erro ao gerar boleto 30d:', boletoErr);
+                return res.status(500).json({ error: `Erro ao gerar boleto: ${boletoErr.message}` });
+            }
         }
         if (status === 'recusado') {
             updates.pagamento_status = 'recusado';
@@ -185,19 +201,27 @@ router.patch('/pedidos/:id/status', async (req, res) => {
             [req.params.id, ...vals]
         );
 
+        const finalStatus = updates.status || status;
+
         // Log
         await pool.query(
             `INSERT INTO pedidos_log (pedido_id, status_anterior, status_novo, observacao) VALUES ($1, $2, $3, $4)`,
-            [req.params.id, anterior, status, observacao || null]
+            [req.params.id, anterior, finalStatus, observacao || null]
         );
 
-        console.log(`Pedido #${req.params.id}: ${anterior} → ${status}`);
+        console.log(`Pedido #${req.params.id}: ${anterior} → ${finalStatus}`);
 
         res.json({
             success: true,
             anterior,
-            novo: status,
-            message: `Status atualizado: ${anterior} → ${status}`
+            novo: finalStatus,
+            message: `Status atualizado: ${anterior} → ${finalStatus}`,
+            boleto: boletoResult ? {
+                url: boletoResult.boletoUrl,
+                barcode: boletoResult.barcode,
+                vencimento: boletoResult.vencimento,
+                valor: boletoResult.valor
+            } : null
         });
 
     } catch (err) {

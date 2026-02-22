@@ -11,7 +11,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .topbar h1{font-size:16px;font-weight:800;color:var(--orange)}
 .topbar .subtitle{font-size:11px;color:var(--text3);margin-top:2px}
-.container{max-width:1200px;margin:0 auto;padding:20px}
+.container{max-width:1600px;margin:0 auto;padding:20px}
 
 /* Login */
 .login-box{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px 32px;text-align:center}
@@ -39,9 +39,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 /* Table */
 .table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:14px}
-table{width:100%;border-collapse:collapse;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
 th{text-align:left;padding:12px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border)}
 tr:last-child td{border-bottom:none}
 tr:hover{background:#ffffff05}
 
@@ -561,6 +561,7 @@ function doLogin() {
             showPanel();
             renderDashboard(data);
             loadPedidos();
+            checkBoleto30Orders();
         })
         .catch(() => {
             document.getElementById('login-error').style.display = 'block';
@@ -585,7 +586,7 @@ function showPanel() {
 if(TOKEN) {
     fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
         .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => { showPanel(); renderDashboard(data); loadPedidos(); })
+        .then(data => { showPanel(); renderDashboard(data); loadPedidos(); checkBoleto30Orders(); })
         .catch(() => logout());
 }
 
@@ -726,8 +727,8 @@ async function openDetail(id) {
                 <div class="modal-row"><span class="label">Pagamento</span><span class="value">${PAY_LABELS[p.pagamento_metodo]||p.pagamento_metodo}</span></div>
                 <div class="modal-row"><span class="label">Pag. Status</span><span class="value">${p.pagamento_status}</span></div>
                 ${p.cpf ? `<div class="modal-row"><span class="label">CPF</span><span class="value">${p.cpf}</span></div>` : ''}
-                ${p.doc_identidade ? `<div class="modal-row"><span class="label">Doc Identidade</span><span class="value"><a href="/uploads/${p.doc_identidade}" target="_blank" class="doc-link">Ver documento</a></span></div>` : ''}
-                ${p.doc_residencia ? `<div class="modal-row"><span class="label">Doc Residencia</span><span class="value"><a href="/uploads/${p.doc_residencia}" target="_blank" class="doc-link">Ver documento</a></span></div>` : ''}
+                ${p.doc_identidade ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Identidade</span><a href="/uploads/${p.doc_identidade}" target="_blank"><img src="/uploads/${p.doc_identidade}" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer" onerror="this.outerHTML='<a href=/uploads/${p.doc_identidade} target=_blank class=doc-link>📄 Baixar documento</a>'"></a></div>` : ''}
+                ${p.doc_residencia ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Residência</span><a href="/uploads/${p.doc_residencia}" target="_blank"><img src="/uploads/${p.doc_residencia}" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer" onerror="this.outerHTML='<a href=/uploads/${p.doc_residencia} target=_blank class=doc-link>📄 Baixar documento</a>'"></a></div>` : ''}
             </div>
 
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
@@ -738,11 +739,17 @@ async function openDetail(id) {
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Mensagens WhatsApp</div>
                 <div style="display:flex;flex-direction:column;gap:6px">
-                    ${buildWhatsAppBtn(p, 'aceito', 'Pedido aceito', `Ol\u00e1, ${p.recebedor_nome}! Seu pedido ${p.codigo} da ${p.cesta_nome} foi recebido e aceito com sucesso. Estamos preparando tudo com muito cuidado para voc\u00ea. Em breve iniciaremos a separa\u00e7\u00e3o dos itens. Agradecemos a prefer\u00eancia! Araquari Cestas.`)}
-                    ${buildWhatsAppBtn(p, 'separacao', 'Em separa\u00e7\u00e3o', `Ol\u00e1, ${p.recebedor_nome}! Temos boas not\u00edcias: a sua ${p.cesta_nome} (pedido ${p.codigo}) j\u00e1 est\u00e1 sendo preparada. Nossa equipe est\u00e1 selecionando cada item com aten\u00e7\u00e3o. Avisaremos assim que estiver pronta para o envio. Araquari Cestas.`)}
-                    ${buildWhatsAppBtn(p, 'caminho', 'Saiu para entrega', `Ol\u00e1, ${p.recebedor_nome}! Sua ${p.cesta_nome} (pedido ${p.codigo}) acabou de sair para entrega. Nosso entregador est\u00e1 a caminho do endere\u00e7o informado. Por gentileza, fique atento para receb\u00ea-la. Qualquer d\u00favida, estamos \u00e0 disposi\u00e7\u00e3o. Araquari Cestas.`)}
-                    ${buildWhatsAppBtn(p, 'entregue', 'Entrega confirmada', `Ol\u00e1, ${p.recebedor_nome}! Confirmamos que a sua ${p.cesta_nome} (pedido ${p.codigo}) foi entregue com sucesso. Esperamos que aproveite cada item! Caso precise de algo, n\u00e3o hesite em nos procurar. Obrigado por escolher a Araquari Cestas. At\u00e9 a pr\u00f3xima!`)}
-                    ${buildWhatsAppBtn(p, 'problema', 'Informar problema', `Ol\u00e1, ${p.recebedor_nome}! Referente ao seu pedido ${p.codigo}, precisamos informar que ocorreu uma pend\u00eancia no processamento. Por favor, entre em contato conosco para que possamos resolver da melhor forma poss\u00edvel. Pedimos desculpas pelo transtorno. Araquari Cestas.`)}
+                    ${p.pagamento_metodo === 'boleto30' ? `
+                        ${buildWhatsAppBtn(p, 'b30_recebido', '📋 Documentos recebidos', `Olá! Recebemos seu pedido ${p.codigo} da ${p.cesta_nome} com pagamento via Boleto 30 dias. Seus documentos estão em análise. Assim que aprovados, enviaremos o boleto para pagamento. Agradecemos a paciência! Araquari Cestas.`)}
+                        ${buildWhatsAppBtn(p, 'b30_aprovado', '✅ Boleto aprovado', `Olá! Ótima notícia! Seu pedido ${p.codigo} da ${p.cesta_nome} foi APROVADO! O boleto para pagamento em 30 dias já foi gerado. Acesse o link para pagar: ${p.gateway_data ? (() => { try { const gd = JSON.parse(p.gateway_data); return gd.boletoUrl || '(boleto será enviado em seguida)'; } catch(e) { return '(boleto será enviado em seguida)'; } })() : '(gere o boleto aprovando o pedido)'} Valor: R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} | Vencimento em 30 dias. Agradecemos a confiança! Araquari Cestas.`)}
+                        ${buildWhatsAppBtn(p, 'b30_recusado', '❌ Boleto recusado', `Olá! Infelizmente não foi possível aprovar seu pedido ${p.codigo} da ${p.cesta_nome} via Boleto 30 dias. Os documentos enviados não atenderam aos requisitos necessários. Caso queira, você pode realizar um novo pedido utilizando outra forma de pagamento (PIX, cartão ou boleto à vista). Estamos à disposição! Araquari Cestas.`)}
+                    ` : `
+                        ${buildWhatsAppBtn(p, 'aceito', 'Pedido aceito', `Olá, ${p.recebedor_nome}! Seu pedido ${p.codigo} da ${p.cesta_nome} foi recebido e aceito com sucesso. Estamos preparando tudo com muito cuidado para você. Em breve iniciaremos a separação dos itens. Agradecemos a preferência! Araquari Cestas.`)}
+                    `}
+                    ${buildWhatsAppBtn(p, 'separacao', 'Em separação', `Olá, ${p.recebedor_nome}! Temos boas notícias: a sua ${p.cesta_nome} (pedido ${p.codigo}) já está sendo preparada. Nossa equipe está selecionando cada item com atenção. Avisaremos assim que estiver pronta para o envio. Araquari Cestas.`)}
+                    ${buildWhatsAppBtn(p, 'caminho', 'Saiu para entrega', `Olá, ${p.recebedor_nome}! Sua ${p.cesta_nome} (pedido ${p.codigo}) acabou de sair para entrega. Nosso entregador está a caminho do endereço informado. Por gentileza, fique atento para recebê-la. Qualquer dúvida, estamos à disposição. Araquari Cestas.`)}
+                    ${buildWhatsAppBtn(p, 'entregue', 'Entrega confirmada', `Olá, ${p.recebedor_nome}! Confirmamos que a sua ${p.cesta_nome} (pedido ${p.codigo}) foi entregue com sucesso. Esperamos que aproveite cada item! Caso precise de algo, não hesite em nos procurar. Obrigado por escolher a Araquari Cestas. Até a próxima!`)}
+                    ${buildWhatsAppBtn(p, 'problema', 'Informar problema', `Olá, ${p.recebedor_nome}! Referente ao seu pedido ${p.codigo}, precisamos informar que ocorreu uma pendência no processamento. Por favor, entre em contato conosco para que possamos resolver da melhor forma possível. Pedimos desculpas pelo transtorno. Araquari Cestas.`)}
                 </div>
             </div>
 
@@ -798,7 +805,11 @@ async function updateStatus(id) {
         });
         const data = await res.json();
         if(data.success) {
-            showToast('Status atualizado com sucesso!', 'success');
+            if(data.boleto && data.boleto.url) {
+                showToast(`✅ Boleto 30d gerado! Vencimento: ${data.boleto.vencimento}. Envie o link pelo WhatsApp ao cliente.`, 'success', 8000);
+            } else {
+                showToast('Status atualizado com sucesso!', 'success');
+            }
             openDetail(id);
             loadPedidos();
             loadDashboard();
@@ -872,8 +883,56 @@ setInterval(() => {
     if(TOKEN && document.getElementById('admin-panel').style.display !== 'none') {
         loadDashboard();
         loadPedidos();
+        checkBoleto30Orders();
     }
 }, 15000);
+
+// Poll for new boleto30 orders separately (they're hidden from main tab)
+let knownBoleto30 = new Set();
+let boleto30FirstLoad = true;
+
+async function checkBoleto30Orders() {
+    try {
+        const res = await fetch(API+'/pedidos?status=analise&limite=50', {headers:{'x-admin-token':TOKEN}});
+        const data = await res.json();
+        if(!data.pedidos) return;
+
+        if(boleto30FirstLoad) {
+            data.pedidos.forEach(p => knownBoleto30.add(p.codigo));
+            boleto30FirstLoad = false;
+            // Update badge
+            updateBoleto30Badge(data.pedidos.length);
+            return;
+        }
+
+        const newOnes = data.pedidos.filter(p => !knownBoleto30.has(p.codigo));
+        data.pedidos.forEach(p => knownBoleto30.add(p.codigo));
+        updateBoleto30Badge(data.pedidos.length);
+
+        if(newOnes.length > 0) {
+            playAlertSound();
+            if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
+            newOnes.forEach(p => {
+                showToast(`📋 Boleto 30d: ${p.codigo} - ${p.cesta_nome} (R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}) - Documentos para análise!`, 'info', 10000);
+                if(Notification.permission === 'granted') {
+                    try { new Notification('📋 Boleto 30d - Análise pendente', { body: `${p.codigo} - ${p.cesta_nome} - Documentos enviados`, icon: '/assets/img/logo.png', tag: 'b30-'+p.codigo, requireInteraction: true }); } catch(e) {}
+                }
+            });
+        }
+    } catch(e) {}
+}
+
+function updateBoleto30Badge(count) {
+    const tab = document.querySelector('.tab[data-tab="analise"]');
+    if(!tab) return;
+    const existing = tab.querySelector('.badge-count');
+    if(existing) existing.remove();
+    if(count > 0) {
+        tab.innerHTML = `Boleto 30d <span class="badge-count" style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">${count}</span>`;
+    } else {
+        tab.textContent = 'Boleto 30d';
+    }
+}
 </script>
 </body>
 </html>
