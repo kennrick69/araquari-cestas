@@ -131,7 +131,9 @@ router.post('/cartao/:codigo', async (req, res) => {
         const cartao = await mp.criarCartao(pedido, token, parcelas || 1, email);
 
         const isApproved = cartao.status === 'approved';
-        const novoStatus = isApproved ? 'confirmado' : 'novo';
+        const isPending = cartao.status === 'in_process' || cartao.status === 'pending';
+        const isOk = isApproved || isPending;
+        const novoStatus = isApproved ? 'confirmado' : (isPending ? 'novo' : 'novo');
         const pagStatus = isApproved ? 'aprovado' : (cartao.status === 'rejected' ? 'rejeitado' : 'pendente');
 
         await pool.query(
@@ -148,7 +150,7 @@ router.post('/cartao/:codigo', async (req, res) => {
 
         console.log(`Cartao para ${pedido.codigo}: status=${cartao.status}, detail=${cartao.statusDetail}, parcelas=${cartao.parcelas}`);
 
-        if (!isApproved) {
+        if (!isOk) {
             return res.status(400).json({
                 success: false,
                 status: cartao.status,
@@ -161,7 +163,8 @@ router.post('/cartao/:codigo', async (req, res) => {
             success: true,
             status: cartao.status,
             statusDetail: cartao.statusDetail,
-            parcelas: cartao.parcelas
+            parcelas: cartao.parcelas,
+            pendingReview: isPending
         });
 
     } catch (err) {

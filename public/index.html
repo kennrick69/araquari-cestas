@@ -1904,14 +1904,21 @@ async function initSecureFields(codigo, amount, cpf, email) {
                             throw new Error(msgMap[detail] || detail);
                         }
 
-                        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
-                        setTimeout(() => showStatus('separacao'), 1500);
+                        if(data.pendingReview) {
+                            statusEl.innerHTML = '<div style="color:var(--orange);font-weight:800;font-size:14px">⏳ Pagamento em análise pelo banco. Você será notificado em breve!</div>';
+                            setTimeout(() => showStatus('separacao'), 2500);
+                        } else {
+                            statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
+                            setTimeout(() => showStatus('separacao'), 1500);
+                        }
 
                     } catch(err) {
                         console.error('Erro cartao:', err);
                         statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">❌ ${err.message}</div>`;
                         btn.disabled = false;
                         btn.textContent = 'Tentar novamente';
+                        // Token é de uso único - reinicializar form para gerar novo token
+                        setTimeout(() => initSecureFields(codigo, amount, cpf, email), 500);
                     }
                 },
                 onFetching: (resource) => {
