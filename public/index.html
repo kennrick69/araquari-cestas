@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
@@ -124,7 +124,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 /* ── APP CONTAINER ── */
 #app { position:fixed; inset:0; display:flex; flex-direction:column; }
-.screen { position:absolute; inset:0; display:none; flex-direction:column; }
+.screen { position:absolute; inset:0; display:none; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
 .screen.active { display:flex; animation:screenIn 0.4s ease-out; }
 @keyframes screenIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
 
@@ -1095,7 +1095,10 @@ function centerOnUser() {
 // ═══════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════
-function showScreen(id) {
+// Navigation history stack for Android back button
+const navStack = ['home'];
+
+function showScreen(id, addToHistory = true) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + id).classList.add('active');
 
@@ -1116,7 +1119,28 @@ function showScreen(id) {
     }
 
     if(id === 'payment') renderPaymentSummary();
+
+    // Push to history stack (Android back button support)
+    if(addToHistory && navStack[navStack.length - 1] !== id) {
+        navStack.push(id);
+        history.pushState({ screen: id }, '', '');
+    }
 }
+
+// Handle Android back button / browser back
+window.addEventListener('popstate', function(e) {
+    if(navStack.length > 1) {
+        navStack.pop();
+        const prevScreen = navStack[navStack.length - 1];
+        showScreen(prevScreen, false);
+    } else {
+        // Already at home, push state again to prevent exit
+        history.pushState({ screen: 'home' }, '', '');
+    }
+});
+
+// Initialize first history state
+history.replaceState({ screen: 'home' }, '', '');
 
 function goToMap() {
     showScreen('map');
@@ -1764,111 +1788,146 @@ function showCardForm(codigo) {
     showScreen('status');
     const el = document.getElementById('status-content');
     const b = BASKETS[state.basket];
-    const total = (b.price * state.qty).toFixed(2).replace('.',',');
+    const totalNum = b.price * state.qty;
+    const total = totalNum.toFixed(2).replace('.',',');
+
+    // CPF e email já preenchidos na tela anterior
+    const cpf = (document.getElementById('input-cpf-payer')?.value || '').replace(/\D/g,'');
+    const email = document.getElementById('input-email-payer')?.value || '';
 
     el.innerHTML = `
         <div style="margin-bottom:8px"><img src="assets/img/pay-cartao.png" style="width:48px;height:48px"></div>
         <div class="status-title">Cartão de Crédito</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
-        <div class="card-form-box">
-            <input class="card-input" id="card-number" placeholder="Número do cartão" inputmode="numeric" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
-            <input class="card-input" id="card-name" placeholder="Nome impresso no cartão" style="text-transform:uppercase">
+        <form id="form-checkout" class="card-form-box">
+            <div id="form-checkout__cardNumber" class="card-input" style="height:40px;padding:6px 12px"></div>
+            <input type="text" class="card-input" id="form-checkout__cardholderName" placeholder="Nome impresso no cartão" style="text-transform:uppercase">
             <div class="card-row">
-                <input class="card-input" id="card-expiry" placeholder="MM/AA" inputmode="numeric" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
-                <input class="card-input" id="card-cvv" placeholder="CVV" inputmode="numeric" maxlength="4" type="password">
+                <div id="form-checkout__expirationDate" class="card-input" style="height:40px;padding:6px 12px"></div>
+                <div id="form-checkout__securityCode" class="card-input" style="height:40px;padding:6px 12px"></div>
             </div>
-            <select class="card-input" id="card-parcelas" style="color:var(--text)">
-                <option value="1">1x de R$ ${total} (sem juros)</option>
-                <option value="2">2x de R$ ${(b.price * state.qty / 2).toFixed(2).replace('.',',')} (sem juros)</option>
-                <option value="3">3x de R$ ${(b.price * state.qty / 3).toFixed(2).replace('.',',')} (sem juros)</option>
-            </select>
-            <button class="card-pay-btn" id="card-submit-btn" onclick="processCardPayment('${codigo}')">Pagar R$ ${total}</button>
-        </div>
+            <select class="card-input" id="form-checkout__installments" style="color:var(--text)"></select>
+            <select class="card-input" id="form-checkout__issuer" style="display:none"></select>
+            <select class="card-input" id="form-checkout__identificationType" style="display:none"></select>
+            <input type="hidden" id="form-checkout__identificationNumber" value="${cpf}">
+            <input type="hidden" id="form-checkout__cardholderEmail" value="${email || 'cliente@araquaricestas.com'}">
+            <button type="submit" class="card-pay-btn" id="card-submit-btn">Pagar R$ ${total}</button>
+        </form>
         <div id="card-status" style="text-align:center;margin-top:12px"></div>
         <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
             <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
             <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
         </div>
     `;
+
+    // Inicializar Secure Fields
+    initSecureFields(codigo, totalNum, cpf, email);
 }
 
-async function processCardPayment(codigo) {
-    const btn = document.getElementById('card-submit-btn');
-    const statusEl = document.getElementById('card-status');
-    btn.disabled = true;
-    btn.textContent = 'Processando...';
-    statusEl.innerHTML = '<div class="payment-waiting"><div class="spin-sm"></div> Processando pagamento...</div>';
+let _cardForm = null;
 
+async function initSecureFields(codigo, amount, cpf, email) {
     try {
-        // Get MP public key
         const keyRes = await fetch('/api/pagamento/public-key');
         const keyData = await keyRes.json();
-        const mp = new MercadoPago(keyData.publicKey || keyData.public_key);
+        const mp = new MercadoPago(keyData.publicKey || keyData.public_key, { locale: 'pt-BR' });
 
-        const cardNumber = document.getElementById('card-number').value.replace(/\s/g,'');
-        const expiry = document.getElementById('card-expiry').value.split('/');
-        const cardName = document.getElementById('card-name').value;
-        const cvv = document.getElementById('card-cvv').value;
-        const parcelas = parseInt(document.getElementById('card-parcelas').value) || 1;
+        if(_cardForm) { try { _cardForm.unmount(); } catch(e) {} }
 
-        // Reuse CPF and email already filled in payer-data-area
-        const cpf = (document.getElementById('input-cpf-payer')?.value || '').replace(/\D/g,'');
-        const email = document.getElementById('input-email-payer')?.value || '';
+        _cardForm = mp.cardForm({
+            amount: String(amount.toFixed(2)),
+            iframe: true,
+            form: {
+                id: 'form-checkout',
+                cardNumber: { id: 'form-checkout__cardNumber', placeholder: 'Número do cartão',
+                    style: { fontSize: '14px', color: '#e0e0e0', 'placeholder-color': '#888' }
+                },
+                expirationDate: { id: 'form-checkout__expirationDate', placeholder: 'MM/AA',
+                    style: { fontSize: '14px', color: '#e0e0e0', 'placeholder-color': '#888' }
+                },
+                securityCode: { id: 'form-checkout__securityCode', placeholder: 'CVV',
+                    style: { fontSize: '14px', color: '#e0e0e0', 'placeholder-color': '#888' }
+                },
+                cardholderName: { id: 'form-checkout__cardholderName', placeholder: 'Nome no cartão' },
+                issuer: { id: 'form-checkout__issuer', placeholder: 'Banco emissor' },
+                installments: { id: 'form-checkout__installments', placeholder: 'Parcelas' },
+                identificationType: { id: 'form-checkout__identificationType' },
+                identificationNumber: { id: 'form-checkout__identificationNumber' },
+                cardholderEmail: { id: 'form-checkout__cardholderEmail' }
+            },
+            callbacks: {
+                onFormMounted: (err) => {
+                    if(err) console.warn('CardForm mount error:', err);
+                    else console.log('Secure Fields mounted OK');
+                },
+                onSubmit: async (event) => {
+                    event.preventDefault();
+                    const btn = document.getElementById('card-submit-btn');
+                    const statusEl = document.getElementById('card-status');
+                    btn.disabled = true;
+                    btn.textContent = 'Processando...';
+                    statusEl.innerHTML = '<div class="payment-waiting"><div class="spin-sm"></div> Processando pagamento...</div>';
 
-        if(!cardNumber || !cardName || expiry.length !== 2 || !cvv) {
-            throw new Error('Preencha todos os campos do cart\u00E3o');
-        }
+                    try {
+                        const fd = _cardForm.getCardFormData();
+                        console.log('Secure Fields token:', fd.token);
 
-        // Create card token via MP SDK
-        const cardToken = await mp.createCardToken({
-            cardNumber: cardNumber,
-            cardholderName: cardName,
-            cardExpirationMonth: expiry[0],
-            cardExpirationYear: '20' + expiry[1],
-            securityCode: cvv,
-            identificationType: 'CPF',
-            identificationNumber: cpf
+                        // MESMO payload e MESMA rota do que funcionava antes
+                        const res = await fetch('/api/pagamento/cartao/' + codigo, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                token: fd.token,
+                                parcelas: Number(fd.installments) || 1,
+                                email: email,
+                                cpf: cpf
+                            })
+                        });
+                        const data = await res.json();
+
+                        if(!res.ok || !data.success) {
+                            const detail = data.statusDetail || data.error || 'Pagamento recusado';
+                            const msgMap = {
+                                'cc_rejected_bad_filled_card_number': 'Número do cartão inválido',
+                                'cc_rejected_bad_filled_date': 'Data de validade inválida',
+                                'cc_rejected_bad_filled_other': 'Dados do cartão incorretos',
+                                'cc_rejected_bad_filled_security_code': 'Código de segurança inválido',
+                                'cc_rejected_blacklist': 'Cartão não permitido',
+                                'cc_rejected_call_for_authorize': 'Ligue para sua operadora e autorize o pagamento',
+                                'cc_rejected_card_disabled': 'Cartão desabilitado. Ative com a operadora.',
+                                'cc_rejected_duplicated_payment': 'Pagamento duplicado. Tente em alguns minutos.',
+                                'cc_rejected_high_risk': 'Pagamento recusado por política de segurança',
+                                'cc_rejected_insufficient_amount': 'Saldo insuficiente',
+                                'cc_rejected_max_attempts': 'Limite de tentativas atingido. Tente outro cartão.',
+                                'cc_rejected_other_reason': 'Pagamento recusado pela operadora'
+                            };
+                            throw new Error(msgMap[detail] || detail);
+                        }
+
+                        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
+                        setTimeout(() => showStatus('separacao'), 1500);
+
+                    } catch(err) {
+                        console.error('Erro cartao:', err);
+                        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">❌ ${err.message}</div>`;
+                        btn.disabled = false;
+                        btn.textContent = 'Tentar novamente';
+                    }
+                },
+                onFetching: (resource) => {
+                    const btn = document.getElementById('card-submit-btn');
+                    if(btn) btn.textContent = 'Carregando...';
+                    return () => { if(btn) btn.textContent = 'Pagar R$ ' + amount.toFixed(2).replace('.',','); };
+                },
+                onError: (err) => { console.error('CardForm error:', err); }
+            }
         });
-
-        if(!cardToken || !cardToken.id) throw new Error('Erro ao tokenizar cartao');
-
-        // Send to backend with all data
-        const res = await fetch('/api/pagamento/cartao/' + codigo, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: cardToken.id, parcelas, email, cpf })
-        });
-        const data = await res.json();
-
-        if(!res.ok || !data.success) {
-            const detail = data.statusDetail || data.error || 'Pagamento recusado';
-            const msgMap = {
-                'cc_rejected_bad_filled_card_number': 'N\u00FAmero do cart\u00E3o inv\u00E1lido',
-                'cc_rejected_bad_filled_date': 'Data de validade inv\u00E1lida',
-                'cc_rejected_bad_filled_other': 'Dados do cart\u00E3o incorretos',
-                'cc_rejected_bad_filled_security_code': 'C\u00F3digo de seguran\u00E7a inv\u00E1lido',
-                'cc_rejected_blacklist': 'Cart\u00E3o n\u00E3o permitido',
-                'cc_rejected_call_for_authorize': 'Ligue para sua operadora e autorize o pagamento',
-                'cc_rejected_card_disabled': 'Cart\u00E3o desabilitado. Ative com a operadora.',
-                'cc_rejected_duplicated_payment': 'Pagamento duplicado. Tente em alguns minutos.',
-                'cc_rejected_high_risk': 'Pagamento recusado por pol\u00EDtica de seguran\u00E7a',
-                'cc_rejected_insufficient_amount': 'Saldo insuficiente',
-                'cc_rejected_max_attempts': 'Limite de tentativas atingido. Tente outro cart\u00E3o.',
-                'cc_rejected_other_reason': 'Pagamento recusado pela operadora'
-            };
-            throw new Error(msgMap[detail] || detail);
-        }
-
-        statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">\u2705 Pagamento aprovado!</div>';
-        setTimeout(() => showStatus('separacao'), 1500);
-
     } catch(err) {
-        console.error('Erro cartao:', err);
-        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">\u274C ${err.message}</div>`;
-        btn.disabled = false;
-        btn.textContent = 'Tentar novamente';
+        console.error('Erro ao inicializar Secure Fields:', err);
+        document.getElementById('card-status').innerHTML = '<div style="color:var(--red);">❌ Erro ao carregar formulário</div>';
     }
 }
+
 function showStatus(type) {
     showScreen('status');
     const b = BASKETS[state.basket];
