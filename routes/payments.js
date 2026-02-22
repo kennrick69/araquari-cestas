@@ -56,14 +56,13 @@ router.post('/boleto/:codigo', async (req, res) => {
             return res.status(503).json({ error: 'Gateway de pagamento nao configurado' });
         }
 
-        const { dias, cpf, email, payer_address } = req.body;
+        const { dias, cpf, email } = req.body;
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });
 
         const pedido = result.rows[0];
         if (cpf) pedido.cpf = cpf;
         if (email) pedido.email = email;
-        if (payer_address) pedido.payer_address = payer_address;
 
         // Save CPF and email to database
         const updates = [];
@@ -108,7 +107,7 @@ router.post('/cartao/:codigo', async (req, res) => {
             return res.status(503).json({ error: 'Gateway de pagamento nao configurado' });
         }
 
-        const { token, parcelas, email, cpf, payment_method_id, issuer_id, payer_address } = req.body;
+        const { token, parcelas, email, cpf } = req.body;
         if (!token) return res.status(400).json({ error: 'Token do cartao obrigatorio' });
 
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
@@ -117,9 +116,6 @@ router.post('/cartao/:codigo', async (req, res) => {
         const pedido = result.rows[0];
         if (cpf) pedido.cpf = cpf;
         if (email) pedido.email = email;
-        if (payment_method_id) pedido.card_payment_method = payment_method_id;
-        if (issuer_id) pedido.card_issuer_id = issuer_id;
-        if (payer_address) pedido.payer_address = payer_address;
 
         // Save CPF/email to database
         if (cpf || email) {

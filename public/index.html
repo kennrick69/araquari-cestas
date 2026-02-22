@@ -651,14 +651,9 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <label class="form-label">CPF <span class="req">*</span></label>
                     <input class="form-input" placeholder="000.000.000-00" id="input-cpf-payer" inputmode="numeric" maxlength="14" oninput="this.value=maskCPF(this.value)">
                 </div>
-                <div class="form-group" style="margin-bottom:8px">
+                <div class="form-group" style="margin-bottom:0">
                     <label class="form-label">E-mail <span class="req">*</span></label>
                     <input class="form-input" placeholder="seu@email.com" id="input-email-payer" type="email">
-                </div>
-                <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label">CEP do pagador <span class="req">*</span></label>
-                    <input class="form-input" placeholder="00000-000" id="input-cep-payer" inputmode="numeric" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').slice(0,9); if(this.value.replace(/\D/g,'').length===8) fetchPayerCep(this.value);">
-                    <div id="payer-cep-info" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
                 </div>
             </div>
 
@@ -1544,12 +1539,6 @@ async function finalizePay() {
             shakeInput('input-email-payer');
             return;
         }
-        const cepPayer = (document.getElementById('input-cep-payer')?.value || '').replace(/\D/g,'');
-        if(cepPayer.length !== 8) {
-            showToast('Informe o CEP do pagador.', 'warning');
-            shakeInput('input-cep-payer');
-            return;
-        }
     }
 
     // Disable button and show loading
@@ -1586,8 +1575,7 @@ async function finalizePay() {
             desconto: discount,
             total: total,
             cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-cpf-payer')?.value || '') : null,
-            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null,
-            payer_address: (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? payerAddress : null
+            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));
@@ -1760,7 +1748,7 @@ async function processBoletoPayment(codigo) {
         const res = await fetch('/api/pagamento/boleto/' + codigo, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dias: 3, cpf: cpf, email: email, payer_address: payerAddress || {} })
+            body: JSON.stringify({ dias: 3, cpf: cpf, email: email })
         });
         const data = await res.json();
 
@@ -1833,12 +1821,12 @@ function showCardForm(codigo) {
     `;
 
     // Initialize MP CardForm with Secure Fields
-    initCardForm(codigo, totalNum, cpf, email, payerAddress);
+    initCardForm(codigo, totalNum, cpf, email);
 }
 
 let mpCardFormInstance = null;
 
-async function initCardForm(codigo, amount, cpf, email, billingAddr) {
+async function initCardForm(codigo, amount, cpf, email) {
     try {
         const keyRes = await fetch('/api/pagamento/public-key');
         const keyData = await keyRes.json();
@@ -1914,10 +1902,7 @@ async function initCardForm(codigo, amount, cpf, email, billingAddr) {
                                 token: formData.token,
                                 parcelas: Number(formData.installments) || 1,
                                 email: email || formData.cardholderEmail,
-                                cpf: cpf || formData.identificationNumber,
-                                payment_method_id: formData.paymentMethodId,
-                                issuer_id: formData.issuerId,
-                                payer_address: billingAddr || {}
+                                cpf: cpf || formData.identificationNumber
                             })
                         });
                         const data = await res.json();
@@ -2283,36 +2268,6 @@ async function buscarPedidos() {
 // ═══════════════════════════════════════
 const maskCPF = v => v.replace(/\D/g,"").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2").slice(0,14);
 const maskPhone = v => v.replace(/\D/g,"").replace(/(\d{2})(\d)/,"($1) $2").replace(/(\d{5})(\d)/,"$1-$2").slice(0,15);
-
-// Payer address (billing) - separate from delivery address
-let payerAddress = {};
-
-async function fetchPayerCep(cep) {
-    const cepClean = cep.replace(/\D/g, '');
-    const infoEl = document.getElementById('payer-cep-info');
-    if(cepClean.length !== 8) return;
-    infoEl.textContent = 'Buscando...';
-    try {
-        const res = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-        const data = await res.json();
-        if(data.erro) {
-            infoEl.textContent = 'CEP n\u00E3o encontrado';
-            payerAddress = { zip_code: cepClean };
-            return;
-        }
-        payerAddress = {
-            zip_code: cepClean,
-            street_name: data.logradouro || '',
-            neighborhood: data.bairro || '',
-            city: data.localidade || '',
-            federal_unit: data.uf || ''
-        };
-        infoEl.innerHTML = `<span style="color:var(--green)">\u2705 ${data.logradouro ? data.logradouro + ', ' : ''}${data.bairro || ''} - ${data.localidade}/${data.uf}</span>`;
-    } catch(e) {
-        infoEl.textContent = 'Erro ao buscar CEP';
-        payerAddress = { zip_code: cepClean };
-    }
-}
 
 function abreviarEstado(nome) {
     const map = {'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'};
