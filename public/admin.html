@@ -470,7 +470,7 @@ function detectNewOrders(pedidos) {
             alertOrders.forEach(p => {
                 try {
                     new Notification('\uD83D\uDCE6 Novo Pedido Confirmado!', {
-                        body: `${p.codigo} - ${p.quantidade > 1 ? p.quantidade + 'x ' : ''}${p.cesta_nome} - R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}`,
+                        body: `${p.codigo} - ${p.cesta_nome} - R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}`,
                         icon: '/assets/img/logo.png',
                         tag: 'order-' + p.codigo,
                         requireInteraction: true
@@ -497,7 +497,7 @@ function showOrderToast(p) {
             <span class="toast-badge">Novo Pedido</span>
             <button class="toast-close" onclick="dismissToast(this)">X</button>
         </div>
-        <div class="toast-title">${p.codigo} - ${p.quantidade > 1 ? p.quantidade + 'x ' : ''}${p.cesta_nome}</div>
+        <div class="toast-title">${p.codigo} - ${p.cesta_nome}</div>
         <div class="toast-body">
             <strong>${p.recebedor_nome}</strong><br>
             ${endereco || 'Endereco nao informado'}<br>
@@ -655,7 +655,7 @@ async function loadPedidos() {
         tbody.innerHTML = data.pedidos.map(p => `
             <tr>
                 <td style="font-weight:800;color:var(--orange)">${p.codigo}</td>
-                <td>${p.quantidade > 1 ? p.quantidade + 'x ' : ''}${p.cesta_nome}</td>
+                <td>${p.cesta_nome}</td>
                 <td style="font-weight:600">${p.recebedor_nome}</td>
                 <td style="color:var(--text2)">${p.recebedor_telefone}</td>
                 <td>${PAY_LABELS[p.pagamento_metodo]||p.pagamento_metodo}</td>

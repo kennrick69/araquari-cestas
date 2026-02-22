@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
@@ -124,7 +124,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 /* ── APP CONTAINER ── */
 #app { position:fixed; inset:0; display:flex; flex-direction:column; }
-.screen { position:absolute; inset:0; display:none; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
+.screen { position:absolute; inset:0; display:none; flex-direction:column; }
 .screen.active { display:flex; animation:screenIn 0.4s ease-out; }
 @keyframes screenIn { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
 
@@ -269,7 +269,7 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 .boleto-barcode { background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;word-break:break-all;color:var(--text2);margin:12px 0; }
 .boleto-link-btn { display:block;width:100%;padding:12px;background:var(--orange);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;text-align:center;margin-top:8px; }
 .card-form-box { background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px auto;max-width:340px; }
-.card-input { width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box; }
+.card-input { width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px; }
 .card-input:focus { outline:none;border-color:var(--orange); }
 .card-input::placeholder { color:var(--text3); }
 .card-row { display:flex;gap:8px; }
@@ -1095,10 +1095,7 @@ function centerOnUser() {
 // ═══════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════
-// Navigation history stack for Android back button
-const navStack = ['home'];
-
-function showScreen(id, addToHistory = true) {
+function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + id).classList.add('active');
 
@@ -1119,28 +1116,7 @@ function showScreen(id, addToHistory = true) {
     }
 
     if(id === 'payment') renderPaymentSummary();
-
-    // Push to history stack (Android back button support)
-    if(addToHistory && navStack[navStack.length - 1] !== id) {
-        navStack.push(id);
-        history.pushState({ screen: id }, '', '');
-    }
 }
-
-// Handle Android back button / browser back
-window.addEventListener('popstate', function(e) {
-    if(navStack.length > 1) {
-        navStack.pop();
-        const prevScreen = navStack[navStack.length - 1];
-        showScreen(prevScreen, false);
-    } else {
-        // Already at home, push state again to prevent exit
-        history.pushState({ screen: 'home' }, '', '');
-    }
-});
-
-// Initialize first history state
-history.replaceState({ screen: 'home' }, '', '');
 
 function goToMap() {
     showScreen('map');
@@ -1792,11 +1768,11 @@ function showCardForm(codigo) {
 
     el.innerHTML = `
         <div style="margin-bottom:8px"><img src="assets/img/pay-cartao.png" style="width:48px;height:48px"></div>
-        <div class="status-title">Cart\u00E3o de Cr\u00E9dito</div>
+        <div class="status-title">Cartão de Crédito</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Total: R$ ${total}</div>
         <div class="card-form-box">
-            <input class="card-input" id="card-number" placeholder="N\u00FAmero do cart\u00E3o" inputmode="numeric" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
-            <input class="card-input" id="card-name" placeholder="Nome impresso no cart\u00E3o" style="text-transform:uppercase">
+            <input class="card-input" id="card-number" placeholder="Número do cartão" inputmode="numeric" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
+            <input class="card-input" id="card-name" placeholder="Nome impresso no cartão" style="text-transform:uppercase">
             <div class="card-row">
                 <input class="card-input" id="card-expiry" placeholder="MM/AA" inputmode="numeric" maxlength="5" oninput="let v=this.value.replace(/[^0-9]/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);this.value=v">
                 <input class="card-input" id="card-cvv" placeholder="CVV" inputmode="numeric" maxlength="4" type="password">
@@ -1810,7 +1786,7 @@ function showCardForm(codigo) {
         </div>
         <div id="card-status" style="text-align:center;margin-top:12px"></div>
         <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">C\u00F3digo do Pedido</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
             <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
         </div>
     `;
@@ -1893,7 +1869,6 @@ async function processCardPayment(codigo) {
         btn.textContent = 'Tentar novamente';
     }
 }
-
 function showStatus(type) {
     showScreen('status');
     const b = BASKETS[state.basket];
