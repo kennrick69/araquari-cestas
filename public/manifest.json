@@ -1,7 +1,7 @@
 {
   "name": "Araquari Cestas",
   "short_name": "Araquari Cestas",
-  "description": "Cestas basicas entregues na sua porta em Araquari",
+  "description": "Cestas básicas entregues na sua porta em Araquari",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,10 +9,25 @@
   "background_color": "#0a0a0f",
   "icons": [
     {
-      "src": "/assets/img/logo.png",
+      "src": "/assets/img/icon-48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
   "categories": ["food", "shopping"],
