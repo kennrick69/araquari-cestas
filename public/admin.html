@@ -203,7 +203,7 @@ tr:hover{background:#ffffff05}
             <option value="">Todos os status</option>
             <option value="novo">Novo</option>
             <option value="confirmado">Confirmado</option>
-            <option value="separacao">Em Separacao</option>
+            <option value="separacao">Em Separação</option>
             <option value="pronto">Pronto</option>
             <option value="a_caminho">A Caminho</option>
             <option value="entregue">Entregue</option>
@@ -228,7 +228,7 @@ tr:hover{background:#ffffff05}
         <table>
             <thead>
                 <tr>
-                    <th>Codigo</th>
+                    <th>Código</th>
                     <th>Cesta</th>
                     <th>Recebedor</th>
                     <th>Telefone</th>
@@ -236,7 +236,7 @@ tr:hover{background:#ffffff05}
                     <th>Total</th>
                     <th>Status</th>
                     <th>Data</th>
-                    <th>Acao</th>
+                    <th>Ação</th>
                 </tr>
             </thead>
             <tbody id="orders-tbody">
@@ -320,7 +320,7 @@ let currentPage = 1;
 let currentTab = 'pedidos';
 const API = '/api/admin';
 const STATUS_LABELS = {
-    'novo':'Novo','confirmado':'Confirmado','separacao':'Em Separacao',
+    'novo':'Novo','confirmado':'Confirmado','separacao':'Em Separação',
     'pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue',
     'cancelado':'Cancelado','analise':'Em Analise','aprovado':'Aprovado','recusado':'Recusado'
 };
@@ -451,11 +451,18 @@ function detectNewOrders(pedidos) {
     pedidos.forEach(p => {
         const prevStatus = knownOrderStatuses[p.codigo];
 
-        // Alert case 1: Brand new order that already has payment confirmed or in analise (not "novo")
+        // Skip analise orders — handled by checkBoleto30Orders to avoid duplicates
+        if(p.status === 'analise') {
+            knownOrderCodes.add(p.codigo);
+            knownOrderStatuses[p.codigo] = p.status;
+            return;
+        }
+
+        // Alert case 1: Brand new order that already has payment confirmed (not "novo")
         if(!knownOrderCodes.has(p.codigo) && p.status !== 'novo') {
             alertOrders.push(p);
         }
-        // Alert case 2: Known order that just changed from "novo" to confirmed/paid/analise status
+        // Alert case 2: Known order that just changed from "novo" to confirmed/paid status
         else if(prevStatus === 'novo' && p.status !== 'novo') {
             alertOrders.push(p);
         }
@@ -795,7 +802,7 @@ async function openDetail(id) {
 
             <div class="modal-row"><span class="label">Cesta</span><span class="value">${p.cesta_nome}</span></div>
             <div class="modal-row"><span class="label">Quantidade</span><span class="value">${p.quantidade}x</span></div>
-            <div class="modal-row"><span class="label">Preco Unitario</span><span class="value">R$ ${parseFloat(p.cesta_preco).toFixed(2).replace('.',',')}</span></div>
+            <div class="modal-row"><span class="label">Preço Unitário</span><span class="value">R$ ${parseFloat(p.cesta_preco).toFixed(2).replace('.',',')}</span></div>
             <div class="modal-row"><span class="label">Desconto</span><span class="value" style="color:var(--green)">${p.desconto > 0 ? '-R$ '+parseFloat(p.desconto).toFixed(2).replace('.',',') : '-'}</span></div>
             <div class="modal-row"><span class="label">Total</span><span class="value" style="font-size:16px;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</span></div>
 
@@ -853,18 +860,28 @@ async function openDetail(id) {
             </div>` : ''}
 
             <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                ${p.pagamento_metodo === 'boleto30' && (p.status === 'analise' || p.status === 'novo') ? `
+                <div style="background:#2e2a1a;border:2px solid #f39c12;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center">
+                    <div style="font-size:14px;font-weight:800;color:#f39c12;margin-bottom:6px">⚠️ ANÁLISE DE BOLETO 30 DIAS</div>
+                    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Verifique os documentos acima antes de decidir</div>
+                    <div style="display:flex;gap:10px;justify-content:center">
+                        <button class="btn" onclick="aprovarBoleto30(${p.id})" style="flex:1;padding:14px;background:#27ae60;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">✅ APROVAR e Gerar Boleto</button>
+                        <button class="btn" onclick="recusarBoleto30(${p.id})" style="flex:1;padding:14px;background:#e74c3c;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">❌ RECUSAR</button>
+                    </div>
+                </div>
+                ` : ''}
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Alterar Status</div>
                 <select class="status-select" id="new-status">
                     <option value="">Selecione...</option>
                     <option value="confirmado">Confirmado</option>
-                    <option value="separacao">Em Separacao</option>
+                    <option value="separacao">Em Separação</option>
                     <option value="pronto">Pronto</option>
                     <option value="a_caminho">A Caminho</option>
                     <option value="entregue">Entregue</option>
                     <option value="cancelado">Cancelado</option>
                     ${p.pagamento_metodo === 'boleto30' ? '<option value="aprovado">Aprovar Boleto 30d</option><option value="recusado">Recusar Boleto 30d</option>' : ''}
                 </select>
-                <textarea class="obs-input" id="obs-status" placeholder="Observacao (opcional)"></textarea>
+                <textarea class="obs-input" id="obs-status" placeholder="Observação (opcional)"></textarea>
                 <div class="modal-actions">
                     <button class="btn btn-green" onclick="updateStatus(${p.id})">Salvar Status</button>
                     <button class="btn" style="background:var(--border);color:var(--text)" onclick="closeDetail()">Fechar</button>
@@ -903,6 +920,58 @@ async function updateStatus(id) {
     } catch(e) {
         showToast('Erro ao atualizar status', 'error');
     }
+}
+
+async function aprovarBoleto30(id) {
+    showConfirm('Aprovar Boleto 30d', 'Tem certeza que deseja APROVAR este pedido? Será gerado um boleto com vencimento em 30 dias.', async () => {
+        try {
+            const res = await fetch(API+'/pedidos/'+id+'/status', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+                body: JSON.stringify({status:'aprovado', observacao:'Aprovado via painel - documentos verificados'})
+            });
+            const data = await res.json();
+            if(data.success) {
+                if(data.boleto && data.boleto.url) {
+                    showToast('✅ Boleto gerado! Envie o link pelo WhatsApp.', 'success', 8000);
+                } else {
+                    showToast('✅ Pedido aprovado!', 'success');
+                }
+                openDetail(id);
+                loadPedidos();
+                loadDashboard();
+                checkBoleto30Orders();
+            } else {
+                showToast('Erro: ' + (data.error || 'Falha ao aprovar'), 'error');
+            }
+        } catch(e) {
+            showToast('Erro ao aprovar', 'error');
+        }
+    }, {icon:'✅', okText:'Aprovar'});
+}
+
+async function recusarBoleto30(id) {
+    showConfirm('Recusar Boleto 30d', 'Tem certeza que deseja RECUSAR este pedido? O cliente será notificado.', async () => {
+        try {
+            const res = await fetch(API+'/pedidos/'+id+'/status', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+                body: JSON.stringify({status:'recusado', observacao:'Recusado via painel - documentos insuficientes'})
+            });
+            const data = await res.json();
+            if(data.success) {
+                showToast('❌ Pedido recusado.', 'warning');
+                openDetail(id);
+                loadPedidos();
+                loadDashboard();
+                checkBoleto30Orders();
+            } else {
+                showToast('Erro: ' + (data.error || 'Falha ao recusar'), 'error');
+            }
+        } catch(e) {
+            showToast('Erro ao recusar', 'error');
+        }
+    }, {icon:'❌', okText:'Recusar', danger:true});
 }
 
 async function quickStatus(pedidoId, status, btn) {
@@ -984,7 +1053,6 @@ async function checkBoleto30Orders() {
         if(boleto30FirstLoad) {
             data.pedidos.forEach(p => knownBoleto30.add(p.codigo));
             boleto30FirstLoad = false;
-            // Update badge
             updateBoleto30Badge(data.pedidos.length);
             return;
         }
@@ -996,12 +1064,14 @@ async function checkBoleto30Orders() {
         if(newOnes.length > 0) {
             playAlertSound();
             if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
-            newOnes.forEach(p => {
-                showToast(`📋 Boleto 30d: ${p.codigo} - ${p.cesta_nome} (R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}) - Documentos para análise!`, 'info', 10000);
-                if(Notification.permission === 'granted') {
+            // Use fancy toast (same as normal orders but with boleto30 style)
+            newOnes.forEach(p => showOrderToast(p));
+            // Browser notification
+            if(Notification.permission === 'granted') {
+                newOnes.forEach(p => {
                     try { new Notification('📋 Boleto 30d - Análise pendente', { body: `${p.codigo} - ${p.cesta_nome} - Documentos enviados`, icon: '/assets/img/logo.png', tag: 'b30-'+p.codigo, requireInteraction: true }); } catch(e) {}
-                }
-            });
+                });
+            }
         }
     } catch(e) {}
 }
