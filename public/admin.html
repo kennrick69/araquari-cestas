@@ -322,7 +322,7 @@ const API = '/api/admin';
 const STATUS_LABELS = {
     'novo':'Novo','confirmado':'Confirmado','separacao':'Em Separação',
     'pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue',
-    'cancelado':'Cancelado','analise':'Em Analise','aprovado':'Aprovado','recusado':'Recusado'
+    'cancelado':'Cancelado','analise':'Em Análise','aprovado':'Aprovado','recusado':'Recusado'
 };
 const PAY_LABELS = {'pix':'PIX','cartao':'Cartao','boleto':'Boleto','boleto30':'Boleto 30d'};
 
@@ -932,7 +932,9 @@ async function aprovarBoleto30(id) {
             });
             const data = await res.json();
             if(data.success) {
-                if(data.boleto && data.boleto.url) {
+                if(data.boletoError) {
+                    showToast('⚠️ ' + data.boletoError, 'warning', 10000);
+                } else if(data.boleto && data.boleto.url) {
                     showToast('✅ Boleto gerado! Envie o link pelo WhatsApp.', 'success', 8000);
                 } else {
                     showToast('✅ Pedido aprovado!', 'success');

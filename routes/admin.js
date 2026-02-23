@@ -166,6 +166,7 @@ router.patch('/pedidos/:id/status', async (req, res) => {
         // Atualizar status
         let updates = { status };
         let boletoResult = null;
+        let boletoError = null;
 
         // Se aprovando boleto 30 dias → gerar boleto no MP
         if (status === 'aprovado' && pedido.rows[0].pagamento_metodo === 'boleto30') {
@@ -180,10 +181,13 @@ router.patch('/pedidos/:id/status', async (req, res) => {
                     updates.gateway_data = JSON.stringify(boletoResult);
                     updates.pagamento_status = 'pendente'; // Aguardando pagamento do boleto
                     console.log(`Boleto 30d gerado para pedido #${req.params.id}: ${boletoResult.boletoUrl}`);
+                } else {
+                    console.log(`Boleto 30d: MP não configurado, aprovando sem gerar boleto`);
                 }
             } catch (boletoErr) {
-                console.error('Erro ao gerar boleto 30d:', boletoErr);
-                return res.status(500).json({ error: `Erro ao gerar boleto: ${boletoErr.message}` });
+                console.error('Erro ao gerar boleto 30d:', boletoErr.message || boletoErr);
+                // Approve anyway but flag the error - admin can generate boleto later
+                boletoError = `Pedido aprovado, mas erro ao gerar boleto: ${boletoErr.message}. Você pode gerar o boleto manualmente depois.`;
             }
         }
         if (status === 'recusado') {
@@ -216,6 +220,7 @@ router.patch('/pedidos/:id/status', async (req, res) => {
             anterior,
             novo: finalStatus,
             message: `Status atualizado: ${anterior} → ${finalStatus}`,
+            boletoError: boletoError || null,
             boleto: boletoResult ? {
                 url: boletoResult.boletoUrl,
                 barcode: boletoResult.barcode,
