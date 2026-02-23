@@ -278,4 +278,55 @@ router.delete('/pedidos/:id', async (req, res) => {
     }
 });
 
+// ══════════════════════════════════════
+// CESTAS CONFIG - CRUD
+// ══════════════════════════════════════
+
+// GET /api/admin/cestas - listar todas as cestas
+router.get('/cestas', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM cestas_config ORDER BY ordem ASC');
+        res.json({ cestas: result.rows });
+    } catch(err) {
+        console.error('Erro ao listar cestas:', err.message);
+        res.status(500).json({ error: 'Erro ao listar cestas' });
+    }
+});
+
+// PUT /api/admin/cestas/:tipo - atualizar cesta (preço, nome, itens, etc)
+router.put('/cestas/:tipo', async (req, res) => {
+    try {
+        const { tipo } = req.params;
+        const { nome, preco, emoji, descricao, embalagem, itens, ativo } = req.body;
+
+        const updates = [];
+        const values = [];
+        let idx = 1;
+
+        if(nome !== undefined) { updates.push(`nome = $${idx++}`); values.push(nome); }
+        if(preco !== undefined) { updates.push(`preco = $${idx++}`); values.push(preco); }
+        if(emoji !== undefined) { updates.push(`emoji = $${idx++}`); values.push(emoji); }
+        if(descricao !== undefined) { updates.push(`descricao = $${idx++}`); values.push(descricao); }
+        if(embalagem !== undefined) { updates.push(`embalagem = $${idx++}`); values.push(embalagem); }
+        if(itens !== undefined) { updates.push(`itens = $${idx++}`); values.push(JSON.stringify(itens)); }
+        if(ativo !== undefined) { updates.push(`ativo = $${idx++}`); values.push(ativo); }
+
+        updates.push(`atualizado_em = NOW()`);
+
+        if(updates.length === 1) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+
+        values.push(tipo);
+        const result = await pool.query(
+            `UPDATE cestas_config SET ${updates.join(', ')} WHERE tipo = $${idx} RETURNING *`,
+            values
+        );
+
+        if(result.rows.length === 0) return res.status(404).json({ error: 'Cesta não encontrada' });
+        res.json({ success: true, cesta: result.rows[0] });
+    } catch(err) {
+        console.error('Erro ao atualizar cesta:', err.message);
+        res.status(500).json({ error: 'Erro ao atualizar cesta' });
+    }
+});
+
 module.exports = router;

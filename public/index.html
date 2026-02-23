@@ -490,8 +490,8 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 <span>Araquari Cestas</span>
             </div>
             <div class="header-right">
-                <div class="header-btn" onclick="showScreen('orders')"><img src="assets/img/nav-pedidos.png" style="width:22px;height:22px"></div>
-                <div class="header-btn" onclick="window.open('https://wa.me/5547996813181?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20Araquari%20Cestas','_blank')" style="background:rgba(37,211,102,0.15)"><span style="font-size:20px">💬</span></div>
+                <div class="header-btn" onclick="showScreen('orders')" style="padding:4px 10px;font-size:10px;font-weight:700;gap:3px;display:flex;align-items:center"><span style="font-size:14px">📦</span> Rastreio</div>
+                <div class="header-btn" onclick="window.open('https://wa.me/5547996813181?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20Araquari%20Cestas','_blank')" style="padding:4px 10px;font-size:10px;font-weight:700;gap:3px;display:flex;align-items:center;background:rgba(37,211,102,0.15);color:#25d366"><span style="font-size:14px">📱</span> Dúvidas</div>
             </div>
         </div>
 
@@ -553,6 +553,23 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                         <div class="basket-price-sub">à vista</div>
                     </div>
                     <div class="basket-tag" style="background:rgba(255,217,61,0.15);color:var(--yellow)">⭐ PREMIUM</div>
+                </div>
+
+                <!-- Donation custom value card (hidden by default) -->
+                <div class="basket-card" onclick="selectCustomDonation()" id="card-custom" style="display:none;border:2px dashed var(--orange)">
+                    <div class="basket-icon" style="background:rgba(255,59,48,0.12)"><span style="font-size:24px">💝</span></div>
+                    <div class="basket-info" style="flex:1">
+                        <div class="basket-name">Valor livre</div>
+                        <div class="basket-desc">Digite o valor que deseja doar</div>
+                        <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
+                            <span style="font-size:14px;font-weight:800;color:var(--orange)">R$</span>
+                            <input type="text" id="input-custom-donation" inputmode="decimal" placeholder="0,00"
+                                onclick="event.stopPropagation()"
+                                oninput="formatDonationValue(this)"
+                                style="width:100px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:16px;font-weight:800;outline:none">
+                        </div>
+                    </div>
+                    <div class="pay-check" id="custom-donation-check"></div>
                 </div>
             </div>
 
@@ -988,8 +1005,56 @@ const BASKETS = {
             { name:"Sardinha em Óleo", qty:"1x 125 g" },
         ],
         packaging:"Caixas de Papelão Corrugado Duplo"
+    },
+    custom: {
+        name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)",
+        img:"assets/img/icon-cesta-x.svg",
+        items:[{ name:"Doação de valor livre", qty:"—" }],
+        packaging:"—"
     }
 };
+
+// Load baskets from server (admin-editable)
+async function loadBasketsFromServer() {
+    try {
+        const res = await fetch('/api/cestas');
+        if(!res.ok) return;
+        const data = await res.json();
+        if(data && Object.keys(data).length > 0) {
+            // Merge server data into BASKETS
+            Object.keys(data).forEach(k => {
+                BASKETS[k] = data[k];
+            });
+            // Update basket cards UI with new prices
+            updateBasketCardsUI();
+        }
+    } catch(e) {
+        console.log('Usando cestas padrão (offline)');
+    }
+}
+
+function updateBasketCardsUI() {
+    const types = ['x','confort','plus'];
+    types.forEach(t => {
+        const b = BASKETS[t];
+        if(!b) return;
+        const card = document.getElementById('card-' + t);
+        if(!card) return;
+        const priceEl = card.querySelector('.basket-price-val');
+        if(priceEl) {
+            const intPart = Math.floor(b.price);
+            const decPart = (b.price % 1).toFixed(2).substring(1);
+            priceEl.innerHTML = 'R$ ' + intPart + '<small>' + decPart.replace('.', ',') + '</small>';
+        }
+        const descEl = card.querySelector('.basket-desc');
+        if(descEl && b.desc) descEl.textContent = b.desc;
+    });
+}
+
+function getEffectivePrice() {
+    if(state.basket === 'custom' && state.customDonation) return state.customPrice || 0;
+    return BASKETS[state.basket] ? BASKETS[state.basket].price : 0;
+}
 
 let map, userLat = -26.3726, userLng = -48.7213; // Araquari default
 
@@ -998,6 +1063,9 @@ let map, userLat = -26.3726, userLng = -48.7213; // Araquari default
 // ═══════════════════════════════════════
 window.addEventListener('load', () => {
     const splash = document.getElementById('splash');
+
+    // Load baskets from server (updates prices/items from admin panel)
+    loadBasketsFromServer();
 
     // Spawn floating food emojis
     const foods = ['🍚','🫘','☕','🥛','🍝','🫒','🍅','🌽','🍪','🧂','🍞','🐟','🥫','🌾','🍬','🥔','🍳','🧈','🥩','🍌'];
@@ -1039,13 +1107,23 @@ function initMap() {
     satelliteLayer.addTo(map);
     window._mapLayers = { street: streetLayer, satellite: satelliteLayer, current: 'satellite' };
 
-    // Try to get user location
+    // Try to get user location (priority!)
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             userLat = pos.coords.latitude;
             userLng = pos.coords.longitude;
             map.setView([userLat, userLng], 17);
-        }, () => {}, { enableHighAccuracy:true, timeout:5000 });
+            reverseGeocode(userLat, userLng);
+        }, (err) => {
+            console.log('Geolocation error:', err.code, err.message);
+            // Try again with less accuracy
+            navigator.geolocation.getCurrentPosition(pos => {
+                userLat = pos.coords.latitude;
+                userLng = pos.coords.longitude;
+                map.setView([userLat, userLng], 17);
+                reverseGeocode(userLat, userLng);
+            }, () => {}, { enableHighAccuracy:false, timeout:10000, maximumAge:300000 });
+        }, { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
     }
 
     // On map move, update address
@@ -1159,6 +1237,12 @@ function centerOnUser() {
 const navStack = ['home'];
 
 function showScreen(id, addToHistory = true) {
+    // Close any open overlays first
+    const receipt = document.getElementById('receipt-overlay');
+    if(receipt) receipt.remove();
+    const compare = document.getElementById('modal-compare');
+    if(compare) compare.classList.remove('show');
+
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + id).classList.add('active');
 
@@ -1189,40 +1273,79 @@ function showScreen(id, addToHistory = true) {
 
 // Handle Android back button / browser back
 window.addEventListener('popstate', function(e) {
+    // Close overlays first
+    const receipt = document.getElementById('receipt-overlay');
+    if(receipt) { receipt.remove(); history.pushState({ screen: navStack[navStack.length-1] }, '', ''); return; }
+    const compare = document.getElementById('modal-compare');
+    if(compare && compare.classList.contains('show')) { compare.classList.remove('show'); history.pushState({ screen: navStack[navStack.length-1] }, '', ''); return; }
+
     if(navStack.length > 1) {
         navStack.pop();
         const prevScreen = navStack[navStack.length - 1];
         showScreen(prevScreen, false);
-    } else {
-        // Already at home, push state again to prevent exit
-        history.pushState({ screen: 'home' }, '', '');
     }
+    // Always keep at least one history entry to prevent app exit
+    history.pushState({ screen: navStack[navStack.length-1] || 'home' }, '', '');
 });
 
-// Initialize first history state
+// Initialize with double history entry to prevent accidental exit
 history.replaceState({ screen: 'home' }, '', '');
+history.pushState({ screen: 'home' }, '', '');
 
 function goToMap() {
     showScreen('map');
 }
 
 function goBackFromDetail() {
-    // Keep donation mode active when going back
     const wasDonation = state.isDonation;
     showScreen('home');
     if(wasDonation) {
         state.isDonation = true;
         document.body.classList.add('donation-mode');
         document.getElementById('donation-mode-banner').style.display = 'block';
-        const btn = document.getElementById('btn-toggle-donate');
-        btn.innerHTML = '<img src="assets/img/nav-cesta.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Voltar a comprar';
-        btn.className = 'btn btn-sm btn-donate';
-        btn.style.flex = '1'; btn.style.padding = '8px 12px'; btn.style.fontSize = '12px'; btn.style.borderRadius = '10px';
+        document.getElementById('card-custom').style.display = 'flex';
+        const row = document.getElementById('action-buttons-row');
+        row.innerHTML = `
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
+            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">🛒 Voltar a comprar</button>
+        `;
         const title = document.querySelector('#home-sheet .sheet-title');
         const sub = document.querySelector('#home-sheet .sheet-sub');
         if(title) title.innerHTML = 'Doe uma cesta \u2764\uFE0F';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     }
+}
+
+// Custom donation functions
+function formatDonationValue(input) {
+    let v = input.value.replace(/[^\d]/g, '');
+    if(v.length === 0) { input.value = ''; return; }
+    v = (parseInt(v) / 100).toFixed(2).replace('.', ',');
+    input.value = v;
+}
+
+function selectCustomDonation() {
+    const input = document.getElementById('input-custom-donation');
+    const val = parseFloat((input.value || '0').replace(',', '.'));
+    if(val < 1) {
+        input.focus();
+        input.style.borderColor = 'var(--red)';
+        setTimeout(() => input.style.borderColor = 'var(--border)', 1500);
+        return;
+    }
+    // Deselect other cards
+    document.querySelectorAll('.basket-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('card-custom').classList.add('selected');
+    document.getElementById('custom-donation-check').innerHTML = '✓';
+
+    // Set state with custom basket
+    state.basket = 'custom';
+    state.customDonation = true;
+    state.customPrice = val;
+    state.qty = 1;
+
+    // Go to map
+    showScreen('map');
 }
 
 // ═══════════════════════════════════════
@@ -1377,10 +1500,12 @@ function toggleDonationMode() {
     const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
+    const customCard = document.getElementById('card-custom');
 
     if(state.isDonation) {
         body.classList.add('donation-mode');
         banner.style.display = 'block';
+        if(customCard) customCard.style.display = 'flex';
         row.innerHTML = `
             <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
             <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">🛒 Voltar a comprar</button>
@@ -1395,12 +1520,17 @@ function toggleDonationMode() {
 function exitDonationMode() {
     state.isDonation = false;
     state.donorContact = null;
+    state.customDonation = false;
     document.body.classList.remove('donation-mode');
     const banner = document.getElementById('donation-mode-banner');
     const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
+    const customCard = document.getElementById('card-custom');
     if(banner) banner.style.display = 'none';
+    if(customCard) { customCard.style.display = 'none'; customCard.classList.remove('selected'); }
+    const customCheck = document.getElementById('custom-donation-check');
+    if(customCheck) customCheck.innerHTML = '';
     if(row) {
         row.innerHTML = `
             <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
@@ -1481,7 +1611,8 @@ function renderPaymentSummary() {
     if(paySub) paySub.textContent = state.isDonation ? 'Escolha como deseja pagar sua doa\u00E7\u00E3o' : 'Escolha como deseja pagar';
 
     const b = BASKETS[state.basket];
-    const subtotal = b.price * state.qty;
+    const effectivePrice = getEffectivePrice();
+    const subtotal = effectivePrice * state.qty;
     const isPix = state.payMethod === 'pix';
     const discount = isPix ? subtotal * 0.05 : 0;
     const total = subtotal - discount;
@@ -1526,7 +1657,7 @@ function renderPaymentSummary() {
 function selectPay(method) {
     // Check minimum for boleto (Mercado Pago requires >= R$5)
     if((method === 'boleto' || method === 'boleto30') && state.basket) {
-        const total = BASKETS[state.basket].price * state.qty;
+        const total = getEffectivePrice() * state.qty;
         if(total < 5) {
             showToast('Valor m00EDnimo para boleto 00E9 R$ 5,00. Escolha PIX ou cart00E3o.', 'warning');
             return;
@@ -1601,7 +1732,8 @@ async function finalizePay() {
 
     try {
         const b = BASKETS[state.basket];
-        const subtotal = b.price * state.qty;
+        const effectivePrice = getEffectivePrice();
+        const subtotal = effectivePrice * state.qty;
         const isPix = state.payMethod === 'pix';
         const discount = isPix ? subtotal * 0.05 : 0;
         const total = subtotal - discount;
@@ -1611,8 +1743,8 @@ async function finalizePay() {
 
         const body = {
             cesta_tipo: state.basket,
-            cesta_nome: b.name,
-            cesta_preco: b.price,
+            cesta_nome: state.basket === 'custom' ? 'Doação Livre (R$ ' + effectivePrice.toFixed(2).replace('.',',') + ')' : b.name,
+            cesta_preco: effectivePrice,
             quantidade: state.qty,
             endereco_rua: af.road || af.main || '',
             endereco_numero: addr.num || '',
@@ -1648,6 +1780,7 @@ async function finalizePay() {
         }
 
         state.pedidoCodigo = data.pedido.codigo;
+        window._lastPedido = data.pedido;
 
         // Upload documents for boleto30
         if(state.payMethod === 'boleto30' && (state.uploadFiles.doc || state.uploadFiles.res)) {
@@ -1844,7 +1977,7 @@ function showCardForm(codigo) {
     showScreen('status');
     const el = document.getElementById('status-content');
     const b = BASKETS[state.basket];
-    const totalNum = b.price * state.qty;
+    const totalNum = getEffectivePrice() * state.qty;
     const total = totalNum.toFixed(2).replace('.',',');
 
     // CPF e email já preenchidos na tela anterior
@@ -2038,7 +2171,7 @@ function showStatus(type) {
                 <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Cesta doada</div>
                 <div style="font-size:15px;font-weight:800;margin-bottom:12px">${b.name}</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Valor</div>
-                <div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:12px">R$ ${(b.price * state.qty).toFixed(2).replace('.',',')}</div>
+                <div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:12px">R$ ${(getEffectivePrice() * state.qty).toFixed(2).replace('.',',')}</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Data e hora</div>
                 <div style="font-size:13px;font-weight:700;margin-bottom:12px">${dataHora}</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Destino</div>
@@ -2071,6 +2204,9 @@ function showStatus(type) {
                 <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px;letter-spacing:1px">${codigo}</div>
             </div>
             <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
+            <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;display:none">
+                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
+            </div>
             <div class="status-steps" id="live-steps">
                 <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
                 <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
@@ -2139,6 +2275,13 @@ function startStatusPolling(codigo) {
             const iconEl = document.querySelector('#status-content .status-icon');
             if(titleEl) titleEl.textContent = titles[pedido.status] || pedido.status;
             if(iconEl) iconEl.innerHTML = '<img src="assets/img/' + (iconImgs[pedido.status] || 'status-pronto') + '.png" style="width:64px;height:64px">';
+
+            // Show receipt button when confirmed+
+            const receiptBtn = document.getElementById('receipt-btn-area');
+            if(receiptBtn && pedido.status !== 'novo') receiptBtn.style.display = 'block';
+
+            // Store pedido data for receipt
+            window._lastPedido = pedido;
 
             // Stop polling when delivered or cancelled
             if(pedido.status === 'entregue' || pedido.status === 'cancelado') {
@@ -2229,6 +2372,88 @@ function openCompare() {
 
 function closeCompare() {
     document.getElementById('modal-compare').classList.remove('show');
+}
+
+function gerarComprovante() {
+    const pedido = window._lastPedido;
+    if(!pedido) { showToast('Dados do pedido não disponíveis', 'warning'); return; }
+
+    const b = BASKETS[pedido.cesta_tipo] || BASKETS['x'];
+    const dataHora = new Date(pedido.created_at || Date.now()).toLocaleString('pt-BR');
+    const statusLabels = {'novo':'Novo','confirmado':'Confirmado','separacao':'Em Separação','pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue'};
+
+    let itensHtml = '';
+    if(b.items && b.items.length > 0 && pedido.cesta_tipo !== 'custom') {
+        itensHtml = `<div style="text-align:left;margin:12px 0;padding:12px;background:var(--bg);border-radius:10px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;text-align:center">Itens da cesta</div>
+            ${b.items.map(i => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)"><span style="color:var(--text)">${i.name}</span><span style="color:var(--text2);font-weight:600">${i.qty}</span></div>`).join('')}
+        </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'receipt-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+    overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div style="background:var(--bg2);border-radius:20px;max-width:380px;width:100%;padding:28px 20px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+            <div style="text-align:center;margin-bottom:16px">
+                <img src="assets/img/logo.png" style="width:48px;height:48px;border-radius:12px;margin-bottom:8px">
+                <div style="font-size:16px;font-weight:900;color:var(--text)">Araquari Cestas</div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-top:4px">Comprovante de Pedido</div>
+            </div>
+            <div style="width:100%;height:2px;background:var(--orange);margin-bottom:16px;border-radius:2px"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
+                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código</div>
+                    <div style="font-size:14px;font-weight:900;color:var(--orange);margin-top:4px">${pedido.codigo}</div>
+                </div>
+                <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
+                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Status</div>
+                    <div style="font-size:14px;font-weight:900;color:var(--green);margin-top:4px">${statusLabels[pedido.status] || pedido.status}</div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:11px;color:var(--text3)">Cesta</span>
+                    <span style="font-size:13px;font-weight:800">${pedido.cesta_nome || b.name}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:11px;color:var(--text3)">Quantidade</span>
+                    <span style="font-size:13px;font-weight:800">${pedido.quantidade || state.qty}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:11px;color:var(--text3)">Pagamento</span>
+                    <span style="font-size:13px;font-weight:800">${{'pix':'PIX','cartao':'Cartão','boleto':'Boleto','boleto30':'Boleto 30d'}[pedido.pagamento_metodo] || pedido.pagamento_metodo}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border)">
+                    <span style="font-size:13px;font-weight:900;color:var(--text)">Total</span>
+                    <span style="font-size:16px;font-weight:900;color:var(--green)">R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.',',')}</span>
+                </div>
+            </div>
+
+            ${itensHtml}
+
+            ${pedido.endereco_rua ? `<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
+                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Entrega</div>
+                <div style="font-size:12px;font-weight:700">${pedido.endereco_rua}${pedido.endereco_numero ? ', ' + pedido.endereco_numero : ''}</div>
+                <div style="font-size:11px;color:var(--text2)">${pedido.endereco_bairro || ''} - ${pedido.endereco_cidade || 'Araquari'}/${pedido.endereco_estado || 'SC'}</div>
+                ${pedido.recebedor_nome ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Recebedor: ${pedido.recebedor_nome}</div>` : ''}
+            </div>` : ''}
+
+            <div style="text-align:center;margin-bottom:12px">
+                <div style="font-size:10px;color:var(--text3)">${dataHora}</div>
+            </div>
+
+            <div style="display:flex;gap:8px">
+                <button onclick="document.getElementById('receipt-overlay').remove()" class="btn btn-dark" style="flex:1;padding:10px;font-size:12px;border-radius:10px">Fechar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
 }
 
 // ═══════════════════════════════════════

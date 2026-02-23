@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+const pool = require('./db/pool');
 const PORT = process.env.PORT || 3000;
 
 // ══════════════════════════════════════
@@ -69,6 +70,34 @@ app.get('/api/geocode/search', async (req, res) => {
         res.json(data);
     } catch(err) {
         res.status(500).json([]);
+    }
+});
+
+// ══════════════════════════════════════
+// Cestas config (público - carrega no app)
+// ══════════════════════════════════════
+app.get('/api/cestas', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM cestas_config WHERE ativo = true ORDER BY ordem ASC');
+        const baskets = {};
+        result.rows.forEach(row => {
+            baskets[row.tipo] = {
+                name: row.nome,
+                price: parseFloat(row.preco),
+                emoji: row.emoji,
+                desc: row.descricao,
+                color: row.cor,
+                img: row.imagem,
+                items: typeof row.itens === 'string' ? JSON.parse(row.itens) : row.itens,
+                packaging: row.embalagem
+            };
+        });
+        // Always add custom donation type
+        baskets.custom = { name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)", img:"", items:[], packaging:"—" };
+        res.json(baskets);
+    } catch(err) {
+        console.error('Erro ao carregar cestas:', err.message);
+        res.json({}); // fallback empty - frontend uses hardcoded defaults
     }
 });
 

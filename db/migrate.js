@@ -24,7 +24,7 @@ async function migrate() {
         }
 
         // Rodar migracoes adicionais
-        const migrations = ['migration-002-gateway.sql', 'migration-003-email.sql'];
+        const migrations = ['migration-002-gateway.sql', 'migration-003-email.sql', 'migration-004-baskets.sql'];
         for (const file of migrations) {
             const filePath = path.join(__dirname, file);
             if (fs.existsSync(filePath)) {
