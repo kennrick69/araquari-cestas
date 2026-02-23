@@ -1,8 +1,8 @@
 [{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.araquaricestas.app",
-    "sha256_cert_fingerprints": ["PLACEHOLDER_SHA256_FINGERPRINT"]
-  }
-}]
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.araquaricestas.app",
+        "sha256_cert_fingerprints": ["F0:BC:7E:84:10:56:3F:34:1E:20:0B:44:63:3F:1D:3D:3E:79:81:13:56:91:B4:D5:53:77:4E:42:40:FF:3F:90"]
+      }
+    }]

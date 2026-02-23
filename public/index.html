@@ -236,7 +236,8 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
     border:2.5px solid transparent; transition:all 0.2s;
 }
 .pay-method.selected { border-color:var(--orange); background:rgba(232,133,12,0.06); }
-.pay-emoji { font-size:28px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--bg3); border-radius:12px; }
+.pay-emoji { font-size:28px; width:48px; height:48px; display:flex; align-items:center; justify-content:center; background:var(--bg3); border-radius:12px; overflow:hidden; }
+.pay-emoji img { width:48px !important; height:48px !important; object-fit:cover; border-radius:12px; }
 .pay-info { flex:1; }
 .pay-name { font-size:14px; font-weight:700; }
 .pay-desc { font-size:11px; color:var(--text3); font-weight:500; margin-top:2px; }
@@ -372,15 +373,15 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 }
 .compare-header { padding:0 20px 16px; border-bottom:1px solid var(--border); }
 .compare-body { overflow-x:auto; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
-.compare-table { width:100%; min-width:420px; border-collapse:collapse; font-size:12px; }
+.compare-table { width:100%; border-collapse:collapse; font-size:11px; }
 .compare-table thead { position:sticky; top:0; z-index:2; }
 .compare-table th {
-    padding:12px 8px; text-align:center; font-weight:800; font-size:11px;
+    padding:10px 5px; text-align:center; font-weight:800; font-size:10px;
     background:var(--bg2); border-bottom:2px solid var(--border); white-space:nowrap;
 }
-.compare-table th:first-child { text-align:left; padding-left:16px; min-width:140px; position:sticky; left:0; background:var(--bg2); z-index:3; }
-.compare-table td { padding:10px 8px; text-align:center; border-bottom:1px solid var(--border); color:var(--text2); font-weight:500; }
-.compare-table td:first-child { text-align:left; padding-left:16px; color:var(--text); font-weight:600; position:sticky; left:0; background:var(--bg); z-index:1; }
+.compare-table th:first-child { text-align:left; padding-left:10px; min-width:100px; position:sticky; left:0; background:var(--bg2); z-index:3; }
+.compare-table td { padding:8px 5px; text-align:center; border-bottom:1px solid var(--border); color:var(--text2); font-weight:500; font-size:11px; }
+.compare-table td:first-child { text-align:left; padding-left:10px; color:var(--text); font-weight:600; position:sticky; left:0; background:var(--bg); z-index:1; }
 .compare-table .col-x { color:var(--green); font-weight:700; }
 .compare-table .col-c { color:var(--orange); font-weight:700; }
 .compare-table .col-p { color:var(--yellow); font-weight:700; }
@@ -490,7 +491,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             </div>
             <div class="header-right">
                 <div class="header-btn" onclick="showScreen('orders')"><img src="assets/img/nav-pedidos.png" style="width:22px;height:22px"></div>
-                <div class="header-btn"><img src="assets/img/nav-conta.png" style="width:22px;height:22px"></div>
+                <div class="header-btn" onclick="window.open('https://wa.me/5547988597989?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20o%20Araquari%20Cestas','_blank')" style="background:rgba(37,211,102,0.15)"><span style="font-size:20px">💬</span></div>
             </div>
         </div>
 
@@ -500,7 +501,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             <div class="sheet-sub">Selecione o tipo e peça agora</div>
 
             <!-- Action buttons row -->
-            <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div style="display:flex;gap:8px;margin-bottom:12px" id="action-buttons-row">
                 <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
                 <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta</button>
             </div>
@@ -614,7 +615,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Forma de pagamento</div>
             <div class="pay-methods">
                 <div class="pay-method" onclick="selectPay('pix')" id="pay-pix">
-                    <div class="pay-emoji"><img src="assets/img/pay-pix.png" style="width:32px;height:32px"></div>
+                    <div class="pay-emoji"><img src="assets/img/pay-pix.png"></div>
                     <div class="pay-info">
                         <div class="pay-name">PIX</div>
                         <div class="pay-desc">Aprovação instantânea</div>
@@ -623,7 +624,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('cartao')" id="pay-cartao">
-                    <div class="pay-emoji"><img src="assets/img/pay-cartao.png" style="width:32px;height:32px"></div>
+                    <div class="pay-emoji"><img src="assets/img/pay-cartao.png"></div>
                     <div class="pay-info">
                         <div class="pay-name">Cartão de Crédito</div>
                         <div class="pay-desc">Até 3x sem juros</div>
@@ -631,7 +632,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('boleto')" id="pay-boleto">
-                    <div class="pay-emoji"><img src="assets/img/pay-boleto.png" style="width:32px;height:32px"></div>
+                    <div class="pay-emoji"><img src="assets/img/pay-boleto.png"></div>
                     <div class="pay-info">
                         <div class="pay-name">Boleto à Vista</div>
                         <div class="pay-desc">Vencimento 3 dias úteis</div>
@@ -639,7 +640,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <div class="pay-check"></div>
                 </div>
                 <div class="pay-method" onclick="selectPay('boleto30')" id="pay-boleto30">
-                    <div class="pay-emoji"><img src="assets/img/pay-boleto30.png" style="width:32px;height:32px"></div>
+                    <div class="pay-emoji"><img src="assets/img/pay-boleto30.png"></div>
                     <div class="pay-info">
                         <div class="pay-name">Boleto 30 Dias</div>
                         <div class="pay-desc">Pague em até 30 dias</div>
@@ -916,14 +917,14 @@ const BASKETS = {
             { name:"Açúcar Refinado Especial", qty:"1x 1 kg" },
             { name:"Arroz Parboilizado Tipo 1", qty:"2x 1 kg" },
             { name:"Biscoito Recheado Chocolate", qty:"1x 140 g" },
-            { name:"Café em Pó Extra Forte", qty:"1x 500 g" },
+            { name:"Café em Pó", qty:"1x 500 g" },
             { name:"Feijão Carioca Tipo 1", qty:"1x 1 kg" },
-            { name:"Fubá Mimoso Fino", qty:"1x 500 g" },
+            { name:"Fubá", qty:"1x 500 g" },
             { name:"Macarrão Espaguete com Ovos", qty:"1x 500 g" },
-            { name:"Molho de Tomate Refogado Tradicional", qty:"1x 340 g" },
+            { name:"Molho de Tomate", qty:"1x 340 g" },
             { name:"Óleo de Soja PET", qty:"1x 900 ml" },
             { name:"Sal Refinado Iodado", qty:"1x 1 kg" },
-            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+            { name:"Sardinha em Óleo", qty:"1x 125 g" },
         ],
         packaging:"Embalagem Saco Plástico Transparente"
     },
@@ -934,17 +935,17 @@ const BASKETS = {
             { name:"Açúcar Refinado Especial", qty:"2x 1 kg" },
             { name:"Arroz Parboilizado Tipo 1", qty:"1x 5 kg" },
             { name:"Biscoito Sortido", qty:"1x 280 g" },
-            { name:"Café em Pó Extra Forte a Vácuo", qty:"1x 500 g" },
-            { name:"Farinha de Milho Amarelo", qty:"1x 1 kg" },
-            { name:"Farinha de Trigo Tipo 1 Tradicional", qty:"1x 1 kg" },
+            { name:"Café em Pó", qty:"1x 500 g" },
+            { name:"Farinha de Milho", qty:"1x 1 kg" },
+            { name:"Farinha de Trigo", qty:"1x 1 kg" },
             { name:"Feijão Preto Tipo 1", qty:"1x 1 kg" },
-            { name:"Fubá Amarelo", qty:"1x 1 kg" },
+            { name:"Fubá", qty:"1x 1 kg" },
             { name:"Macarrão Espaguete com Ovos", qty:"1x 500 g" },
             { name:"Macarrão Parafuso com Ovos", qty:"1x 500 g" },
-            { name:"Molho de Tomate Refogado Sachê", qty:"1x 340 g" },
+            { name:"Molho de Tomate", qty:"1x 340 g" },
             { name:"Óleo de Soja PET", qty:"2x 900 ml" },
-            { name:"Refresco em Pó Morango", qty:"1x 25 g" },
-            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+            { name:"Refresco em Pó", qty:"1x 25 g" },
+            { name:"Sardinha em Óleo", qty:"1x 125 g" },
         ],
         packaging:"Caixa de Papelão Corrugado Duplo"
     },
@@ -953,38 +954,38 @@ const BASKETS = {
         img:"assets/img/cesta-plus.png",
         items:[
             { name:"Achocolatado em Pó", qty:"1x 370 g" },
-            { name:"Açúcar Cristal Branco", qty:"1x 5 kg" },
+            { name:"Açúcar Cristal", qty:"1x 5 kg" },
             { name:"Água Sanitária", qty:"1x 1 l" },
             { name:"Arroz Parboilizado Tipo 1", qty:"1x 5 kg" },
             { name:"Biscoito Recheado Chocolate", qty:"1x 140 g" },
-            { name:"Café em Pó Tradicional a Vácuo", qty:"1x 500 g" },
-            { name:"Creme Dental Tripla Limpeza", qty:"2x 70 g" },
-            { name:"Creme de Leite Leve UHT", qty:"1x 200 g" },
-            { name:"Desinfetante 3 em 1", qty:"1x 500 ml" },
+            { name:"Café em Pó", qty:"1x 500 g" },
+            { name:"Creme Dental", qty:"2x 70 g" },
+            { name:"Creme de Leite UHT", qty:"1x 200 g" },
+            { name:"Desinfetante", qty:"1x 500 ml" },
             { name:"Detergente Neutro", qty:"2x 500 ml" },
-            { name:"Ervilha em Conserva Lata", qty:"1x 200 g" },
-            { name:"Esponja Dupla Face", qty:"1x 7x10 cm" },
-            { name:"Farinha de Milho Amarelo", qty:"1x 1 kg" },
+            { name:"Ervilha em Conserva", qty:"1x 200 g" },
+            { name:"Esponja Dupla Face", qty:"1x unid" },
+            { name:"Farinha de Milho", qty:"1x 1 kg" },
             { name:"Farinha de Trigo", qty:"1x 1 kg" },
             { name:"Farofa Temperada", qty:"1x 250 g" },
             { name:"Feijão Preto Tipo 1", qty:"2x 1 kg" },
-            { name:"Fubá Mimoso Fino", qty:"1x 1 kg" },
-            { name:"Gelatina Morango", qty:"1x 20 g" },
-            { name:"Lã de Aço c/ 8 Unidades", qty:"1x 60 g" },
-            { name:"Leite Condensado Semi Desnatado", qty:"1x 395 g" },
+            { name:"Fubá", qty:"1x 1 kg" },
+            { name:"Gelatina", qty:"1x 20 g" },
+            { name:"Lã de Aço", qty:"1x 60 g" },
+            { name:"Leite Condensado", qty:"1x 395 g" },
             { name:"Macarrão Espaguete com Ovos", qty:"2x 500 g" },
             { name:"Macarrão Parafuso com Ovos", qty:"1x 500 g" },
-            { name:"Milho Verde em Conserva Lata", qty:"1x 170 g" },
-            { name:"Molho de Tomate Tradicional", qty:"2x 300 g" },
+            { name:"Milho Verde em Conserva", qty:"1x 170 g" },
+            { name:"Molho de Tomate", qty:"2x 300 g" },
             { name:"Óleo de Soja PET", qty:"2x 900 ml" },
-            { name:"Papel Higiênico Folha Simples c/ 4 Rolos", qty:"1x 4x30 m" },
+            { name:"Papel Higiênico 4 Rolos", qty:"1x 4x30 m" },
             { name:"Polenta Preparo Rápido", qty:"1x 500 g" },
-            { name:"Pudim em Pó Coco", qty:"1x 50 g" },
-            { name:"Refresco em Pó Morango", qty:"2x 25 g" },
+            { name:"Pudim em Pó", qty:"1x 50 g" },
+            { name:"Refresco em Pó", qty:"2x 25 g" },
             { name:"Sabão em Pó", qty:"1x 1 kg" },
-            { name:"Sabonete Glicerinado", qty:"2x 90 g" },
+            { name:"Sabonete", qty:"2x 90 g" },
             { name:"Sal Refinado Iodado", qty:"1x 1 kg" },
-            { name:"Sardinha em Óleo Lata Abre Fácil", qty:"1x 125 g" },
+            { name:"Sardinha em Óleo", qty:"1x 125 g" },
         ],
         packaging:"Caixas de Papelão Corrugado Duplo"
     }
@@ -1373,19 +1374,17 @@ function toggleDonationMode() {
     state.isDonation = !state.isDonation;
     const body = document.body;
     const banner = document.getElementById('donation-mode-banner');
-    const btn = document.getElementById('btn-toggle-donate');
+    const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
 
     if(state.isDonation) {
         body.classList.add('donation-mode');
         banner.style.display = 'block';
-        btn.innerHTML = '<img src="assets/img/nav-cesta.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Voltar a comprar';
-        btn.className = 'btn btn-sm btn-donate';
-        btn.style.flex = '1';
-        btn.style.padding = '8px 12px';
-        btn.style.fontSize = '12px';
-        btn.style.borderRadius = '10px';
+        row.innerHTML = `
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
+            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">🛒 Voltar a comprar</button>
+        `;
         if(title) title.innerHTML = 'Doe uma cesta &#x2764;&#xFE0F;';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     } else {
@@ -1398,17 +1397,15 @@ function exitDonationMode() {
     state.donorContact = null;
     document.body.classList.remove('donation-mode');
     const banner = document.getElementById('donation-mode-banner');
-    const btn = document.getElementById('btn-toggle-donate');
+    const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
     if(banner) banner.style.display = 'none';
-    if(btn) {
-        btn.innerHTML = '<img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta';
-        btn.className = 'btn btn-sm btn-donate-outline';
-        btn.style.flex = '1';
-        btn.style.padding = '8px 12px';
-        btn.style.fontSize = '12px';
-        btn.style.borderRadius = '10px';
+    if(row) {
+        row.innerHTML = `
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
+            <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta</button>
+        `;
     }
     if(title) title.innerHTML = 'Escolha sua cesta \uD83D\uDED2';
     if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
