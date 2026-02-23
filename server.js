@@ -78,6 +78,19 @@ app.get('/api/geocode/search', async (req, res) => {
 // ══════════════════════════════════════
 app.get('/api/cestas', async (req, res) => {
     try {
+        // Check if table exists first
+        const tableCheck = await pool.query(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'cestas_config')`);
+        if(!tableCheck.rows[0].exists) {
+            console.log('Tabela cestas_config nao existe, rodando migracao...');
+            const fs = require('fs');
+            const migPath = path.join(__dirname, 'db', 'migration-004-baskets.sql');
+            if(fs.existsSync(migPath)) {
+                const sql = fs.readFileSync(migPath, 'utf8');
+                await pool.query(sql);
+                console.log('Tabela cestas_config criada com sucesso!');
+            }
+        }
+
         const result = await pool.query('SELECT * FROM cestas_config WHERE ativo = true ORDER BY ordem ASC');
         const baskets = {};
         result.rows.forEach(row => {
@@ -92,12 +105,11 @@ app.get('/api/cestas', async (req, res) => {
                 packaging: row.embalagem
             };
         });
-        // Always add custom donation type
         baskets.custom = { name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)", img:"", items:[], packaging:"—" };
         res.json(baskets);
     } catch(err) {
         console.error('Erro ao carregar cestas:', err.message);
-        res.json({}); // fallback empty - frontend uses hardcoded defaults
+        res.status(500).json({ error: err.message });
     }
 });
 

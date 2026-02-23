@@ -285,11 +285,22 @@ router.delete('/pedidos/:id', async (req, res) => {
 // GET /api/admin/cestas - listar todas as cestas
 router.get('/cestas', async (req, res) => {
     try {
+        // Try to create table if not exists
+        const tableCheck = await pool.query(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'cestas_config')`);
+        if(!tableCheck.rows[0].exists) {
+            const fs = require('fs');
+            const path = require('path');
+            const migPath = path.join(__dirname, '..', 'db', 'migration-004-baskets.sql');
+            if(fs.existsSync(migPath)) {
+                const sql = fs.readFileSync(migPath, 'utf8');
+                await pool.query(sql);
+            }
+        }
         const result = await pool.query('SELECT * FROM cestas_config ORDER BY ordem ASC');
         res.json({ cestas: result.rows });
     } catch(err) {
         console.error('Erro ao listar cestas:', err.message);
-        res.status(500).json({ error: 'Erro ao listar cestas' });
+        res.status(500).json({ error: 'Erro ao listar cestas: ' + err.message });
     }
 });
 

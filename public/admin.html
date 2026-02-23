@@ -107,6 +107,7 @@ tr:hover{background:#ffffff05}
 /* Notification Toast */
 .toast-container{position:fixed;top:60px;right:16px;z-index:300;display:flex;flex-direction:column;gap:10px;max-width:380px;width:calc(100% - 32px)}
 .toast{background:#1a2e1a;border:2px solid var(--green);border-radius:14px;padding:16px;animation:toastIn .4s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);cursor:pointer;transition:opacity .3s}
+.toast.toast-boleto30{background:#2e2a1a;border:2px solid #f39c12;box-shadow:0 8px 32px rgba(243,156,18,.3)}
 .toast.hide{opacity:0;transform:translateX(100%)}
 @keyframes toastIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
 .toast-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -450,11 +451,11 @@ function detectNewOrders(pedidos) {
     pedidos.forEach(p => {
         const prevStatus = knownOrderStatuses[p.codigo];
 
-        // Alert case 1: Brand new order that already has payment confirmed (not "novo")
+        // Alert case 1: Brand new order that already has payment confirmed or in analise (not "novo")
         if(!knownOrderCodes.has(p.codigo) && p.status !== 'novo') {
             alertOrders.push(p);
         }
-        // Alert case 2: Known order that just changed from "novo" to confirmed/paid status
+        // Alert case 2: Known order that just changed from "novo" to confirmed/paid/analise status
         else if(prevStatus === 'novo' && p.status !== 'novo') {
             alertOrders.push(p);
         }
@@ -500,34 +501,91 @@ function detectNewOrders(pedidos) {
 function showOrderToast(p) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = 'toast';
     const endereco = [p.endereco_rua, p.endereco_numero, p.endereco_bairro].filter(Boolean).join(', ');
+    const isBoleto30 = p.pagamento_metodo === 'boleto30' || p.status === 'analise';
+    toast.className = isBoleto30 ? 'toast toast-boleto30' : 'toast';
+
     toast.innerHTML = `
         <div class="toast-header">
-            <span class="toast-badge">Novo Pedido</span>
-            <button class="toast-close" onclick="dismissToast(this)">X</button>
+            <span class="toast-badge" style="${isBoleto30 ? 'background:#f39c1230;color:#f39c12' : ''}">${isBoleto30 ? '⚠️ BOLETO 30D — ANÁLISE' : '📦 Novo Pedido'}</span>
+            <button class="toast-close" onclick="dismissToast(this)">✕</button>
         </div>
         <div class="toast-title">${p.codigo} - ${p.cesta_nome}</div>
         <div class="toast-body">
             <strong>${p.recebedor_nome}</strong><br>
-            ${endereco || 'Endereco nao informado'}<br>
+            ${endereco || 'Endereço não informado'}<br>
             Tel: ${p.recebedor_telefone || '-'}<br>
             R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} - ${PAY_LABELS[p.pagamento_metodo] || p.pagamento_metodo}
+            ${isBoleto30 ? '<br><span style="color:#f39c12;font-weight:700;font-size:11px">⚠️ Documentos precisam ser analisados</span>' : ''}
         </div>
-        <button class="toast-accept" onclick="quickAccept(${p.id}, this)">Aceitar Pedido</button>
+        <div style="display:flex;gap:6px">
+            <button style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--border);color:var(--text);font-size:12px;font-weight:700;cursor:pointer" onclick="silenceAndDismiss(this)">🔇 Silenciar</button>
+            ${isBoleto30
+                ? `<button style="flex:1;padding:10px;border:none;border-radius:8px;background:#f39c12;color:#000;font-size:12px;font-weight:800;cursor:pointer" onclick="openAnalise(${p.id}, this)">🔍 Analisar</button>`
+                : `<button class="toast-accept" onclick="quickAccept(${p.id}, this)">✅ Aceitar Pedido</button>`
+            }
+        </div>
     `;
     container.prepend(toast);
-    // Toast persists until accepted or manually dismissed - no auto-remove
+
+    // Show clear all button if multiple toasts
+    updateClearAllBtn();
+}
+
+function silenceAndDismiss(btn) {
+    stopAlarm();
+    const toast = btn.closest('.toast');
+    if(toast) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }
+    updateClearAllBtn();
+}
+
+function silenceAndOpen(pedidoId, btn) {
+    stopAlarm();
+    const toast = btn.closest('.toast');
+    if(toast) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }
+    openDetail(pedidoId);
+    updateClearAllBtn();
+}
+
+async function openAnalise(pedidoId, btn) {
+    stopAlarm();
+    const toast = btn.closest('.toast');
+    if(toast) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }
+    updateClearAllBtn();
+    // Switch to Boleto 30d tab and open the detail modal
+    switchTab('analise');
+    setTimeout(() => openDetail(pedidoId), 300);
+}
+
+function updateClearAllBtn() {
+    setTimeout(() => {
+        const container = document.getElementById('toast-container');
+        const remaining = container.querySelectorAll('.toast:not(.hide)');
+        const clearBtn = document.getElementById('toast-clear-all');
+        if(remaining.length > 1 && clearBtn) {
+            clearBtn.style.display = 'block';
+            clearBtn.textContent = '🔇 Silenciar todos (' + remaining.length + ' notificações)';
+        } else if(clearBtn) {
+            clearBtn.style.display = 'none';
+        }
+        if(remaining.length === 0) stopAlarm();
+    }, 500);
 }
 
 function dismissToast(btn) {
     const toast = btn.closest('.toast');
     if(toast) { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }
-    // If no more toasts, stop alarm
-    setTimeout(() => {
-        const remaining = document.querySelectorAll('.toast:not(.hide)');
-        if(remaining.length === 0) stopAlarm();
-    }, 500);
+    updateClearAllBtn();
+}
+
+function clearAllToasts() {
+    stopAlarm();
+    document.querySelectorAll('.toast').forEach(t => {
+        t.classList.add('hide');
+        setTimeout(() => t.remove(), 400);
+    });
+    const clearBtn = document.getElementById('toast-clear-all');
+    if(clearBtn) clearBtn.style.display = 'none';
 }
 
 async function quickAccept(pedidoId, btn) {
@@ -970,12 +1028,13 @@ async function loadCestas() {
     list.innerHTML = '<div style="text-align:center;padding:30px;color:#888"><div class="spin"></div></div>';
 
     try {
-        const res = await fetch('/api/admin/cestas?token=' + ADMIN_TOKEN);
+        const res = await fetch('/api/admin/cestas', { headers:{'x-admin-token': TOKEN} });
         const data = await res.json();
+        if(!res.ok) throw new Error(data.error || 'Erro HTTP ' + res.status);
         cestasData = data.cestas || [];
         renderCestas();
     } catch(e) {
-        list.innerHTML = '<div style="color:var(--red);padding:20px">Erro ao carregar cestas</div>';
+        list.innerHTML = '<div style="color:var(--red);padding:20px;background:#1a1a2e;border-radius:12px;text-align:center"><div style="font-size:16px;margin-bottom:8px">❌ Erro ao carregar cestas</div><div style="font-size:12px;color:#888">' + e.message + '</div><div style="margin-top:12px"><button class="btn btn-sm btn-orange" onclick="loadCestas()">Tentar novamente</button></div></div>';
     }
 }
 
@@ -1083,7 +1142,7 @@ async function saveCesta(tipo) {
     try {
         const res = await fetch('/api/admin/cestas/' + tipo, {
             method: 'PUT',
-            headers: { 'Content-Type':'application/json', 'x-admin-token': ADMIN_TOKEN },
+            headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
             body: JSON.stringify({ nome, preco, descricao, embalagem, itens })
         });
         const data = await res.json();

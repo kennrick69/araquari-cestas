@@ -730,19 +730,19 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     <div id="screen-orders" class="screen" style="background:var(--bg);overflow-y:auto">
         <div class="back-btn" onclick="showScreen('home')">←</div>
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
-            <div class="sheet-title">Meus Pedidos 📦</div>
-            <div class="sheet-sub">Consulte pelo código ou telefone</div>
+            <div class="sheet-title">Rastreio 📦</div>
+            <div class="sheet-sub">Acompanhe seus pedidos</div>
 
-            <div class="form-group" style="margin-top:16px">
-                <input class="form-input" placeholder="Código do pedido ou telefone" id="input-busca-pedido" style="text-align:center;font-weight:700;letter-spacing:0.5px">
-            </div>
-            <button class="btn btn-primary" onclick="buscarPedidos()" style="margin-bottom:20px">Buscar</button>
+            <div id="saved-orders-list"></div>
 
-            <div id="orders-list" style="text-align:center;padding:20px;color:var(--text3)">
-                <div style="font-size:56px;margin-bottom:12px">📭</div>
-                <p style="font-weight:600">Nenhum pedido ainda</p>
-                <p style="font-size:12px;margin-top:4px">Digite seu telefone ou código do pedido acima</p>
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">Buscar outro pedido</div>
+                <div class="form-group">
+                    <input class="form-input" placeholder="Código do pedido ou telefone" id="input-busca-pedido" style="text-align:center;font-weight:700;letter-spacing:0.5px">
+                </div>
+                <button class="btn btn-primary" onclick="buscarPedidos()" style="margin-bottom:10px">Buscar</button>
             </div>
+            <div id="orders-list"></div>
         </div>
     </div>
 </div>
@@ -1263,6 +1263,7 @@ function showScreen(id, addToHistory = true) {
     }
 
     if(id === 'payment') renderPaymentSummary();
+    if(id === 'orders') loadSavedOrders();
 
     // Push to history stack (Android back button support)
     if(addToHistory && navStack[navStack.length - 1] !== id) {
@@ -1781,6 +1782,9 @@ async function finalizePay() {
 
         state.pedidoCodigo = data.pedido.codigo;
         window._lastPedido = data.pedido;
+
+        // Save order to localStorage for Rastreio
+        saveOrderToLocal(data.pedido);
 
         // Upload documents for boleto30
         if(state.payMethod === 'boleto30' && (state.uploadFiles.doc || state.uploadFiles.res)) {
@@ -2459,6 +2463,144 @@ function gerarComprovante() {
 // ═══════════════════════════════════════
 // ORDERS SEARCH
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// SAVED ORDERS (localStorage)
+// ═══════════════════════════════════════
+function saveOrderToLocal(pedido) {
+    try {
+        const saved = JSON.parse(localStorage.getItem('araquari_orders') || '[]');
+        // Avoid duplicates
+        const exists = saved.findIndex(o => o.codigo === pedido.codigo);
+        const entry = {
+            codigo: pedido.codigo,
+            cesta_nome: pedido.cesta_nome || BASKETS[state.basket]?.name || '',
+            cesta_tipo: pedido.cesta_tipo || state.basket,
+            total: pedido.total,
+            status: pedido.status || 'novo',
+            pagamento_metodo: pedido.pagamento_metodo || state.payMethod,
+            criado_em: pedido.criado_em || new Date().toISOString(),
+            isDonation: state.isDonation || false
+        };
+        if(exists >= 0) saved[exists] = entry;
+        else saved.unshift(entry);
+        // Keep max 20
+        localStorage.setItem('araquari_orders', JSON.stringify(saved.slice(0, 20)));
+    } catch(e) {}
+}
+
+function loadSavedOrders() {
+    const listEl = document.getElementById('saved-orders-list');
+    const saved = JSON.parse(localStorage.getItem('araquari_orders') || '[]');
+
+    if(saved.length === 0) {
+        listEl.innerHTML = `
+            <div style="text-align:center;padding:30px;color:var(--text3)">
+                <div style="font-size:48px;margin-bottom:12px">📭</div>
+                <p style="font-weight:600">Nenhum pedido ainda</p>
+                <p style="font-size:12px;margin-top:4px">Seus pedidos aparecerão aqui automaticamente</p>
+            </div>`;
+        return;
+    }
+
+    // Refresh statuses from server
+    refreshSavedOrders(saved, listEl);
+}
+
+async function refreshSavedOrders(saved, listEl) {
+    const statusLabels = {
+        'novo':'Aguardando','confirmado':'Confirmado','separacao':'Em Separação',
+        'pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue',
+        'cancelado':'Cancelado','analise':'Em Análise','aprovado':'Aprovado','recusado':'Recusado'
+    };
+    const statusColors = {
+        'novo':'var(--orange)','confirmado':'var(--green)','separacao':'var(--orange)',
+        'pronto':'var(--green)','a_caminho':'var(--orange)','entregue':'var(--green)',
+        'cancelado':'var(--red)','analise':'var(--yellow)','aprovado':'var(--green)','recusado':'var(--red)'
+    };
+    const statusIcons = {
+        'novo':'⏳','confirmado':'✅','separacao':'📦','pronto':'🎁',
+        'a_caminho':'🚚','entregue':'✅','cancelado':'❌','analise':'📋','aprovado':'✅','recusado':'❌'
+    };
+
+    // Try to refresh statuses from server
+    for(let i = 0; i < saved.length; i++) {
+        try {
+            const res = await fetch('/api/pedidos/' + saved[i].codigo);
+            if(res.ok) {
+                const data = await res.json();
+                saved[i].status = data.pedido.status;
+                saved[i].total = data.pedido.total;
+            }
+        } catch(e) {}
+    }
+    localStorage.setItem('araquari_orders', JSON.stringify(saved));
+
+    listEl.innerHTML = saved.map(p => {
+        const statusColor = statusColors[p.status] || 'var(--text3)';
+        const statusIcon = statusIcons[p.status] || '📦';
+        const isActive = !['entregue','cancelado','recusado'].includes(p.status);
+        return `
+        <div onclick="openTracking('${p.codigo}')" style="background:var(--card);border:1px solid ${isActive ? statusColor : 'var(--border)'};border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;position:relative;${isActive ? 'box-shadow:0 0 12px ' + statusColor + '20' : 'opacity:0.7'}">
+            ${isActive ? '<div style="position:absolute;top:10px;right:12px;width:8px;height:8px;border-radius:50%;background:'+statusColor+';animation:pulse 2s infinite"></div>' : ''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-weight:900;font-size:13px;color:var(--text);letter-spacing:0.5px">${p.codigo}</span>
+                <span style="font-size:11px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:3px 10px;border-radius:20px">${statusIcon} ${statusLabels[p.status] || p.status}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--text2)">${p.isDonation ? '❤️ Doação: ' : ''}${p.cesta_nome || ''}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+                <span style="font-size:12px;color:var(--text3)">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+                <span style="font-size:14px;font-weight:800;color:var(--green)">R$ ${parseFloat(p.total || 0).toFixed(2).replace('.',',')}</span>
+            </div>
+            ${isActive ? '<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Toque para acompanhar →</div>' : ''}
+        </div>`;
+    }).join('');
+}
+
+async function openTracking(codigo) {
+    // Set state and show status screen with live tracking
+    state.pedidoCodigo = codigo;
+
+    try {
+        const res = await fetch('/api/pedidos/' + codigo);
+        if(!res.ok) throw new Error();
+        const data = await res.json();
+        const p = data.pedido;
+        window._lastPedido = p;
+        state.basket = p.cesta_tipo || 'x';
+
+        showScreen('status');
+        const el = document.getElementById('status-content');
+        const b = BASKETS[state.basket] || BASKETS.x;
+        const statusLabels = {'novo':'Pedido Criado','confirmado':'Confirmado!','separacao':'Em Separação!','pronto':'Pronto!','a_caminho':'A Caminho!','entregue':'Entregue!','analise':'Em Análise','aprovado':'Aprovado!','cancelado':'Cancelado'};
+        const statusIcons = {'novo':'status-pronto','confirmado':'status-confirmado','separacao':'status-separacao','pronto':'status-pronto','a_caminho':'status-caminho','entregue':'status-entregue','analise':'status-aguardando','aprovado':'status-confirmado'};
+
+        el.innerHTML = `
+            <div class="status-icon"><img src="assets/img/${statusIcons[p.status] || 'status-pronto'}.png" style="width:64px;height:64px"></div>
+            <div class="status-title">${statusLabels[p.status] || p.status}</div>
+            <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
+                <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px;letter-spacing:1px">${codigo}</div>
+            </div>
+            <div class="status-sub">${p.cesta_nome} · R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</div>
+            <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;${['entregue','confirmado','separacao','pronto','a_caminho'].includes(p.status) ? '' : 'display:none'}">
+                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
+            </div>
+            <div class="status-steps" id="live-steps">
+                <div class="status-step ${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : 'active'}"><div class="step-dot"><img src="assets/img/${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
+                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : (['confirmado'].includes(p.status) ? 'active' : '')}"><div class="step-dot"><img src="assets/img/${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
+                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-separacao'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step ${['pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-pronto'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
+                <div class="status-step ${['a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-caminho'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
+                <div class="status-step ${p.status === 'entregue' ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${p.status === 'entregue' ? 'status-confirmado' : 'status-entregue'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
+            </div>
+            <button class="btn btn-dark" onclick="showScreen('orders')" style="max-width:300px">← Voltar ao rastreio</button>
+        `;
+        startStatusPolling(codigo);
+    } catch(e) {
+        showToast('Erro ao buscar pedido', 'error');
+    }
+}
+
 async function buscarPedidos() {
     const input = document.getElementById('input-busca-pedido').value.trim();
     if(!input) return;
@@ -2507,8 +2649,11 @@ async function buscarPedidos() {
             'cancelado':'var(--red)', 'analise':'var(--yellow)', 'aprovado':'var(--green)', 'recusado':'var(--red)'
         };
 
-        listEl.innerHTML = pedidos.map(p => `
-            <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;text-align:left">
+        // Save found orders to localStorage
+        pedidos.forEach(p => saveOrderToLocal(p));
+
+        listEl.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">' + pedidos.length + ' pedido(s) encontrado(s)</div>' + pedidos.map(p => `
+            <div onclick="openTracking('${p.codigo}')" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;text-align:left;cursor:pointer">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <span style="font-weight:900;font-size:13px;color:var(--text);letter-spacing:0.5px">${p.codigo}</span>
                     <span style="font-size:11px;font-weight:700;color:${statusColors[p.status] || 'var(--text3)'};background:${statusColors[p.status] || 'var(--text3)'}15;padding:3px 10px;border-radius:20px">${statusLabels[p.status] || p.status}</span>
@@ -2518,6 +2663,7 @@ async function buscarPedidos() {
                     <span style="font-size:12px;color:var(--text3)">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                     <span style="font-size:14px;font-weight:800;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</span>
                 </div>
+                <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Toque para acompanhar →</div>
             </div>
         `).join('');
 

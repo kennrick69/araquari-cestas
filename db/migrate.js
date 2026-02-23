@@ -33,9 +33,11 @@ async function migrate() {
                     await pool.query(sql);
                     console.log('Migracao aplicada: ' + file);
                 } catch(e) {
-                    // Ignora erros de colunas ja existentes
-                    if (!e.message.includes('already exists')) {
+                    // Ignora erros de colunas/tabelas ja existentes ou duplicatas
+                    if (!e.message.includes('already exists') && !e.message.includes('duplicate key')) {
                         console.error('Erro na migracao ' + file + ':', e.message);
+                    } else {
+                        console.log('Migracao ' + file + ': ja aplicada');
                     }
                 }
             }
