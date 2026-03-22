@@ -6,8 +6,14 @@ const mp = require('../services/mercadopago');
 // ══════════════════════════════════════
 // GET /api/pagamento/public-key — Frontend precisa da public key
 // ══════════════════════════════════════
-router.get('/public-key', (req, res) => {
-    res.json({ publicKey: process.env.MP_PUBLIC_KEY || '' });
+router.get('/public-key', async (req, res) => {
+    try {
+        const mp = require('../services/mercadopago');
+        await mp._ensureLoaded();
+        res.json({ publicKey: mp.publicKey || process.env.MP_PUBLIC_KEY || '' });
+    } catch(e) {
+        res.json({ publicKey: process.env.MP_PUBLIC_KEY || '' });
+    }
 });
 
 // ══════════════════════════════════════

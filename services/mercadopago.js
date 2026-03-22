@@ -12,10 +12,40 @@ class MercadoPago {
         this.publicKey = process.env.MP_PUBLIC_KEY;
         this.pixKey = process.env.MP_PIX_KEY;
         this.baseUrl = 'https://api.mercadopago.com';
+        this._dbLoaded = false;
     }
 
     isConfigured() {
         return !!(this.accessToken);
+    }
+
+    // Carrega credenciais do banco de dados (prioridade sobre env vars)
+    async reloadFromDB() {
+        try {
+            const pool = require('../db/pool');
+            const tableCheck = await pool.query(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'app_config')`);
+            if(!tableCheck.rows[0].exists) return;
+
+            const result = await pool.query("SELECT chave, valor FROM app_config WHERE chave LIKE 'mp_%'");
+            const config = {};
+            result.rows.forEach(r => { config[r.chave] = r.valor; });
+
+            // Só sobrescreve se tiver valor no banco (não vazio)
+            if(config.mp_access_token) this.accessToken = config.mp_access_token;
+            if(config.mp_public_key) this.publicKey = config.mp_public_key;
+            if(config.mp_webhook_secret) this.webhookSecret = config.mp_webhook_secret;
+
+            this._dbLoaded = true;
+            console.log('MP credenciais carregadas do banco. Configurado:', this.isConfigured());
+        } catch(e) {
+            // Silencioso - usa env vars como fallback
+            console.log('MP usando variáveis de ambiente (banco indisponível)');
+        }
+    }
+
+    // Garante que credenciais do DB foram carregadas
+    async _ensureLoaded() {
+        if(!this._dbLoaded) await this.reloadFromDB();
     }
 
     // ══════════════════════════════
@@ -36,6 +66,7 @@ class MercadoPago {
     // Request generico
     // ══════════════════════════════
     async _request(method, path, body = null, idempotencyKey = null) {
+        await this._ensureLoaded();
         const url = `${this.baseUrl}${path}`;
         const options = {
             method,

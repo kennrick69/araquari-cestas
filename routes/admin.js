@@ -345,4 +345,82 @@ router.put('/cestas/:tipo', async (req, res) => {
     }
 });
 
+// ══════════════════════════════════════
+// CONFIGURAÇÕES DO SISTEMA
+// ══════════════════════════════════════
+
+// GET /api/admin/config - listar todas as configurações
+router.get('/config', async (req, res) => {
+    try {
+        const tableCheck = await pool.query(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'app_config')`);
+        if(!tableCheck.rows[0].exists) {
+            const fs = require('fs');
+            const path = require('path');
+            const migPath = path.join(__dirname, '..', 'db', 'migration-005-config.sql');
+            if(fs.existsSync(migPath)) {
+                await pool.query(fs.readFileSync(migPath, 'utf8'));
+            }
+        }
+        const result = await pool.query('SELECT chave, valor, descricao, tipo FROM app_config ORDER BY chave');
+        res.json({ config: result.rows });
+    } catch(err) {
+        console.error('Erro ao listar config:', err.message);
+        res.status(500).json({ error: 'Erro ao listar configurações: ' + err.message });
+    }
+});
+
+// PUT /api/admin/config - atualizar configurações (recebe objeto {chave: valor})
+router.put('/config', async (req, res) => {
+    try {
+        const updates = req.body;
+        if(!updates || typeof updates !== 'object') {
+            return res.status(400).json({ error: 'Envie um objeto com as configurações' });
+        }
+
+        let count = 0;
+        for(const [chave, valor] of Object.entries(updates)) {
+            // Não permitir atualizar para vazio se já tinha valor (proteção contra limpar sem querer)
+            // Mas permitir se realmente quer limpar
+            await pool.query(
+                `INSERT INTO app_config (chave, valor, atualizado_em) VALUES ($1, $2, NOW())
+                 ON CONFLICT (chave) DO UPDATE SET valor = $2, atualizado_em = NOW()`,
+                [chave, valor]
+            );
+            count++;
+        }
+
+        // Se atualizou credenciais do MP, recarregar o serviço
+        if(updates.mp_access_token || updates.mp_public_key) {
+            try {
+                const mp = require('../services/mercadopago');
+                await mp.reloadFromDB();
+                console.log('Credenciais do Mercado Pago recarregadas do banco');
+            } catch(e) {
+                console.error('Erro ao recarregar MP:', e.message);
+            }
+        }
+
+        res.json({ success: true, message: `${count} configuração(ões) atualizada(s)` });
+    } catch(err) {
+        console.error('Erro ao salvar config:', err.message);
+        res.status(500).json({ error: 'Erro ao salvar configurações' });
+    }
+});
+
+// GET /api/admin/config/test-mp - testar conexão com Mercado Pago
+router.get('/config/test-mp', async (req, res) => {
+    try {
+        const mp = require('../services/mercadopago');
+        await mp.reloadFromDB();
+        if(!mp.isConfigured()) {
+            return res.json({ success: false, message: 'Access Token não configurado' });
+        }
+        // Tentar uma chamada simples pra validar o token
+        const result = await mp._request('GET', '/v1/payment_methods');
+        res.json({ success: true, message: 'Conexão OK! ' + result.length + ' métodos de pagamento disponíveis' });
+    } catch(err) {
+        res.json({ success: false, message: 'Erro: ' + err.message });
+    }
+});
+
 module.exports = router;

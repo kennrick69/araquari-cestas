@@ -194,7 +194,8 @@ tr:hover{background:#ffffff05}
         <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">Pedidos</div>
         <div class="tab" data-tab="analise" onclick="switchTab('analise')">Boleto 30d</div>
         <div class="tab" data-tab="naopagos" onclick="switchTab('naopagos')" style="border-color:var(--blue)">Aguardando Pagamento</div>
-        <div class="tab" data-tab="cestas" onclick="switchTab('cestas');loadCestas()" style="border-color:#25d366">🛒 Editar Cestas</div>
+        <div class="tab" data-tab="cestas" onclick="switchTab('cestas');loadCestas()" style="border-color:#25d366">🛒 Cestas</div>
+        <div class="tab" data-tab="config" onclick="switchTab('config');loadConfig()" style="border-color:#9b59b6">⚙️ Configurações</div>
     </div>
 
     <!-- Filters -->
@@ -255,6 +256,73 @@ tr:hover{background:#ffffff05}
         <span style="font-size:12px;color:#888">Alterações são aplicadas no app em tempo real</span>
     </div>
     <div id="cestas-list" style="display:flex;flex-direction:column;gap:16px"></div>
+</div>
+
+<!-- CONFIG EDITOR -->
+<div id="config-editor" style="display:none;padding:0 20px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;font-size:18px">⚙️ Configurações</h3>
+        <span style="font-size:12px;color:#888">Credenciais e dados da loja</span>
+    </div>
+
+    <!-- Mercado Pago -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="font-size:24px">💳</span>
+            <div>
+                <div style="font-weight:800;font-size:15px">Mercado Pago</div>
+                <div style="font-size:11px;color:var(--text3)">Credenciais para receber pagamentos</div>
+            </div>
+            <button class="btn btn-sm btn-blue" onclick="testMP()" style="margin-left:auto;padding:6px 12px;font-size:11px">🔌 Testar Conexão</button>
+        </div>
+        <div id="mp-test-result"></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Access Token</label>
+                <input type="password" id="cfg-mp_access_token" placeholder="APP_USR-..." style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:monospace">
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">Encontre em: Mercado Pago → Seu negócio → Configurações → Credenciais</div>
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Public Key</label>
+                <input type="text" id="cfg-mp_public_key" placeholder="APP_USR-..." style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:monospace">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Application ID</label>
+                <input type="text" id="cfg-mp_app_id" placeholder="ID numérico da aplicação" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Webhook Secret (opcional)</label>
+                <input type="password" id="cfg-mp_webhook_secret" placeholder="Deixe vazio se não usar" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados da Loja -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="font-size:24px">🏪</span>
+            <div>
+                <div style="font-weight:800;font-size:15px">Dados da Loja</div>
+                <div style="font-size:11px;color:var(--text3)">Informações exibidas no app e nas mensagens</div>
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Nome da Loja</label>
+                <input type="text" id="cfg-loja_nome" placeholder="Araquari Cestas" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Telefone WhatsApp</label>
+                <input type="text" id="cfg-loja_telefone" placeholder="47996813181" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">E-mail da Loja</label>
+                <input type="text" id="cfg-loja_email" placeholder="contato@araquaricestas.com" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-sm btn-green" onclick="saveConfig()" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:12px">💾 Salvar Configurações</button>
 </div>
 
 </div>
@@ -692,16 +760,25 @@ function switchTab(tab) {
     const ordersArea = document.querySelector('.filters');
     const tableWrap = document.querySelector('.table-wrap');
     const cestasArea = document.getElementById('cestas-editor');
+    const configArea = document.getElementById('config-editor');
+
+    // Hide all special areas first
+    if(cestasArea) cestasArea.style.display = 'none';
+    if(configArea) configArea.style.display = 'none';
 
     if(tab === 'cestas') {
         if(ordersArea) ordersArea.style.display = 'none';
         if(tableWrap) tableWrap.style.display = 'none';
         if(cestasArea) cestasArea.style.display = 'block';
         return;
+    } else if(tab === 'config') {
+        if(ordersArea) ordersArea.style.display = 'none';
+        if(tableWrap) tableWrap.style.display = 'none';
+        if(configArea) configArea.style.display = 'block';
+        return;
     } else {
         if(ordersArea) ordersArea.style.display = '';
         if(tableWrap) tableWrap.style.display = '';
-        if(cestasArea) cestasArea.style.display = 'none';
     }
 
     if(tab === 'analise') {
@@ -1226,6 +1303,86 @@ async function saveCesta(tipo) {
         }
     } catch(e) {
         showToast('Erro de conexão', 'error');
+    }
+}
+
+// ══════════════════════════════════════
+// CONFIGURAÇÕES
+// ══════════════════════════════════════
+
+const CONFIG_FIELDS = ['mp_access_token', 'mp_public_key', 'mp_app_id', 'mp_webhook_secret', 'loja_nome', 'loja_telefone', 'loja_email'];
+
+async function loadConfig() {
+    try {
+        const res = await fetch('/api/admin/config', { headers: {'x-admin-token': TOKEN} });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error || 'Erro');
+
+        (data.config || []).forEach(function(c) {
+            var el = document.getElementById('cfg-' + c.chave);
+            if(el) {
+                el.value = c.valor || '';
+                // Show masked value for password fields
+                if(c.tipo === 'password' && c.valor) {
+                    el.placeholder = '••••••••' + c.valor.slice(-6);
+                }
+            }
+        });
+    } catch(e) {
+        showToast('Erro ao carregar configurações: ' + e.message, 'error');
+    }
+}
+
+async function saveConfig() {
+    var updates = {};
+    var count = 0;
+
+    CONFIG_FIELDS.forEach(function(key) {
+        var el = document.getElementById('cfg-' + key);
+        if(el && el.value.trim() !== '') {
+            updates[key] = el.value.trim();
+            count++;
+        }
+    });
+
+    if(count === 0) {
+        showToast('Nenhuma alteração para salvar', 'warning');
+        return;
+    }
+
+    try {
+        var res = await fetch('/api/admin/config', {
+            method: 'PUT',
+            headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
+            body: JSON.stringify(updates)
+        });
+        var data = await res.json();
+        if(data.success) {
+            showToast('✅ Configurações salvas! ' + count + ' campo(s) atualizado(s).', 'success', 5000);
+            loadConfig();
+        } else {
+            showToast('Erro: ' + (data.error || 'Falha'), 'error');
+        }
+    } catch(e) {
+        showToast('Erro de conexão', 'error');
+    }
+}
+
+async function testMP() {
+    var resultEl = document.getElementById('mp-test-result');
+    resultEl.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--text3)">⏳ Testando conexão...</div>';
+
+    try {
+        var res = await fetch('/api/admin/config/test-mp', { headers: {'x-admin-token': TOKEN} });
+        var data = await res.json();
+
+        if(data.success) {
+            resultEl.innerHTML = '<div style="padding:8px 12px;background:#10b98120;border:1px solid var(--green);border-radius:8px;font-size:12px;color:var(--green);margin-bottom:12px;font-weight:700">✅ ' + data.message + '</div>';
+        } else {
+            resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px;font-weight:700">❌ ' + data.message + '</div>';
+        }
+    } catch(e) {
+        resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px">❌ Erro de conexão</div>';
     }
 }
 </script>
