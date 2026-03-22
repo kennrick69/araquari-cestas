@@ -1186,19 +1186,19 @@ function goToSearchResult(lat, lng) {
     document.getElementById('map-search-input').blur();
 }
 
+let reverseGeoTimeout = null;
 function onMapMove() {
     const center = map.getCenter();
     state.lat = center.lat;
     state.lng = center.lng;
-    reverseGeocode(center.lat, center.lng);
+    // Debounce: wait 600ms after last move before calling API
+    clearTimeout(reverseGeoTimeout);
+    reverseGeoTimeout = setTimeout(() => reverseGeocode(center.lat, center.lng), 600);
 }
 
 function reverseGeocode(lat, lng) {
     fetch(`/api/geocode?lat=${lat}&lng=${lng}`)
-        .then(r => {
-            if(!r.ok) throw new Error('Geocode error');
-            return r.json();
-        })
+        .then(r => r.json())
         .then(data => {
             const a = data.address || {};
             const road = a.road || a.pedestrian || a.footway || 'Localização selecionada';

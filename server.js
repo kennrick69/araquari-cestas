@@ -44,14 +44,23 @@ app.get('/api/geocode', async (req, res) => {
         const { lat, lng } = req.query;
         if(!lat || !lng) return res.status(400).json({ error: 'lat e lng obrigatorios' });
 
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`;
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+            signal: AbortSignal.timeout(5000)
         });
+
+        if(!response.ok) {
+            console.error('Nominatim error:', response.status, response.statusText);
+            return res.json({ display_name: `${lat}, ${lng}`, address: {} });
+        }
+
         const data = await response.json();
         res.json(data);
     } catch(err) {
-        res.status(500).json({ error: 'Erro ao geocodificar', address: {} });
+        console.error('Geocode error:', err.message);
+        // Return coordinates as fallback instead of 500
+        res.json({ display_name: `${req.query.lat}, ${req.query.lng}`, address: {} });
     }
 });
 
@@ -66,7 +75,8 @@ app.get('/api/geocode/search', async (req, res) => {
         const viewbox = '-48.85,-26.45,-48.60,-26.30'; // Araquari + surrounding region
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&countrycodes=br&viewbox=${viewbox}&bounded=0`;
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+            signal: AbortSignal.timeout(5000)
         });
         let data = await response.json();
 
@@ -75,7 +85,8 @@ app.get('/api/geocode/search', async (req, res) => {
             const query2 = encodeURIComponent(q + ', Santa Catarina');
             const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${query2}&limit=5&addressdetails=1&countrycodes=br`;
             const response2 = await fetch(url2, {
-                headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+                headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+                signal: AbortSignal.timeout(5000)
             });
             data = await response2.json();
         }
