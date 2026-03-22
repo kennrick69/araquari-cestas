@@ -61,14 +61,28 @@ app.get('/api/geocode/search', async (req, res) => {
         const { q } = req.query;
         if(!q) return res.status(400).json([]);
 
-        const query = encodeURIComponent(q + ', Araquari, Santa Catarina, Brasil');
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&countrycodes=br`;
+        // First try: biased to Araquari region with viewbox (broader area including Joinville/Barra Velha)
+        const query = encodeURIComponent(q);
+        const viewbox = '-48.85,-26.45,-48.60,-26.30'; // Araquari + surrounding region
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&countrycodes=br&viewbox=${viewbox}&bounded=0`;
         const response = await fetch(url, {
             headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
         });
-        const data = await response.json();
+        let data = await response.json();
+
+        // Fallback: if no results, try appending region
+        if(!data.length) {
+            const query2 = encodeURIComponent(q + ', Santa Catarina');
+            const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${query2}&limit=5&addressdetails=1&countrycodes=br`;
+            const response2 = await fetch(url2, {
+                headers: { 'User-Agent': 'AraquariCestas/1.0 (delivery app)' }
+            });
+            data = await response2.json();
+        }
+
         res.json(data);
     } catch(err) {
+        console.error('Geocode search error:', err.message);
         res.status(500).json([]);
     }
 });

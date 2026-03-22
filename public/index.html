@@ -596,7 +596,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <!-- Map toggle + GPS buttons -->
         <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto;display:flex;flex-direction:column;gap:8px">
-            <div class="header-btn" id="btn-map-toggle" onclick="toggleMapLayer()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px);cursor:pointer">🗺️</div>
+            <div class="header-btn" id="btn-map-toggle" onclick="toggleMapLayer()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px);cursor:pointer">🛰️</div>
             <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)"><img src="assets/img/nav-gps.png" style="width:24px;height:24px"></div>
         </div>
 
@@ -1103,9 +1103,9 @@ function initMap() {
     const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
     const satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 21 });
 
-    // Default to satellite (shows buildings/houses)
-    satelliteLayer.addTo(map);
-    window._mapLayers = { street: streetLayer, satellite: satelliteLayer, current: 'satellite' };
+    // Default to street view (shows building outlines at high zoom)
+    streetLayer.addTo(map);
+    window._mapLayers = { street: streetLayer, satellite: satelliteLayer, current: 'street' };
 
     // Try to get user location (priority!)
     if(navigator.geolocation) {
@@ -1164,12 +1164,14 @@ async function searchAddress(query) {
             const res = await fetch('/api/geocode/search?q=' + encodeURIComponent(query));
             const data = await res.json();
             if(!data.length) {
-                resultsEl.innerHTML = '<div style="padding:10px;color:var(--text3);font-size:12px">Nenhum resultado</div>';
+                resultsEl.innerHTML = '<div style="padding:10px;color:var(--text3);font-size:12px">Nenhum resultado para "'+query+'"<br><span style="font-size:11px">Tente: nome da rua + bairro ou cidade</span></div>';
                 return;
             }
             resultsEl.innerHTML = data.map(r => {
-                const name = r.display_name.split(',').slice(0, 3).join(',');
-                return `<div class="search-item" onclick="goToSearchResult(${r.lat}, ${r.lon})">${name}</div>`;
+                const parts = r.display_name.split(',');
+                const name = parts.slice(0, 3).join(',').trim();
+                const city = parts.length > 3 ? parts[3].trim() : '';
+                return `<div class="search-item" onclick="goToSearchResult(${r.lat}, ${r.lon})"><div style="font-weight:700">${name}</div>${city ? '<div style="font-size:11px;color:var(--text3)">'+city+'</div>' : ''}</div>`;
             }).join('');
         } catch(e) {
             resultsEl.style.display = 'none';
