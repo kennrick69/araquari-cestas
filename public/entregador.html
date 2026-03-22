@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Araquari Cestas - Entregador</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#f0f0f5;--text2:#a0a0b0;--text3:#606070;--green:#10b981;--orange:#E8850C;--red:#ef4444;--yellow:#f39c12;--blue:#3b82f6;--glass:rgba(18,18,26,.95)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+.topbar{background:var(--glass);backdrop-filter:blur(20px);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:16px;font-weight:800;color:var(--green)}
+.topbar .sub{font-size:11px;color:var(--text3)}
+.topbar .logout{background:var(--border);color:var(--text2);border:none;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer}
+
+.login-box{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px 32px;text-align:center}
+.login-box h2{font-size:20px;margin-bottom:8px;color:var(--green)}
+.login-box p{font-size:13px;color:var(--text3);margin-bottom:24px}
+.login-box input{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:16px;text-align:center}
+.login-box input:focus{outline:none;border-color:var(--green)}
+.login-box button{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer}
+.login-error{color:var(--red);font-size:12px;margin-top:12px;display:none}
+
+.content{padding:16px;max-width:600px;margin:0 auto}
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
+.tab{padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:var(--card);border:1px solid var(--border);color:var(--text3)}
+.tab.active{background:var(--green);border-color:var(--green);color:#fff}
+.badge-count{background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px}
+
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.order-header{padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.order-code{font-weight:900;font-size:14px;color:var(--green);letter-spacing:.5px}
+.order-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-pronto{background:#10b98120;color:var(--green)}
+.badge-a_caminho{background:#E8850C20;color:var(--orange)}
+.badge-separacao{background:#f39c1220;color:var(--yellow)}
+
+.order-info{padding:0 16px 12px;font-size:13px;color:var(--text2);line-height:1.6}
+.order-info strong{color:var(--text)}
+
+.order-map{height:200px;width:100%;position:relative}
+.order-map .leaflet-container{height:100%;width:100%;border-radius:0}
+
+.order-actions{padding:12px 16px;display:flex;gap:8px;border-top:1px solid var(--border)}
+.btn{padding:10px 14px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;flex:1;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px}
+.btn-nav{background:var(--blue);color:#fff}
+.btn-waze{background:#33ccff;color:#000}
+.btn-whats{background:#25d366;color:#fff}
+.btn-done{background:var(--green);color:#fff}
+.btn-status{background:var(--orange);color:#fff}
+.btn-sm{padding:8px 12px;font-size:11px}
+
+.coord-bar{padding:8px 16px;background:var(--bg);font-size:11px;color:var(--text3);display:flex;justify-content:space-between;align-items:center}
+.coord-bar span{font-family:monospace}
+.coord-bar .copy-btn{background:var(--border);color:var(--text2);border:none;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:700}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;margin:30px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.driver-location-btn{position:fixed;bottom:80px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--blue);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(59,130,246,.4);z-index:50;display:none}
+
+.stats-bar{display:flex;gap:8px;margin-bottom:16px}
+.stat{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+.stat .num{font-size:20px;font-weight:900;color:var(--green)}
+.stat .label{font-size:10px;color:var(--text3);text-transform:uppercase;margin-top:2px}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <div style="font-size:36px;margin-bottom:12px">🚚</div>
+        <h2>Área do Entregador</h2>
+        <p>Digite o código de acesso</p>
+        <input type="password" id="driver-token" placeholder="Código do entregador" onkeydown="if(event.key==='Enter')doDriverLogin()">
+        <button onclick="doDriverLogin()">Entrar</button>
+        <div class="login-error" id="login-error">Código inválido</div>
+    </div>
+</div>
+
+<div id="driver-panel" style="display:none">
+    <div class="topbar">
+        <div>
+            <h1>🚚 Entregador</h1>
+            <div class="sub">Araquari Cestas</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button class="logout" onclick="refreshOrders()">🔄</button>
+            <button class="logout" onclick="driverLogout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="stats-bar" id="stats-bar"></div>
+
+        <div class="tab-bar">
+            <div class="tab active" data-tab="prontos" onclick="switchDriverTab('prontos')">🎁 Prontos <span class="badge-count" id="count-prontos">0</span></div>
+            <div class="tab" data-tab="caminho" onclick="switchDriverTab('caminho')">🚚 A Caminho <span class="badge-count" id="count-caminho">0</span></div>
+            <div class="tab" data-tab="entregues" onclick="switchDriverTab('entregues')">✅ Entregues</div>
+        </div>
+
+        <div id="orders-container">
+            <div class="spin"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api/admin';
+let TOKEN = localStorage.getItem('driver_token') || '';
+let allOrders = [];
+let currentDriverTab = 'prontos';
+let orderMaps = {};
+
+function doDriverLogin() {
+    TOKEN = document.getElementById('driver-token').value.trim();
+    if(!TOKEN) return;
+    fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
+        .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+        .then(() => {
+            localStorage.setItem('driver_token', TOKEN);
+            showDriverPanel();
+        })
+        .catch(() => {
+            document.getElementById('login-error').style.display = 'block';
+        });
+}
+
+function driverLogout() {
+    TOKEN = '';
+    localStorage.removeItem('driver_token');
+    document.getElementById('driver-panel').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'block';
+}
+
+function showDriverPanel() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('driver-panel').style.display = 'block';
+    refreshOrders();
+}
+
+async function refreshOrders() {
+    const container = document.getElementById('orders-container');
+    container.innerHTML = '<div class="spin"></div>';
+    orderMaps = {};
+
+    try {
+        // Fetch orders with relevant statuses
+        const statuses = ['separacao','pronto','a_caminho','entregue'];
+        const allResults = [];
+        for(const st of statuses) {
+            const res = await fetch(API+'/pedidos?status='+st+'&limite=50', {headers:{'x-admin-token':TOKEN}});
+            const data = await res.json();
+            if(data.pedidos) allResults.push(...data.pedidos);
+        }
+        allOrders = allResults;
+        updateStats();
+        renderDriverTab();
+    } catch(e) {
+        container.innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>Erro ao carregar pedidos</p></div>';
+    }
+}
+
+function updateStats() {
+    const prontos = allOrders.filter(p => p.status === 'pronto' || p.status === 'separacao').length;
+    const caminho = allOrders.filter(p => p.status === 'a_caminho').length;
+    const entregues = allOrders.filter(p => p.status === 'entregue').length;
+
+    document.getElementById('count-prontos').textContent = prontos;
+    document.getElementById('count-caminho').textContent = caminho;
+
+    document.getElementById('stats-bar').innerHTML = `
+        <div class="stat"><div class="num" style="color:var(--yellow)">${prontos}</div><div class="label">Prontos</div></div>
+        <div class="stat"><div class="num" style="color:var(--orange)">${caminho}</div><div class="label">A caminho</div></div>
+        <div class="stat"><div class="num">${entregues}</div><div class="label">Entregues</div></div>
+    `;
+}
+
+function switchDriverTab(tab) {
+    currentDriverTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+    orderMaps = {};
+    renderDriverTab();
+}
+
+function renderDriverTab() {
+    const container = document.getElementById('orders-container');
+    let filtered = [];
+
+    if(currentDriverTab === 'prontos') {
+        filtered = allOrders.filter(p => p.status === 'pronto' || p.status === 'separacao');
+    } else if(currentDriverTab === 'caminho') {
+        filtered = allOrders.filter(p => p.status === 'a_caminho');
+    } else {
+        filtered = allOrders.filter(p => p.status === 'entregue').slice(0, 20);
+    }
+
+    if(!filtered.length) {
+        const msgs = {
+            prontos: { icon:'📭', text:'Nenhum pedido pronto para entrega' },
+            caminho: { icon:'🚚', text:'Nenhuma entrega em andamento' },
+            entregues: { icon:'✅', text:'Nenhuma entrega concluída ainda' }
+        };
+        const m = msgs[currentDriverTab];
+        container.innerHTML = `<div class="empty"><div class="icon">${m.icon}</div><p>${m.text}</p></div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map(p => {
+        const endereco = [p.endereco_rua, p.endereco_numero, p.endereco_bairro, p.endereco_cidade].filter(Boolean).join(', ');
+        const ref = p.endereco_referencia ? `<div style="color:var(--yellow);font-size:12px;margin-top:4px">📌 ${p.endereco_referencia}</div>` : '';
+        const comp = p.endereco_complemento ? `<div style="font-size:12px;color:var(--text3)">🏠 ${p.endereco_complemento}</div>` : '';
+        const lat = parseFloat(p.latitude);
+        const lng = parseFloat(p.longitude);
+        const hasCoords = lat && lng && lat !== 0;
+        const tel = (p.recebedor_telefone || '').replace(/\D/g,'');
+        const telFormatado = tel.startsWith('55') ? tel : '55'+tel;
+
+        const statusBadge = p.status === 'pronto' ? 'badge-pronto' : p.status === 'a_caminho' ? 'badge-a_caminho' : 'badge-separacao';
+        const statusLabel = {'separacao':'Em Separação','pronto':'Pronto','a_caminho':'A Caminho','entregue':'Entregue'}[p.status] || p.status;
+
+        return `
+        <div class="order-card">
+            <div class="order-header">
+                <div>
+                    <div class="order-code">${p.codigo}</div>
+                    <div style="font-size:11px;color:var(--text3)">${p.cesta_nome} · ${p.quantidade}x</div>
+                </div>
+                <span class="order-badge ${statusBadge}">${statusLabel}</span>
+            </div>
+            <div class="order-info">
+                <strong>📍 ${endereco || 'Endereço não informado'}</strong>
+                ${comp}
+                ${ref}
+                <div style="margin-top:6px">👤 <strong>${p.recebedor_nome}</strong></div>
+                <div>📞 ${p.recebedor_telefone || '-'}</div>
+            </div>
+            ${hasCoords ? `
+                <div class="coord-bar">
+                    <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>
+                    <button class="copy-btn" onclick="copyCoords(${lat},${lng})">📋 Copiar</button>
+                </div>
+                <div class="order-map" id="map-${p.id}"></div>
+            ` : ''}
+            <div class="order-actions">
+                ${hasCoords ? `
+                    <a class="btn btn-nav btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank">📍 Google Maps</a>
+                    <a class="btn btn-waze btn-sm" href="https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank">🧭 Waze</a>
+                ` : ''}
+                <a class="btn btn-whats btn-sm" href="https://wa.me/${telFormatado}?text=${encodeURIComponent('Olá '+p.recebedor_nome+'! Sou o entregador do Araquari Cestas. Estou a caminho com seu pedido '+p.codigo+'. Pode me confirmar o local?')}" target="_blank">💬</a>
+                ${p.status === 'pronto' ? `<button class="btn btn-status btn-sm" onclick="changeStatus(${p.id},'a_caminho')">🚚 Saí</button>` : ''}
+                ${p.status === 'a_caminho' ? `<button class="btn btn-done btn-sm" onclick="changeStatus(${p.id},'entregue')">✅ Entreguei</button>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    // Initialize maps after rendering
+    setTimeout(() => initOrderMaps(filtered), 100);
+}
+
+function initOrderMaps(orders) {
+    orders.forEach(p => {
+        const lat = parseFloat(p.latitude);
+        const lng = parseFloat(p.longitude);
+        if(!lat || !lng || lat === 0) return;
+
+        const el = document.getElementById('map-'+p.id);
+        if(!el || orderMaps[p.id]) return;
+
+        const m = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+        m.setView([lat, lng], 17);
+
+        // Custom red pin
+        const icon = L.divIcon({
+            html: '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">📍</div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            className: ''
+        });
+        L.marker([lat, lng], { icon }).addTo(m);
+
+        // Accuracy circle
+        L.circle([lat, lng], { radius: 30, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, weight: 1 }).addTo(m);
+
+        orderMaps[p.id] = m;
+    });
+}
+
+function copyCoords(lat, lng) {
+    const text = lat.toFixed(6) + ', ' + lng.toFixed(6);
+    navigator.clipboard.writeText(text).then(() => {
+        // Quick visual feedback
+        event.target.textContent = '✅ Copiado!';
+        setTimeout(() => event.target.textContent = '📋 Copiar', 1500);
+    }).catch(() => {
+        // Fallback
+        prompt('Copie as coordenadas:', text);
+    });
+}
+
+async function changeStatus(id, newStatus) {
+    const labels = {'a_caminho':'Saiu para entrega?','entregue':'Confirmar entrega?'};
+    if(!confirm(labels[newStatus] || 'Confirmar?')) return;
+
+    try {
+        const res = await fetch(API+'/pedidos/'+id+'/status', {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','x-admin-token':TOKEN},
+            body: JSON.stringify({status: newStatus, observacao: 'Atualizado pelo entregador'})
+        });
+        const data = await res.json();
+        if(data.success) {
+            refreshOrders();
+        } else {
+            alert('Erro: ' + (data.error || 'Falha'));
+        }
+    } catch(e) {
+        alert('Erro de conexão');
+    }
+}
+
+// Auto-refresh every 30s
+setInterval(() => {
+    if(TOKEN && document.getElementById('driver-panel').style.display !== 'none') {
+        refreshOrders();
+    }
+}, 30000);
+
+// Auto-login
+if(TOKEN) {
+    fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(() => showDriverPanel())
+        .catch(() => driverLogout());
+}
+</script>
+</body>
+</html>
