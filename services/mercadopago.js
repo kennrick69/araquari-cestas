@@ -298,6 +298,48 @@ class MercadoPago {
     }
 
     // ══════════════════════════════
+    // Validar assinatura do webhook (x-signature / x-request-id)
+    // Retorna: { enforced: bool, valid: bool }
+    //  - enforced=false quando nao ha secret configurado (compat retro)
+    // ══════════════════════════════
+    async validarWebhook(headers, dataId) {
+        await this._ensureLoaded();
+        const secret = this.webhookSecret || process.env.MP_WEBHOOK_SECRET;
+        if (!secret) {
+            // Sem secret configurado: nao ha como validar. Nao bloqueia (compat).
+            return { enforced: false, valid: false };
+        }
+
+        const crypto = require('crypto');
+        const sigHeader = headers['x-signature'] || '';
+        const requestId = headers['x-request-id'] || '';
+
+        // x-signature: "ts=1699...,v1=abc123..."
+        let ts = '', v1 = '';
+        sigHeader.split(',').forEach(part => {
+            const [k, val] = part.split('=');
+            if (!k || val === undefined) return;
+            const key = k.trim();
+            if (key === 'ts') ts = val.trim();
+            if (key === 'v1') v1 = val.trim();
+        });
+
+        if (!ts || !v1) return { enforced: true, valid: false };
+
+        // Manifest conforme docs MP: id + request-id + ts
+        const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+        const computed = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+
+        let valid = false;
+        try {
+            valid = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(v1));
+        } catch (_) {
+            valid = false;
+        }
+        return { enforced: true, valid };
+    }
+
+    // ══════════════════════════════
     // Consultar pagamento
     // ══════════════════════════════
     async consultarPagamento(paymentId) {

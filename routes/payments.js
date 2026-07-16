@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 const mp = require('../services/mercadopago');
+const { requireAdmin } = require('../middleware/auth');
 
 // ══════════════════════════════════════
 // GET /api/pagamento/public-key — Frontend precisa da public key
@@ -252,6 +253,16 @@ router.post('/webhook', async (req, res) => {
                 return res.status(200).json({ ok: true });
             }
 
+            // Validar assinatura (quando MP_WEBHOOK_SECRET esta configurado)
+            const sig = await mp.validarWebhook(req.headers, queryId || (data && data.id) || paymentIdFromWebhook);
+            if (sig.enforced && !sig.valid) {
+                console.log('WEBHOOK: assinatura INVALIDA - ignorando (possivel forjado)');
+                return res.status(401).json({ error: 'invalid signature' });
+            }
+            if (!sig.enforced) {
+                console.log('WEBHOOK: sem MP_WEBHOOK_SECRET - assinatura NAO verificada (configure para seguranca)');
+            }
+
             const payment = await mp.consultarPagamento(paymentIdFromWebhook);
             console.log('WEBHOOK: Payment status do MP:', payment.status, payment.status_detail);
             console.log('WEBHOOK: Payment ID:', payment.id, 'External ref:', payment.external_reference);
@@ -271,13 +282,19 @@ router.post('/webhook', async (req, res) => {
                 );
             }
 
-            // Fallback: try most recent order with matching amount
+            // Fallback por valor: SO aceita se houver exatamente UM pedido 'novo'
+            // com aquele valor (evita confirmar o pedido errado de outro cliente)
             if (result.rows.length === 0) {
-                console.log('WEBHOOK: Nao encontrou por external_reference, tentando por valor:', payment.transaction_amount);
-                result = await pool.query(
-                    "SELECT * FROM pedidos WHERE status = 'novo' AND total = $1 ORDER BY criado_em DESC LIMIT 1",
+                console.log('WEBHOOK: Nao encontrou por external_reference, tentando por valor (match unico):', payment.transaction_amount);
+                const byAmount = await pool.query(
+                    "SELECT * FROM pedidos WHERE status = 'novo' AND pagamento_status <> 'aprovado' AND total = $1 ORDER BY criado_em DESC LIMIT 2",
                     [payment.transaction_amount]
                 );
+                if (byAmount.rows.length === 1) {
+                    result = byAmount;
+                } else if (byAmount.rows.length > 1) {
+                    console.log('WEBHOOK: multiplos pedidos com mesmo valor - NAO confirmando por seguranca. Requer external_reference/gateway_id.');
+                }
             }
 
             if (result.rows.length > 0) {
@@ -326,9 +343,9 @@ router.post('/webhook', async (req, res) => {
 router.get('/webhook', (req, res) => res.status(200).json({ ok: true }));
 
 // ══════════════════════════════════════
-// POST /api/pagamento/reembolso/:codigo — Reembolso
+// POST /api/pagamento/reembolso/:codigo — Reembolso (SOMENTE ADMIN)
 // ══════════════════════════════════════
-router.post('/reembolso/:codigo', async (req, res) => {
+router.post('/reembolso/:codigo', requireAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM pedidos WHERE codigo = $1', [req.params.codigo]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pedido nao encontrado' });

@@ -43,6 +43,44 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Campos obrigatórios: cesta_tipo, recebedor_nome, recebedor_telefone, pagamento_metodo' });
         }
 
+        const qtd = Math.max(1, parseInt(quantidade) || 1);
+        let totalNum = parseFloat(total);
+        const descontoNum = Math.max(0, parseFloat(desconto) || 0);
+
+        if (!(totalNum > 0)) {
+            return res.status(400).json({ error: 'Total inválido' });
+        }
+
+        // ── Anti-tampering de preço ──────────────────────────────
+        // A cobrança (PIX/boleto/cartão) usa o `total` gravado no banco.
+        // Para cestas de catálogo (não "custom"/doação livre) recalculamos
+        // o valor a partir de cestas_config e rejeitamos totais suspeitos,
+        // impedindo que o cliente pague um centavo por uma cesta cara.
+        if (cesta_tipo !== 'custom') {
+            try {
+                const cfg = await pool.query(
+                    'SELECT preco FROM cestas_config WHERE tipo = $1 AND ativo = true',
+                    [cesta_tipo]
+                );
+                if (cfg.rows.length > 0) {
+                    const precoUnit = parseFloat(cfg.rows[0].preco);
+                    const esperado = precoUnit * qtd - descontoNum;
+                    // tolerância de R$1 (arredondamentos) e desconto não pode exceder o subtotal
+                    if (descontoNum > precoUnit * qtd) {
+                        return res.status(400).json({ error: 'Desconto inválido' });
+                    }
+                    if (totalNum < esperado - 1) {
+                        console.warn(`PRICE TAMPER bloqueado: tipo=${cesta_tipo} qtd=${qtd} enviado=${totalNum} esperado>=${esperado}`);
+                        return res.status(400).json({ error: 'Valor do pedido não confere com a tabela de preços' });
+                    }
+                    // Normaliza o total para o valor confiável do servidor
+                    totalNum = precoUnit * qtd - descontoNum;
+                }
+            } catch (e) {
+                console.warn('Validação de preço ignorada (cestas_config indisponível):', e.message);
+            }
+        }
+
         const codigo = await gerarCodigo();
 
         // Status inicial conforme método de pagamento
@@ -73,12 +111,12 @@ router.post('/', async (req, res) => {
                 $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23
             ) RETURNING *`,
             [
-                codigo, cesta_tipo, cesta_nome, cesta_preco, quantidade || 1,
+                codigo, cesta_tipo, cesta_nome, cesta_preco, qtd,
                 endereco_rua, endereco_numero, endereco_complemento,
                 endereco_referencia, endereco_bairro, endereco_cidade || 'Araquari',
                 uf, latitude, longitude,
                 recebedor_nome, recebedor_telefone,
-                pagamento_metodo, pagamento_status, desconto || 0, total,
+                pagamento_metodo, pagamento_status, descontoNum, totalNum,
                 cpf || null, email || null, status
             ]
         );
@@ -127,12 +165,26 @@ router.post('/:codigo/documentos',
                 return res.status(404).json({ error: 'Pedido não encontrado' });
             }
 
+            const ped = pedido.rows[0];
+
+            // ── Anti-IDOR (código é sequencial/enumerável) ───────────
+            // 1) Só aceita docs enquanto o pedido está em análise (boleto 30d).
+            // 2) Nunca sobrescreve um documento já enviado — impede terceiro
+            //    de trocar os docs de outro cliente antes da análise do admin.
+            if (ped.status !== 'analise') {
+                return res.status(409).json({ error: 'Este pedido não está aguardando documentos' });
+            }
+
             const updates = {};
-            if (req.files['doc_identidade']) {
+            if (req.files['doc_identidade'] && !ped.doc_identidade) {
                 updates.doc_identidade = req.files['doc_identidade'][0].filename;
             }
-            if (req.files['doc_residencia']) {
+            if (req.files['doc_residencia'] && !ped.doc_residencia) {
                 updates.doc_residencia = req.files['doc_residencia'][0].filename;
+            }
+
+            if (Object.keys(updates).length === 0 && (ped.doc_identidade || ped.doc_residencia)) {
+                return res.status(409).json({ error: 'Documentos já enviados para este pedido' });
             }
 
             if (Object.keys(updates).length > 0) {

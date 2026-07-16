@@ -18,8 +18,56 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Servir uploads (documentos)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ══════════════════════════════════════
+// Headers de segurança (sem dependências externas)
+// ══════════════════════════════════════
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '0');
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+    }
+    next();
+});
+
+// ══════════════════════════════════════
+// Rate limiter em memória (por IP + rota), sem dependências
+// ══════════════════════════════════════
+function rateLimit({ windowMs, max, key }) {
+    const hits = new Map();
+    setInterval(() => {
+        const now = Date.now();
+        for (const [k, v] of hits) if (now - v.start > windowMs) hits.delete(k);
+    }, windowMs).unref?.();
+    return (req, res, next) => {
+        const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').toString().split(',')[0].trim();
+        const id = `${key}:${ip}`;
+        const now = Date.now();
+        let rec = hits.get(id);
+        if (!rec || now - rec.start > windowMs) { rec = { start: now, count: 0 }; hits.set(id, rec); }
+        rec.count++;
+        if (rec.count > max) {
+            return res.status(429).json({ error: 'Muitas requisições. Tente novamente em instantes.' });
+        }
+        next();
+    };
+}
+
+// Limites: criação de pedido e endpoints de pagamento (mitiga abuso/enumeração).
+// O webhook do Mercado Pago é excluído (MP faz burst/retry e espera 200).
+const pagamentoLimiter = rateLimit({ windowMs: 60000, max: 30, key: 'pagamento' });
+app.use('/api/pedidos', rateLimit({ windowMs: 60000, max: 20, key: 'pedidos' }));
+app.use('/api/pagamento', (req, res, next) => {
+    if (req.path.startsWith('/webhook')) return next();
+    return pagamentoLimiter(req, res, next);
+});
+
+// Servir uploads (documentos de identidade/residência = PII sensível)
+// SOMENTE ADMIN: painel busca via fetch com header x-admin-token e exibe como blob.
+const { requireAdmin } = require('./middleware/auth');
+app.use('/uploads', requireAdmin, express.static(path.join(__dirname, 'uploads')));
 
 // Servir .well-known (TWA Digital Asset Links)
 app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), {
@@ -172,6 +220,16 @@ app.listen(PORT, async () => {
     console.log('   Rodando na porta ' + PORT);
     console.log('========================================');
     console.log('');
+
+    // Avisos de segurança no boot
+    if (!process.env.ADMIN_TOKEN) {
+        console.warn('[SEGURANCA] ADMIN_TOKEN NAO configurado — painel admin fica BLOQUEADO (fail-closed).');
+    } else if (process.env.ADMIN_TOKEN.length < 20) {
+        console.warn('[SEGURANCA] ADMIN_TOKEN curto (<20 chars) — use um token forte e aleatorio.');
+    }
+    if (!process.env.MP_WEBHOOK_SECRET) {
+        console.warn('[SEGURANCA] MP_WEBHOOK_SECRET nao configurado — assinatura do webhook NAO sera verificada. Configure em produção.');
+    }
 
     // Auto-criar tabelas se nao existirem
     const migrate = require('./db/migrate');

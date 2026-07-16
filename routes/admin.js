@@ -6,11 +6,35 @@ const pool = require('../db/pool');
 // Middleware: autenticação admin simples (token)
 // ══════════════════════════════════════
 function authAdmin(req, res, next) {
-    const token = req.headers['x-admin-token'] || req.query.token;
-    if (!token || token !== process.env.ADMIN_TOKEN) {
+    // Fail-closed: sem ADMIN_TOKEN configurado, ninguem entra
+    if (!process.env.ADMIN_TOKEN) {
+        return res.status(503).json({ error: 'Admin não configurado no servidor' });
+    }
+    // Somente via header (query param vaza token em logs/URL/referer)
+    const token = req.headers['x-admin-token'];
+    if (!token) {
         return res.status(401).json({ error: 'Acesso não autorizado' });
     }
-    next();
+    if (token === process.env.ADMIN_TOKEN) {
+        return next();
+    }
+    // ── DRIVER_TOKEN (opcional, retrocompatível) ─────────────────
+    // Token separado para o entregador (entregador.html): acesso restrito
+    // a listar pedidos e avançar status de entrega. NÃO acessa config,
+    // credenciais MP, delete de pedidos nem aprovação de boleto.
+    // Sem DRIVER_TOKEN configurado, nada muda (entregador usa ADMIN_TOKEN).
+    if (process.env.DRIVER_TOKEN && token === process.env.DRIVER_TOKEN) {
+        const isGetPermitido = req.method === 'GET' &&
+            (req.path === '/dashboard' || req.path === '/pedidos');
+        const isStatusEntrega = req.method === 'PATCH' &&
+            /^\/pedidos\/\d+\/status$/.test(req.path) &&
+            ['separacao', 'pronto', 'a_caminho', 'entregue'].includes(req.body && req.body.status);
+        if (isGetPermitido || isStatusEntrega) {
+            return next();
+        }
+        return res.status(403).json({ error: 'Token de entregador não permite esta operação' });
+    }
+    return res.status(401).json({ error: 'Acesso não autorizado' });
 }
 
 router.use(authAdmin);
@@ -362,7 +386,16 @@ router.get('/config', async (req, res) => {
             }
         }
         const result = await pool.query('SELECT chave, valor, descricao, tipo FROM app_config ORDER BY chave');
-        res.json({ config: result.rows });
+        // Mascarar segredos (access token / secret) — nunca devolver em claro
+        const SENSIVEL = /(token|secret|access)/i;
+        const rows = result.rows.map(r => {
+            if (SENSIVEL.test(r.chave) && r.valor) {
+                const v = String(r.valor);
+                return { ...r, valor: '', _preenchido: true, _mascara: '••••' + v.slice(-4) };
+            }
+            return r;
+        });
+        res.json({ config: rows });
     } catch(err) {
         console.error('Erro ao listar config:', err.message);
         res.status(500).json({ error: 'Erro ao listar configurações: ' + err.message });

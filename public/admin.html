@@ -895,8 +895,8 @@ async function openDetail(id) {
                 <div class="modal-row"><span class="label">Pagamento</span><span class="value">${PAY_LABELS[p.pagamento_metodo]||p.pagamento_metodo}</span></div>
                 <div class="modal-row"><span class="label">Pag. Status</span><span class="value">${p.pagamento_status}</span></div>
                 ${p.cpf ? `<div class="modal-row"><span class="label">CPF</span><span class="value">${p.cpf}</span></div>` : ''}
-                ${p.doc_identidade ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Identidade</span><a href="/uploads/${p.doc_identidade}" target="_blank"><img src="/uploads/${p.doc_identidade}" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer" onerror="this.outerHTML='<a href=/uploads/${p.doc_identidade} target=_blank class=doc-link>📄 Baixar documento</a>'"></a></div>` : ''}
-                ${p.doc_residencia ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Residência</span><a href="/uploads/${p.doc_residencia}" target="_blank"><img src="/uploads/${p.doc_residencia}" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer" onerror="this.outerHTML='<a href=/uploads/${p.doc_residencia} target=_blank class=doc-link>📄 Baixar documento</a>'"></a></div>` : ''}
+                ${p.doc_identidade ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Identidade</span><img data-doc="${p.doc_identidade}" alt="Documento de identidade" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer"></div>` : ''}
+                ${p.doc_residencia ? `<div class="modal-row" style="flex-direction:column;align-items:flex-start"><span class="label">Doc Residência</span><img data-doc="${p.doc_residencia}" alt="Comprovante de residência" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;border:1px solid var(--border);cursor:pointer"></div>` : ''}
             </div>
 
             <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
@@ -965,8 +965,32 @@ async function openDetail(id) {
                 </div>
             </div>
         `;
+        loadDocImages(content);
     } catch(e) {
         content.innerHTML = '<div style="color:var(--red);padding:20px">Erro ao carregar pedido</div>';
+    }
+}
+
+// Documentos ficam atrás de auth (x-admin-token) — <img src> não envia header,
+// então buscamos via fetch autenticado e exibimos como blob. Clique abre em nova aba.
+async function loadDocImages(scope) {
+    const imgs = (scope || document).querySelectorAll('img[data-doc]');
+    for (const img of imgs) {
+        const nome = img.dataset.doc;
+        try {
+            const r = await fetch('/uploads/' + encodeURIComponent(nome), { headers: { 'x-admin-token': TOKEN } });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const blob = await r.blob();
+            const url = URL.createObjectURL(blob);
+            if (nome.toLowerCase().endsWith('.pdf') || blob.type === 'application/pdf') {
+                img.outerHTML = '<a href="' + url + '" target="_blank" class="doc-link" style="margin-top:6px">[PDF] Abrir documento</a>';
+            } else {
+                img.src = url;
+                img.onclick = () => window.open(url, '_blank');
+            }
+        } catch (e) {
+            img.outerHTML = '<span style="color:var(--text3);margin-top:6px">[ERRO] Documento indisponível (' + nome + ')</span>';
+        }
     }
 }
 
