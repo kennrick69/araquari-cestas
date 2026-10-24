@@ -287,19 +287,30 @@ router.get('/config', async (req, res) => {
 });
 
 // ══════════════════════════════════════
-// PUT /api/admin/config — Salvar config
+// PUT /api/admin/config — Salvar config (tabela `config` legada)
+// Ignora silenciosamente valores que são apenas máscara (••••XXXX) — evita
+// que um save do painel sobrescreva segredo real por eco da própria máscara.
 // ══════════════════════════════════════
+function _isMascaraPlaceholder(v) {
+    if (typeof v !== 'string') return false;
+    const s = v.trim();
+    // Qualquer valor que começa com bullets (•) é tratado como eco de máscara.
+    return s.length > 0 && /^[•]+/.test(s);
+}
 router.put('/config', async (req, res) => {
     try {
         const entries = Object.entries(req.body);
+        let saved = 0, skipped = 0;
         for (const [chave, valor] of entries) {
+            if (_isMascaraPlaceholder(valor)) { skipped++; continue; }
             await pool.query(
-                `INSERT INTO config (chave, valor) VALUES ($1, $2) 
+                `INSERT INTO config (chave, valor) VALUES ($1, $2)
                  ON CONFLICT (chave) DO UPDATE SET valor = $2, atualizado_em = CURRENT_TIMESTAMP`,
                 [chave, String(valor)]
             );
+            saved++;
         }
-        res.json({ success: true, message: 'Configurações atualizadas' });
+        res.json({ success: true, saved, skipped, message: 'Configurações atualizadas' });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao salvar configurações' });
     }
@@ -423,8 +434,10 @@ router.put('/config', async (req, res) => {
             return res.status(400).json({ error: 'Envie um objeto com as configurações' });
         }
 
-        let count = 0;
+        let count = 0, skipped = 0;
         for(const [chave, valor] of Object.entries(updates)) {
+            // Defense-in-depth: ignora qualquer valor que seja eco de máscara (••••XXXX).
+            if (_isMascaraPlaceholder(valor)) { skipped++; continue; }
             // Não permitir atualizar para vazio se já tinha valor (proteção contra limpar sem querer)
             // Mas permitir se realmente quer limpar
             await pool.query(
@@ -446,7 +459,7 @@ router.put('/config', async (req, res) => {
             }
         }
 
-        res.json({ success: true, message: `${count} configuração(ões) atualizada(s)` });
+        res.json({ success: true, saved: count, skipped, message: `${count} configuração(ões) atualizada(s)${skipped ? ` · ${skipped} máscara(s) ignorada(s)` : ''}` });
     } catch(err) {
         console.error('Erro ao salvar config:', err.message);
         res.status(500).json({ error: 'Erro ao salvar configurações' });

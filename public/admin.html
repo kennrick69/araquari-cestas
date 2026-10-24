@@ -1363,10 +1363,15 @@ async function saveConfig() {
 
     CONFIG_FIELDS.forEach(function(key) {
         var el = document.getElementById('cfg-' + key);
-        if(el && el.value.trim() !== '') {
-            updates[key] = el.value.trim();
-            count++;
-        }
+        if(!el) return;
+        var v = el.value.trim();
+        if (v === '') return;
+        // Nunca enviar valor que começa com bullets — é eco de máscara (••••XXXX)
+        // devolvida pelo GET /config. Backend também filtra, mas aqui evitamos
+        // tráfego inútil e feedback confuso.
+        if (/^[•]+/.test(v)) return;
+        updates[key] = v;
+        count++;
     });
 
     if(count === 0) {
