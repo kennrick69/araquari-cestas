@@ -690,10 +690,47 @@ async function quickAccept(pedidoId, btn) {
     }
 }
 
+// ──────────────────────────────────────────────────────────
+// Interceptor global: qualquer 401 em /api/admin/* durante uma sessão
+// ativa limpa o token e volta ao login com msg "Sessão expirada".
+// Durante login (doLogin / auto-login) o kick é suprimido pra não ocultar
+// a mensagem "Token invalido" quando o usuário erra a credencial.
+// ──────────────────────────────────────────────────────────
+let _loginInFlight = false;
+(function installAuthInterceptor() {
+    const _origFetch = window.fetch.bind(window);
+    window.fetch = async function(input, init) {
+        const resp = await _origFetch(input, init);
+        try {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            if (resp.status === 401 && /\/api\/admin\//.test(url) && !_loginInFlight && TOKEN) {
+                sessionExpired();
+            }
+        } catch (_) { /* defensivo: nunca quebrar o pipeline por log */ }
+        return resp;
+    };
+})();
+
+function sessionExpired() {
+    TOKEN = '';
+    localStorage.removeItem('admin_token');
+    const panel = document.getElementById('admin-panel');
+    const login = document.getElementById('login-screen');
+    const logoutArea = document.getElementById('logout-area');
+    if (panel) panel.style.display = 'none';
+    if (logoutArea) logoutArea.style.display = 'none';
+    if (login) login.style.display = 'block';
+    const err = document.getElementById('login-error');
+    if (err) { err.textContent = 'Sessão expirada, entre de novo'; err.style.display = 'block'; }
+    const input = document.getElementById('token-input');
+    if (input) { input.value = ''; input.focus(); }
+}
+
 // Auth
 function doLogin() {
     TOKEN = document.getElementById('token-input').value.trim();
     if(!TOKEN) return;
+    _loginInFlight = true;
     fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
         .then(r => {
             if(!r.ok) throw new Error();
@@ -707,8 +744,11 @@ function doLogin() {
             checkBoleto30Orders();
         })
         .catch(() => {
-            document.getElementById('login-error').style.display = 'block';
-        });
+            TOKEN = '';
+            var err = document.getElementById('login-error');
+            if (err) { err.textContent = 'Token invalido'; err.style.display = 'block'; }
+        })
+        .finally(() => { _loginInFlight = false; });
 }
 
 function logout() {
@@ -717,20 +757,29 @@ function logout() {
     document.getElementById('admin-panel').style.display = 'none';
     document.getElementById('login-screen').style.display = 'block';
     document.getElementById('logout-area').style.display = 'none';
+    var err = document.getElementById('login-error');
+    if (err) err.style.display = 'none';
 }
 
 function showPanel() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
     document.getElementById('logout-area').style.display = 'block';
+    var err = document.getElementById('login-error');
+    if (err) err.style.display = 'none';
 }
 
 // Auto-login if token stored
 if(TOKEN) {
+    _loginInFlight = true;
     fetch(API+'/dashboard', {headers:{'x-admin-token':TOKEN}})
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => { showPanel(); renderDashboard(data); loadPedidos(); checkBoleto30Orders(); })
-        .catch(() => logout());
+        .catch(() => {
+            // Auto-login falhou → tratar como sessão expirada
+            sessionExpired();
+        })
+        .finally(() => { _loginInFlight = false; });
 }
 
 // Dashboard
