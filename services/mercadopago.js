@@ -8,38 +8,61 @@
 
 class MercadoPago {
     constructor() {
-        this.accessToken = process.env.MP_ACCESS_TOKEN;
-        this.publicKey = process.env.MP_PUBLIC_KEY;
-        this.pixKey = process.env.MP_PIX_KEY;
+        // Bootstrap da env Railway. reloadFromDB() sobrescreve com o painel
+        // na primeira chamada; env só persiste se o DB estiver vazio.
+        this.accessToken = process.env.MP_ACCESS_TOKEN || null;
+        this.publicKey = process.env.MP_PUBLIC_KEY || null;
+        this.pixKey = process.env.MP_PIX_KEY || null;
+        this.webhookSecret = process.env.MP_WEBHOOK_SECRET || null;
         this.baseUrl = 'https://api.mercadopago.com';
         this._dbLoaded = false;
+        // Origem da credencial em uso: 'database' | 'env' | null (nada setado)
+        this.source = this.accessToken ? 'env' : null;
     }
 
     isConfigured() {
         return !!(this.accessToken);
     }
 
-    // Carrega credenciais do banco de dados (prioridade sobre env vars)
+    // Carrega credenciais do banco de dados.
+    // Regra: banco é fonte canônica. Env Railway é fallback só quando banco vazio.
+    // Chamado automaticamente pelo PUT /config quando admin salva mp_*.
     async reloadFromDB() {
         try {
             const pool = require('../db/pool');
             const tableCheck = await pool.query(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'app_config')`);
-            if(!tableCheck.rows[0].exists) return;
+            if(!tableCheck.rows[0].exists) {
+                console.warn('[MP] app_config não existe ainda — usando env Railway como fallback');
+                this.source = this.accessToken ? 'env' : null;
+                this._dbLoaded = true;
+                return;
+            }
 
             const result = await pool.query("SELECT chave, valor FROM app_config WHERE chave LIKE 'mp_%'");
             const config = {};
             result.rows.forEach(r => { config[r.chave] = r.valor; });
 
-            // Só sobrescreve se tiver valor no banco (não vazio)
-            if(config.mp_access_token) this.accessToken = config.mp_access_token;
-            if(config.mp_public_key) this.publicKey = config.mp_public_key;
-            if(config.mp_webhook_secret) this.webhookSecret = config.mp_webhook_secret;
+            // DB tem prioridade. Só mantém env se DB está vazio pra aquela chave.
+            if (config.mp_access_token) {
+                this.accessToken = config.mp_access_token;
+                this.source = 'database';
+            } else if (process.env.MP_ACCESS_TOKEN) {
+                this.accessToken = process.env.MP_ACCESS_TOKEN;
+                this.source = 'env';
+                console.warn('[MP] mp_access_token vazio no painel — caindo pra MP_ACCESS_TOKEN da env Railway. Peça o cliente cadastrar no admin.');
+            } else {
+                this.accessToken = null;
+                this.source = null;
+            }
+            // Demais chaves seguem a mesma lógica mas sem log de aviso dedicado
+            this.publicKey = config.mp_public_key || process.env.MP_PUBLIC_KEY || null;
+            this.webhookSecret = config.mp_webhook_secret || process.env.MP_WEBHOOK_SECRET || null;
 
             this._dbLoaded = true;
-            console.log('MP credenciais carregadas do banco. Configurado:', this.isConfigured());
+            console.log(`[MP] credenciais recarregadas · source=${this.source} · configurado=${this.isConfigured()}`);
         } catch(e) {
-            // Silencioso - usa env vars como fallback
-            console.log('MP usando variáveis de ambiente (banco indisponível)');
+            console.error('[MP] erro ao ler app_config:', e.message, '— mantendo env como fallback');
+            this.source = this.accessToken ? 'env' : null;
         }
     }
 

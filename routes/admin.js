@@ -260,61 +260,13 @@ router.patch('/pedidos/:id/status', async (req, res) => {
 });
 
 // ══════════════════════════════════════
-// GET /api/admin/config — Configurações (legado, tabela `config`)
-// Mascara qualquer chave sensível antes de responder.
-// Handler novo em /api/admin/config (abaixo) usa a tabela `app_config`.
-// Cobre: *token, *secret, *access, *key, *senha, *password, *pwd — e TUDO que
-// começa com mp_ (Mercado Pago: token/secret/public_key/app_id ficam ocultos
-// no payload, só prefix+sufix 4 chars revelados).
-// ══════════════════════════════════════
-const SENSIVEL_RE = /^mp_|(token|secret|access|key|senha|password|pwd|credential)/i;
-router.get('/config', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT chave, valor FROM config');
-        const config = {};
-        result.rows.forEach(r => {
-            if (SENSIVEL_RE.test(r.chave) && r.valor) {
-                const v = String(r.valor);
-                config[r.chave] = '••••' + v.slice(-4);
-            } else {
-                config[r.chave] = r.valor;
-            }
-        });
-        res.json(config);
-    } catch (err) {
-        res.status(500).json({ error: 'Erro ao buscar configurações' });
-    }
-});
-
-// ══════════════════════════════════════
-// PUT /api/admin/config — Salvar config (tabela `config` legada)
-// Ignora silenciosamente valores que são apenas máscara (••••XXXX) — evita
-// que um save do painel sobrescreva segredo real por eco da própria máscara.
-// ══════════════════════════════════════
+// Helper: valor é apenas eco de máscara (••••XXXX) devolvida pelo GET /config?
+// Blindagem anti-destruição acidental de segredos quando o painel ecoa o campo.
 function _isMascaraPlaceholder(v) {
     if (typeof v !== 'string') return false;
     const s = v.trim();
-    // Qualquer valor que começa com bullets (•) é tratado como eco de máscara.
     return s.length > 0 && /^[•]+/.test(s);
 }
-router.put('/config', async (req, res) => {
-    try {
-        const entries = Object.entries(req.body);
-        let saved = 0, skipped = 0;
-        for (const [chave, valor] of entries) {
-            if (_isMascaraPlaceholder(valor)) { skipped++; continue; }
-            await pool.query(
-                `INSERT INTO config (chave, valor) VALUES ($1, $2)
-                 ON CONFLICT (chave) DO UPDATE SET valor = $2, atualizado_em = CURRENT_TIMESTAMP`,
-                [chave, String(valor)]
-            );
-            saved++;
-        }
-        res.json({ success: true, saved, skipped, message: 'Configurações atualizadas' });
-    } catch (err) {
-        res.status(500).json({ error: 'Erro ao salvar configurações' });
-    }
-});
 
 // ══════════════════════════════════════
 // DELETE /api/admin/pedidos/:id — Excluir pedido
@@ -448,14 +400,15 @@ router.put('/config', async (req, res) => {
             count++;
         }
 
-        // Se atualizou credenciais do MP, recarregar o serviço
-        if(updates.mp_access_token || updates.mp_public_key) {
+        // Se atualizou QUALQUER credencial mp_*, recarregar o serviço (sem redeploy)
+        const touchedMp = Object.keys(updates).some(k => k.startsWith('mp_'));
+        if (touchedMp) {
             try {
                 const mp = require('../services/mercadopago');
                 await mp.reloadFromDB();
-                console.log('Credenciais do Mercado Pago recarregadas do banco');
+                console.log('[config] Credenciais MP recarregadas do banco após save');
             } catch(e) {
-                console.error('Erro ao recarregar MP:', e.message);
+                console.error('[config] Erro ao recarregar MP:', e.message);
             }
         }
 
@@ -466,19 +419,32 @@ router.put('/config', async (req, res) => {
     }
 });
 
-// GET /api/admin/config/test-mp - testar conexão com Mercado Pago
+// GET /api/admin/config/test-mp — testa EXATAMENTE o access token que o
+// checkout vai usar + informa de onde ele veio (banco ou env Railway).
 router.get('/config/test-mp', async (req, res) => {
+    const mp = require('../services/mercadopago');
     try {
-        const mp = require('../services/mercadopago');
         await mp.reloadFromDB();
+        const source = mp.source || 'nenhum';
+        const origemLabel = source === 'database'
+            ? 'painel admin (banco)'
+            : source === 'env'
+                ? '⚠️ env MP_ACCESS_TOKEN (Railway) — fallback, cadastre no painel'
+                : 'nenhum';
+
         if(!mp.isConfigured()) {
-            return res.json({ success: false, message: 'Access Token não configurado' });
+            return res.json({ success: false, source, message: 'Access Token não configurado em nenhuma fonte' });
         }
-        // Tentar uma chamada simples pra validar o token
+        // Chamada real ao MP com o token em uso (confirma que ele vale)
         const result = await mp._request('GET', '/v1/payment_methods');
-        res.json({ success: true, message: 'Conexão OK! ' + result.length + ' métodos de pagamento disponíveis' });
+        res.json({
+            success: true,
+            source,
+            origem: origemLabel,
+            message: `Conexão OK · origem: ${origemLabel} · ${result.length} métodos de pagamento`
+        });
     } catch(err) {
-        res.json({ success: false, message: 'Erro: ' + err.message });
+        res.json({ success: false, source: mp.source || 'desconhecido', message: 'Erro: ' + err.message });
     }
 });
 

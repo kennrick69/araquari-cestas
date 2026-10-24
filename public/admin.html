@@ -1344,12 +1344,16 @@ async function loadConfig() {
 
         (data.config || []).forEach(function(c) {
             var el = document.getElementById('cfg-' + c.chave);
-            if(el) {
+            if(!el) return;
+            // Backend mascara segredos: retorna valor='' + _preenchido + _mascara.
+            // Mostra a máscara como placeholder (NÃO como value) pra:
+            //  1) usuário saber que já tem valor salvo
+            //  2) saveConfig() não re-enviar a máscara (input continua vazio)
+            if (c._preenchido) {
+                el.value = '';
+                el.placeholder = c._mascara || '(salvo)';
+            } else {
                 el.value = c.valor || '';
-                // Show masked value for password fields
-                if(c.tipo === 'password' && c.valor) {
-                    el.placeholder = '••••••••' + c.valor.slice(-6);
-                }
             }
         });
     } catch(e) {
@@ -1405,11 +1409,17 @@ async function testMP() {
         var res = await fetch('/api/admin/config/test-mp', { headers: {'x-admin-token': TOKEN} });
         var data = await res.json();
 
+        var html = '';
         if(data.success) {
-            resultEl.innerHTML = '<div style="padding:8px 12px;background:#10b98120;border:1px solid var(--green);border-radius:8px;font-size:12px;color:var(--green);margin-bottom:12px;font-weight:700">✅ ' + data.message + '</div>';
+            html = '<div style="padding:8px 12px;background:#10b98120;border:1px solid var(--green);border-radius:8px;font-size:12px;color:var(--green);margin-bottom:4px;font-weight:700">✅ ' + data.message + '</div>';
+            // Aviso extra quando o token em uso veio da env Railway (sem painel preenchido)
+            if (data.source === 'env') {
+                html += '<div style="padding:6px 12px;background:#f59e0b20;border:1px solid #f59e0b;border-radius:8px;font-size:11px;color:#f59e0b;margin-bottom:12px">⚠️ O token em uso vem da env MP_ACCESS_TOKEN (Railway), não do painel. Cadastre as chaves aqui pra que o painel se torne a fonte canônica.</div>';
+            }
         } else {
-            resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px;font-weight:700">❌ ' + data.message + '</div>';
+            html = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px;font-weight:700">❌ ' + data.message + '</div>';
         }
+        resultEl.innerHTML = html;
     } catch(e) {
         resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px">❌ Erro de conexão</div>';
     }
