@@ -260,13 +260,26 @@ router.patch('/pedidos/:id/status', async (req, res) => {
 });
 
 // ══════════════════════════════════════
-// GET /api/admin/config — Configurações
+// GET /api/admin/config — Configurações (legado, tabela `config`)
+// Mascara qualquer chave sensível antes de responder.
+// Handler novo em /api/admin/config (abaixo) usa a tabela `app_config`.
+// Cobre: *token, *secret, *access, *key, *senha, *password, *pwd — e TUDO que
+// começa com mp_ (Mercado Pago: token/secret/public_key/app_id ficam ocultos
+// no payload, só prefix+sufix 4 chars revelados).
 // ══════════════════════════════════════
+const SENSIVEL_RE = /^mp_|(token|secret|access|key|senha|password|pwd|credential)/i;
 router.get('/config', async (req, res) => {
     try {
         const result = await pool.query('SELECT chave, valor FROM config');
         const config = {};
-        result.rows.forEach(r => { config[r.chave] = r.valor; });
+        result.rows.forEach(r => {
+            if (SENSIVEL_RE.test(r.chave) && r.valor) {
+                const v = String(r.valor);
+                config[r.chave] = '••••' + v.slice(-4);
+            } else {
+                config[r.chave] = r.valor;
+            }
+        });
         res.json(config);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar configurações' });
