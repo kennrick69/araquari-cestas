@@ -189,19 +189,23 @@ app.get('/api/cestas', async (req, res) => {
 // ══════════════════════════════════════
 // Health check
 // ══════════════════════════════════════
-app.get('/api/health', async (req, res) => {
+async function healthCheck(req, res) {
     try {
         const pool = require('./db/pool');
         const dbCheck = await pool.query('SELECT NOW()');
         res.json({
             status: 'ok',
             timestamp: new Date().toISOString(),
-            db: dbCheck.rows[0].now
+            db: 'conectado',
+            db_time: dbCheck.rows[0].now
         });
     } catch (err) {
         res.status(500).json({ status: 'error', db: 'desconectado' });
     }
-});
+}
+
+app.get('/health', healthCheck);
+app.get('/api/health', healthCheck);
 
 // ══════════════════════════════════════
 // Fallback → frontend
