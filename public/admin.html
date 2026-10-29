@@ -251,11 +251,13 @@ tr:hover{background:#ffffff05}
 </div>
 <!-- Cestas Editor -->
 <div id="cestas-editor" style="display:none;padding:0 20px 20px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <h3 style="margin:0;font-size:18px">🛒 Gerenciar Cestas</h3>
-        <span style="font-size:12px;color:#888">Alterações são aplicadas no app em tempo real</span>
+        <button class="btn btn-sm" style="background:#25d366;color:#fff;font-weight:700;padding:8px 16px" onclick="openNovaCesta()">➕ Nova cesta</button>
     </div>
-    <div id="cestas-list" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px">Alterações são aplicadas no app em tempo real · cestas vêm fechadas, clique para editar</div>
+    <div id="nova-cesta-form" style="display:none;background:#14233a;border:1px solid #25d366;border-radius:14px;padding:18px;margin-bottom:16px"></div>
+    <div id="cestas-list" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 
 <!-- CONFIG EDITOR -->
@@ -318,6 +320,11 @@ tr:hover{background:#ffffff05}
             <div>
                 <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">E-mail da Loja</label>
                 <input type="text" id="cfg-loja_email" placeholder="contato@conversecommaria.com.br" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">WhatsApp de atendimento</label>
+                <input type="text" id="cfg-loja_whatsapp" placeholder="(47) 99681-3181" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+                <div style="font-size:10px;color:var(--text3);margin-top:4px">Botão "Houve algum imprevisto?" na tela do pedido. Vazio = botão não aparece.</div>
             </div>
         </div>
     </div>
@@ -1244,6 +1251,9 @@ function updateBoleto30Badge(count) {
 // CESTAS MANAGEMENT
 // ══════════════════════════════════════
 let cestasData = [];
+let expandedCestas = {}; // {tipo:true} — mantém o card aberto entre reloads
+const CIN = 'width:100%;padding:8px;border-radius:8px;border:1px solid #444;background:#0d0d1a;color:#fff;font-size:13px';
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 async function loadCestas() {
     const list = document.getElementById('cestas-list');
@@ -1267,61 +1277,112 @@ function renderCestas() {
         return;
     }
 
-    list.innerHTML = cestasData.map(c => {
+    list.innerHTML = cestasData.map((c, i) => {
         const itens = typeof c.itens === 'string' ? JSON.parse(c.itens) : (c.itens || []);
+        const open = !!expandedCestas[c.tipo];
+        const badge = c.ativo
+            ? '<span style="font-size:10px;font-weight:800;color:#25d366;background:rgba(37,211,102,0.15);padding:3px 8px;border-radius:6px">ATIVA</span>'
+            : '<span style="font-size:10px;font-weight:800;color:#888;background:rgba(136,136,136,0.2);padding:3px 8px;border-radius:6px">INATIVA</span>';
         return `
-        <div style="background:#1a1a2e;border:1px solid #333;border-radius:14px;padding:20px;${!c.ativo ? 'opacity:0.5' : ''}">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                <div style="display:flex;align-items:center;gap:10px">
-                    <span style="font-size:28px">${c.emoji || '📦'}</span>
-                    <div>
-                        <div style="font-size:16px;font-weight:800">${c.nome}</div>
-                        <div style="font-size:12px;color:#888">Tipo: ${c.tipo} | ${c.descricao}</div>
+        <div style="background:#1a1a2e;border:1px solid #333;border-radius:14px;overflow:hidden;${!c.ativo ? 'opacity:0.55' : ''}">
+            <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer" onclick="toggleCesta('${c.tipo}')">
+                <div style="display:flex;flex-direction:column;gap:3px" onclick="event.stopPropagation()">
+                    <button title="Subir" onclick="moveCesta('${c.tipo}',-1)" ${i===0?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===0?'opacity:0.3;cursor:default':'cursor:pointer'}">▲</button>
+                    <button title="Descer" onclick="moveCesta('${c.tipo}',1)" ${i===cestasData.length-1?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===cestasData.length-1?'opacity:0.3;cursor:default':'cursor:pointer'}">▼</button>
+                </div>
+                <span style="font-size:26px">${c.emoji || '📦'}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(c.nome)} ${badge}</div>
+                    <div style="font-size:12px;color:#888">Tipo: ${c.tipo}${c.tag ? ' · '+esc(c.tag) : ''}</div>
+                </div>
+                <div style="font-size:20px;font-weight:900;color:#25d366;white-space:nowrap">R$ ${parseFloat(c.preco).toFixed(2).replace('.',',')}</div>
+                <label title="Ativar/desativar" onclick="event.stopPropagation()" style="display:flex;align-items:center;cursor:pointer">
+                    <input type="checkbox" ${c.ativo?'checked':''} onchange="toggleAtivo('${c.tipo}',this.checked)" style="width:18px;height:18px;cursor:pointer">
+                </label>
+                <span id="chev-${c.tipo}" style="color:#888;font-size:12px;width:12px">${open?'▲':'▼'}</span>
+            </div>
+
+            <div id="cesta-body-${c.tipo}" style="display:${open?'block':'none'};padding:14px 16px 18px;border-top:1px solid #333">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Nome</label>
+                        <input type="text" value="${esc(c.nome)}" id="cesta-nome-${c.tipo}" style="${CIN}"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Preço (R$)</label>
+                        <input type="number" step="0.01" value="${parseFloat(c.preco).toFixed(2)}" id="cesta-preco-${c.tipo}" style="${CIN};font-weight:800"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Descrição</label>
+                        <input type="text" value="${esc(c.descricao)}" id="cesta-desc-${c.tipo}" style="${CIN}"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Embalagem</label>
+                        <input type="text" value="${esc(c.embalagem||'')}" id="cesta-emb-${c.tipo}" style="${CIN}"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Emoji</label>
+                        <input type="text" value="${esc(c.emoji||'')}" id="cesta-emoji-${c.tipo}" style="${CIN}"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tag / destaque</label>
+                        <input type="text" value="${esc(c.tag||'')}" id="cesta-tag-${c.tipo}" placeholder="ex.: POPULAR" style="${CIN}"></div>
+                    <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho)</label>
+                        <input type="text" value="${esc(c.imagem||'')}" id="cesta-img-${c.tipo}" placeholder="assets/img/cesta-x.png" style="${CIN}"></div>
+                </div>
+
+                <div style="margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <label style="font-size:12px;font-weight:700">Itens (${itens.length})</label>
+                        <button class="btn btn-sm" style="background:#25d366;color:#fff;font-size:11px;padding:4px 10px" onclick="addItem('${c.tipo}')">+ Adicionar item</button>
+                    </div>
+                    <div id="itens-${c.tipo}" style="max-height:300px;overflow-y:auto;background:#0d0d1a;border-radius:10px;padding:8px">
+                        ${itens.map((it, idx) => `
+                            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px" id="item-${c.tipo}-${idx}">
+                                <input type="text" value="${esc(it.name)}" style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="name">
+                                <input type="text" value="${esc(it.qty)}" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="qty">
+                                <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
-                <div style="font-size:24px;font-weight:900;color:#25d366">R$ ${parseFloat(c.preco).toFixed(2).replace('.',',')}</div>
-            </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-                <div>
-                    <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Nome</label>
-                    <input type="text" value="${c.nome}" id="cesta-nome-${c.tipo}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #444;background:#0d0d1a;color:#fff;font-size:13px">
+                <div style="display:flex;gap:8px;justify-content:flex-end">
+                    <button class="btn btn-sm" style="background:var(--orange);color:#fff;font-weight:700;padding:8px 20px" onclick="saveCesta('${c.tipo}')">💾 Salvar</button>
                 </div>
-                <div>
-                    <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Preço (R$)</label>
-                    <input type="number" step="0.01" value="${parseFloat(c.preco).toFixed(2)}" id="cesta-preco-${c.tipo}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #444;background:#0d0d1a;color:#fff;font-size:13px;font-weight:800">
-                </div>
-                <div>
-                    <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Descrição</label>
-                    <input type="text" value="${c.descricao}" id="cesta-desc-${c.tipo}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #444;background:#0d0d1a;color:#fff;font-size:13px">
-                </div>
-                <div>
-                    <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Embalagem</label>
-                    <input type="text" value="${c.embalagem || ''}" id="cesta-emb-${c.tipo}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #444;background:#0d0d1a;color:#fff;font-size:13px">
-                </div>
-            </div>
-
-            <div style="margin-bottom:12px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                    <label style="font-size:12px;font-weight:700">Itens (${itens.length})</label>
-                    <button class="btn btn-sm" style="background:#25d366;color:#fff;font-size:11px;padding:4px 10px" onclick="addItem('${c.tipo}')">+ Adicionar item</button>
-                </div>
-                <div id="itens-${c.tipo}" style="max-height:300px;overflow-y:auto;background:#0d0d1a;border-radius:10px;padding:8px">
-                    ${itens.map((it, idx) => `
-                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px" id="item-${c.tipo}-${idx}">
-                            <input type="text" value="${it.name}" style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="name">
-                            <input type="text" value="${it.qty}" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="qty">
-                            <button onclick="removeItem('${c.tipo}',${idx})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button class="btn btn-sm" style="background:var(--orange);color:#fff;font-weight:700;padding:8px 20px" onclick="saveCesta('${c.tipo}')">💾 Salvar</button>
             </div>
         </div>`;
     }).join('');
+}
+
+function toggleCesta(tipo) {
+    expandedCestas[tipo] = !expandedCestas[tipo];
+    const body = document.getElementById('cesta-body-' + tipo);
+    const chev = document.getElementById('chev-' + tipo);
+    if(body) body.style.display = expandedCestas[tipo] ? 'block' : 'none';
+    if(chev) chev.textContent = expandedCestas[tipo] ? '▲' : '▼';
+}
+
+async function toggleAtivo(tipo, ativo) {
+    try {
+        const res = await fetch('/api/admin/cestas/' + tipo, {
+            method: 'PUT',
+            headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
+            body: JSON.stringify({ ativo })
+        });
+        const data = await res.json();
+        if(data.success) showToast('Cesta ' + (ativo ? 'ativada' : 'desativada') + '. App atualizado.', 'success');
+        else showToast('Erro: ' + (data.error || 'falha'), 'error');
+    } catch(e) { showToast('Erro de conexão', 'error'); }
+    loadCestas();
+}
+
+async function moveCesta(tipo, dir) {
+    const i = cestasData.findIndex(c => c.tipo === tipo);
+    const j = i + dir;
+    if(i < 0 || j < 0 || j >= cestasData.length) return;
+    const arr = cestasData.slice();
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    const ordem = arr.map((c, idx) => ({ tipo: c.tipo, ordem: idx + 1 }));
+    try {
+        const res = await fetch('/api/admin/cestas-reordenar', {
+            method: 'PUT',
+            headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
+            body: JSON.stringify({ ordem })
+        });
+        const data = await res.json();
+        if(data.success) loadCestas();
+        else showToast('Erro ao reordenar: ' + (data.error || ''), 'error');
+    } catch(e) { showToast('Erro de conexão', 'error'); }
 }
 
 function addItem(tipo) {
@@ -1333,15 +1394,31 @@ function addItem(tipo) {
     div.innerHTML = `
         <input type="text" value="" placeholder="Nome do item" style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="name">
         <input type="text" value="" placeholder="1x 500 g" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="qty">
-        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
+        <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
     `;
     container.appendChild(div);
     div.querySelector('input').focus();
 }
 
-function removeItem(tipo, idx) {
-    const el = document.getElementById('item-' + tipo + '-' + idx);
-    if(el) el.remove();
+// Remoção de item com confirmação (evita toque acidental ao rolar).
+function confirmRemoveItemEl(btn) {
+    const row = btn.closest('[id^="item-"]') || btn.parentElement;
+    const nameInput = row.querySelector('[data-field="name"]');
+    const nome = nameInput && nameInput.value.trim();
+    if(!nome) { row.remove(); return; } // item vazio: remove direto
+    showConfirm('Remover item', 'Remover ' + nome + '?', () => row.remove(), { danger:true, okText:'Remover', icon:'🗑️' });
+}
+
+function collectItens(tipo) {
+    const container = document.getElementById('itens-' + tipo);
+    const itens = [];
+    if(!container) return itens;
+    container.querySelectorAll('[id^="item-' + tipo + '-"]').forEach(row => {
+        const n = row.querySelector('[data-field="name"]');
+        const q = row.querySelector('[data-field="qty"]');
+        if(n && q && n.value.trim()) itens.push({ name: n.value.trim(), qty: q.value.trim() });
+    });
+    return itens;
 }
 
 async function saveCesta(tipo) {
@@ -1349,23 +1426,16 @@ async function saveCesta(tipo) {
     const preco = parseFloat(document.getElementById('cesta-preco-' + tipo).value);
     const descricao = document.getElementById('cesta-desc-' + tipo).value;
     const embalagem = document.getElementById('cesta-emb-' + tipo).value;
-
-    // Collect items from DOM
-    const container = document.getElementById('itens-' + tipo);
-    const itens = [];
-    container.querySelectorAll('[id^="item-' + tipo + '-"]').forEach(row => {
-        const nameInput = row.querySelector('[data-field="name"]');
-        const qtyInput = row.querySelector('[data-field="qty"]');
-        if(nameInput && qtyInput && nameInput.value.trim()) {
-            itens.push({ name: nameInput.value.trim(), qty: qtyInput.value.trim() });
-        }
-    });
+    const emoji = document.getElementById('cesta-emoji-' + tipo).value;
+    const tag = document.getElementById('cesta-tag-' + tipo).value;
+    const imagem = document.getElementById('cesta-img-' + tipo).value;
+    const itens = collectItens(tipo);
 
     try {
         const res = await fetch('/api/admin/cestas/' + tipo, {
             method: 'PUT',
             headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
-            body: JSON.stringify({ nome, preco, descricao, embalagem, itens })
+            body: JSON.stringify({ nome, preco, descricao, embalagem, emoji, tag, imagem, itens })
         });
         const data = await res.json();
         if(data.success) {
@@ -1379,11 +1449,84 @@ async function saveCesta(tipo) {
     }
 }
 
+function openNovaCesta() {
+    const f = document.getElementById('nova-cesta-form');
+    if(f.style.display === 'block') { f.style.display = 'none'; return; }
+    f.style.display = 'block';
+    f.innerHTML = `
+        <div style="font-size:15px;font-weight:800;margin-bottom:12px">➕ Nova cesta</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Nome *</label>
+                <input type="text" id="nova-nome" style="${CIN}"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tipo (opcional)</label>
+                <input type="text" id="nova-tipo" placeholder="gera do nome" style="${CIN}"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Preço (R$)</label>
+                <input type="number" step="0.01" id="nova-preco" value="0" style="${CIN};font-weight:800"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Emoji</label>
+                <input type="text" id="nova-emoji" value="📦" style="${CIN}"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tag / destaque</label>
+                <input type="text" id="nova-tag" placeholder="ex.: POPULAR" style="${CIN}"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Cor do ícone</label>
+                <input type="text" id="nova-cor" value="var(--green)" style="${CIN}"></div>
+            <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Descrição</label>
+                <input type="text" id="nova-desc" placeholder="Ex.: Família · 14 itens" style="${CIN}"></div>
+            <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Embalagem</label>
+                <input type="text" id="nova-emb" style="${CIN}"></div>
+            <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho) — opcional</label>
+                <input type="text" id="nova-img" placeholder="assets/img/..." style="${CIN}"></div>
+        </div>
+        <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <label style="font-size:12px;font-weight:700">Itens</label>
+                <button class="btn btn-sm" style="background:#25d366;color:#fff;font-size:11px;padding:4px 10px" onclick="addItem('nova')">+ Adicionar item</button>
+            </div>
+            <div id="itens-nova" style="max-height:300px;overflow-y:auto;background:#0d0d1a;border-radius:10px;padding:8px"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-sm" style="background:#333;color:#fff;padding:8px 16px" onclick="document.getElementById('nova-cesta-form').style.display='none'">Cancelar</button>
+            <button class="btn btn-sm" style="background:#25d366;color:#fff;font-weight:700;padding:8px 20px" onclick="createCesta()">Criar cesta</button>
+        </div>`;
+    document.getElementById('nova-nome').focus();
+}
+
+async function createCesta() {
+    const nome = document.getElementById('nova-nome').value.trim();
+    if(!nome) { showToast('Informe o nome da cesta.', 'warning'); return; }
+    const body = {
+        nome,
+        tipo: document.getElementById('nova-tipo').value.trim(),
+        preco: parseFloat(document.getElementById('nova-preco').value) || 0,
+        emoji: document.getElementById('nova-emoji').value.trim() || '📦',
+        tag: document.getElementById('nova-tag').value.trim(),
+        cor: document.getElementById('nova-cor').value.trim() || 'var(--green)',
+        descricao: document.getElementById('nova-desc').value.trim(),
+        embalagem: document.getElementById('nova-emb').value.trim(),
+        imagem: document.getElementById('nova-img').value.trim(),
+        itens: collectItens('nova')
+    };
+    try {
+        const res = await fetch('/api/admin/cestas', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'x-admin-token': TOKEN },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if(data.success) {
+            showToast('Cesta "' + nome + '" criada! Já aparece no app.', 'success');
+            document.getElementById('nova-cesta-form').style.display = 'none';
+            if(data.cesta) expandedCestas[data.cesta.tipo] = true;
+            loadCestas();
+        } else {
+            showToast('Erro: ' + (data.error || 'falha ao criar'), 'error');
+        }
+    } catch(e) { showToast('Erro de conexão', 'error'); }
+}
+
 // ══════════════════════════════════════
 // CONFIGURAÇÕES
 // ══════════════════════════════════════
 
-const CONFIG_FIELDS = ['mp_access_token', 'mp_public_key', 'mp_app_id', 'mp_webhook_secret', 'loja_nome', 'loja_telefone', 'loja_email'];
+const CONFIG_FIELDS = ['mp_access_token', 'mp_public_key', 'mp_app_id', 'mp_webhook_secret', 'loja_nome', 'loja_telefone', 'loja_email', 'loja_whatsapp'];
 
 async function loadConfig() {
     try {

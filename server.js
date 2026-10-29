@@ -175,7 +175,8 @@ app.get('/api/cestas', async (req, res) => {
                 color: row.cor,
                 img: row.imagem,
                 items: typeof row.itens === 'string' ? JSON.parse(row.itens) : row.itens,
-                packaging: row.embalagem
+                packaging: row.embalagem,
+                tag: row.tag || ''
             };
         });
         baskets.custom = { name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)", img:"", items:[], packaging:"—" };
@@ -209,6 +210,18 @@ app.get('/api/health', healthCheck);
 
 // ══════════════════════════════════════
 // Fallback → frontend
+// ══════════════════════════════════════
+// Config pública da loja (campos não-secretos) — usada pelo app do cliente
+app.get('/api/loja', async (req, res) => {
+    try {
+        const r = await pool.query("SELECT chave, valor FROM app_config WHERE chave IN ('loja_nome','loja_telefone','loja_whatsapp')");
+        const c = {}; r.rows.forEach(row => { c[row.chave] = row.valor; });
+        res.json({ nome: c.loja_nome || '', telefone: c.loja_telefone || '', whatsapp: c.loja_whatsapp || '' });
+    } catch (err) {
+        res.json({ nome: '', telefone: '', whatsapp: '' });
+    }
+});
+
 // ══════════════════════════════════════
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

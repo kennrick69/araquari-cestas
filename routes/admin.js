@@ -309,11 +309,65 @@ router.get('/cestas', async (req, res) => {
     }
 });
 
+// POST /api/admin/cestas - criar cesta do zero
+router.post('/cestas', async (req, res) => {
+    try {
+        let { tipo, nome, preco, emoji, descricao, embalagem, imagem, cor, tag, itens, ativo } = req.body;
+        if(!nome || !String(nome).trim()) return res.status(400).json({ error: 'Nome é obrigatório' });
+
+        // tipo: usa o informado, senão gera um slug a partir do nome (sem acento)
+        tipo = String(tipo || nome).trim().toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        if(!tipo) return res.status(400).json({ error: 'Tipo inválido (use letras ou números)' });
+        if(tipo === 'custom') return res.status(400).json({ error: 'O tipo "custom" é reservado (Doação Livre)' });
+
+        // próxima ordem = depois da última
+        const ord = await pool.query('SELECT COALESCE(MAX(ordem),0)+1 AS prox FROM cestas_config');
+        const ordem = ord.rows[0].prox;
+
+        const result = await pool.query(
+            `INSERT INTO cestas_config (tipo, nome, preco, emoji, descricao, embalagem, imagem, cor, tag, itens, ativo, ordem)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+            [tipo, String(nome).trim(), preco || 0, emoji || '📦', descricao || '', embalagem || '',
+             imagem || '', cor || 'var(--green)', tag || '', JSON.stringify(Array.isArray(itens) ? itens : []),
+             ativo !== undefined ? ativo : true, ordem]
+        );
+        res.json({ success: true, cesta: result.rows[0] });
+    } catch(err) {
+        if(err.code === '23505') return res.status(409).json({ error: 'Já existe uma cesta com esse tipo. Mude o nome/tipo.' });
+        console.error('Erro ao criar cesta:', err.message);
+        res.status(500).json({ error: 'Erro ao criar cesta: ' + err.message });
+    }
+});
+
+// PUT /api/admin/cestas-reordenar - aplicar nova ordem (setas subir/descer)
+// Hífen (não /cestas/reordenar) pra não colidir com a rota /cestas/:tipo.
+router.put('/cestas-reordenar', async (req, res) => {
+    const { ordem } = req.body; // [{ tipo, ordem }, ...]
+    if(!Array.isArray(ordem)) return res.status(400).json({ error: 'Formato inválido' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        for(const it of ordem) {
+            await client.query('UPDATE cestas_config SET ordem = $1, atualizado_em = NOW() WHERE tipo = $2', [it.ordem, it.tipo]);
+        }
+        await client.query('COMMIT');
+        res.json({ success: true });
+    } catch(err) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao reordenar cestas:', err.message);
+        res.status(500).json({ error: 'Erro ao reordenar: ' + err.message });
+    } finally {
+        client.release();
+    }
+});
+
 // PUT /api/admin/cestas/:tipo - atualizar cesta (preço, nome, itens, etc)
 router.put('/cestas/:tipo', async (req, res) => {
     try {
         const { tipo } = req.params;
-        const { nome, preco, emoji, descricao, embalagem, itens, ativo } = req.body;
+        const { nome, preco, emoji, descricao, embalagem, imagem, cor, tag, itens, ativo, ordem } = req.body;
 
         const updates = [];
         const values = [];
@@ -324,8 +378,12 @@ router.put('/cestas/:tipo', async (req, res) => {
         if(emoji !== undefined) { updates.push(`emoji = $${idx++}`); values.push(emoji); }
         if(descricao !== undefined) { updates.push(`descricao = $${idx++}`); values.push(descricao); }
         if(embalagem !== undefined) { updates.push(`embalagem = $${idx++}`); values.push(embalagem); }
+        if(imagem !== undefined) { updates.push(`imagem = $${idx++}`); values.push(imagem); }
+        if(cor !== undefined) { updates.push(`cor = $${idx++}`); values.push(cor); }
+        if(tag !== undefined) { updates.push(`tag = $${idx++}`); values.push(tag); }
         if(itens !== undefined) { updates.push(`itens = $${idx++}`); values.push(JSON.stringify(itens)); }
         if(ativo !== undefined) { updates.push(`ativo = $${idx++}`); values.push(ativo); }
+        if(ordem !== undefined) { updates.push(`ordem = $${idx++}`); values.push(ordem); }
 
         updates.push(`atualizado_em = NOW()`);
 

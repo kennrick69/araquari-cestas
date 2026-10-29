@@ -446,6 +446,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 .confirm-btn-danger { background:var(--red); color:#fff; }
 </style>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -514,46 +515,9 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
             <!-- Basket cards -->
             <div class="basket-cards">
-                <div class="basket-card" onclick="selectBasket('x')" id="card-x">
-                    <div class="basket-icon" style="background:rgba(52,199,89,0.12)"><img src="assets/img/icon-cesta-x.svg" style="width:36px;height:36px"></div>
-                    <div class="basket-info">
-                        <div class="basket-name">Cesta X</div>
-                        <div class="basket-desc">Essencial · 11 itens</div>
-                        <div class="basket-items-preview">Arroz, Feijão, Café, Óleo, Sardinha...</div>
-                    </div>
-                    <div class="basket-price">
-                        <div class="basket-price-val">R$ 1<small>,00</small></div>
-                        <div class="basket-price-sub">à vista</div>
-                    </div>
-                </div>
-
-                <div class="basket-card" onclick="selectBasket('confort')" id="card-confort">
-                    <div class="basket-icon" style="background:rgba(232,133,12,0.12)"><img src="assets/img/icon-cesta-confort.svg" style="width:36px;height:36px"></div>
-                    <div class="basket-info">
-                        <div class="basket-name">Cesta Confort</div>
-                        <div class="basket-desc">Família · 14 itens</div>
-                        <div class="basket-items-preview">Arroz 5kg, Feijão, Café, 2x Óleo, Fubá...</div>
-                    </div>
-                    <div class="basket-price">
-                        <div class="basket-price-val">R$ 2<small>,00</small></div>
-                        <div class="basket-price-sub">à vista</div>
-                    </div>
-                    <div class="basket-tag" style="background:rgba(232,133,12,0.15);color:var(--orange)">POPULAR</div>
-                </div>
-
-                <div class="basket-card" onclick="selectBasket('plus')" id="card-plus">
-                    <div class="basket-icon" style="background:rgba(255,217,61,0.12)"><img src="assets/img/icon-cesta-plus.svg" style="width:36px;height:36px"></div>
-                    <div class="basket-info">
-                        <div class="basket-name">Cesta Plus</div>
-                        <div class="basket-desc">Premium · 33 itens</div>
-                        <div class="basket-items-preview">Completa + higiene e limpeza</div>
-                    </div>
-                    <div class="basket-price">
-                        <div class="basket-price-val">R$ 3<small>,00</small></div>
-                        <div class="basket-price-sub">à vista</div>
-                    </div>
-                    <div class="basket-tag" style="background:rgba(255,217,61,0.15);color:var(--yellow)">⭐ PREMIUM</div>
-                </div>
+                <!-- Cards das cestas renderizados dinamicamente do /api/cestas (ativo + ordem) -->
+                <!-- mesmo gap:12px do .basket-cards de hoje (o wrapper quebraria o gap entre cards) -->
+                <div id="dynamic-baskets" style="display:flex;flex-direction:column;gap:12px"></div>
 
                 <!-- Donation custom value card (hidden by default) -->
                 <div class="basket-card" onclick="selectCustomDonation()" id="card-custom" style="display:none;border:2px dashed var(--orange)">
@@ -937,7 +901,7 @@ const state = {
 
 const BASKETS = {
     x: {
-        name:"Cesta X", price:1.00, emoji:"🍚", desc:"Essencial · 11 itens", color:"var(--green)",
+        name:"Cesta X", price:1.00, emoji:"🍚", desc:"Essencial · 11 itens", color:"var(--green)", tag:"",
         img:"assets/img/cesta-x.png",
         items:[
             { name:"Açúcar Refinado Especial", qty:"1x 1 kg" },
@@ -955,7 +919,7 @@ const BASKETS = {
         packaging:"Embalagem Saco Plástico Transparente"
     },
     confort: {
-        name:"Cesta Confort", price:2.00, emoji:"🛒", desc:"Família · 14 itens", color:"var(--orange)",
+        name:"Cesta Confort", price:2.00, emoji:"🛒", desc:"Família · 14 itens", color:"var(--orange)", tag:"POPULAR",
         img:"assets/img/cesta-confort.png",
         items:[
             { name:"Açúcar Refinado Especial", qty:"2x 1 kg" },
@@ -976,7 +940,7 @@ const BASKETS = {
         packaging:"Caixa de Papelão Corrugado Duplo"
     },
     plus: {
-        name:"Cesta Plus", price:3.00, emoji:"👑", desc:"Premium · 33 itens", color:"var(--yellow)",
+        name:"Cesta Plus", price:3.00, emoji:"👑", desc:"Premium · 33 itens", color:"var(--yellow)", tag:"⭐ PREMIUM",
         img:"assets/img/cesta-plus.png",
         items:[
             { name:"Achocolatado em Pó", qty:"1x 370 g" },
@@ -1023,41 +987,72 @@ const BASKETS = {
     }
 };
 
-// Load baskets from server (admin-editable)
+// Ordem de exibição das cestas (atualizada pelo servidor; exclui 'custom')
+let basketOrder = ['x','confort','plus'];
+
+// Tint: reproduz EXATAMENTE as rgba de hoje p/ as cores conhecidas (idêntico em
+// qualquer webview); cai pra color-mix em cores customizadas de cestas novas.
+function tint(cor, a) {
+    const map = { 'var(--green)':'52,199,89', 'var(--orange)':'232,133,12', 'var(--yellow)':'255,217,61', 'var(--red)':'255,59,48', 'var(--blue)':'77,184,232' };
+    if(map[cor]) return `rgba(${map[cor]},${a})`;
+    return `color-mix(in srgb, ${cor} ${Math.round(a*100)}%, transparent)`;
+}
+
+// Load baskets from server (admin-editable): define cards, ordem e ativo
 async function loadBasketsFromServer() {
     try {
         const res = await fetch('/api/cestas');
-        if(!res.ok) return;
-        const data = await res.json();
-        if(data && Object.keys(data).length > 0) {
-            // Merge server data into BASKETS
-            Object.keys(data).forEach(k => {
-                BASKETS[k] = data[k];
-            });
-            // Update basket cards UI with new prices
-            updateBasketCardsUI();
+        if(res.ok) {
+            const data = await res.json();
+            if(data && Object.keys(data).length > 0) {
+                // Servidor é a fonte: cesta desativada/apagada some; 'custom' preservado.
+                Object.keys(data).forEach(k => { BASKETS[k] = data[k]; });
+                basketOrder = Object.keys(data).filter(k => k !== 'custom');
+            }
         }
     } catch(e) {
         console.log('Usando cestas padrão (offline)');
     }
+    renderBasketCards();
 }
 
-function updateBasketCardsUI() {
-    const types = ['x','confort','plus'];
-    types.forEach(t => {
+// Monta os cards do cliente dinamicamente (respeita ativo + ordem do painel)
+function renderBasketCards() {
+    const wrap = document.getElementById('dynamic-baskets');
+    if(!wrap) return;
+    wrap.innerHTML = basketOrder.map(t => {
         const b = BASKETS[t];
-        if(!b) return;
-        const card = document.getElementById('card-' + t);
-        if(!card) return;
-        const priceEl = card.querySelector('.basket-price-val');
-        if(priceEl) {
-            const intPart = Math.floor(b.price);
-            const decPart = (b.price % 1).toFixed(2).substring(1);
-            priceEl.innerHTML = 'R$ ' + intPart + '<small>' + decPart.replace('.', ',') + '</small>';
-        }
-        const descEl = card.querySelector('.basket-desc');
-        if(descEl && b.desc) descEl.textContent = b.desc;
-    });
+        if(!b) return '';
+        const intPart = Math.floor(b.price);
+        const decPart = (b.price % 1).toFixed(2).substring(1).replace('.', ',');
+        const cor = b.color || 'var(--green)';
+        const emoji = b.emoji || '📦';
+        const preview = (b.items && b.items.length)
+            ? b.items.slice(0,5).map(it => (it.name||'').split(' ')[0]).filter(Boolean).join(', ') + '...'
+            : '';
+        const tagHtml = b.tag
+            ? `<div class="basket-tag" style="background:${tint(cor,0.15)};color:${cor}">${b.tag}</div>`
+            : '';
+        return `
+                <div class="basket-card" onclick="selectBasket('${t}')" id="card-${t}">
+                    <div class="basket-icon" style="background:${tint(cor,0.12)}"><img src="assets/img/icon-cesta-${t}.svg" style="width:36px;height:36px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="font-size:30px;display:none">${emoji}</span></div>
+                    <div class="basket-info">
+                        <div class="basket-name">${b.name}</div>
+                        <div class="basket-desc">${b.desc||''}</div>
+                        <div class="basket-items-preview">${preview}</div>
+                    </div>
+                    <div class="basket-price">
+                        <div class="basket-price-val">R$ ${intPart}<small>${decPart}</small></div>
+                        <div class="basket-price-sub">à vista</div>
+                    </div>
+                    ${tagHtml}
+                </div>`;
+    }).join('');
+    // Reaplica seleção visual se já havia cesta escolhida
+    if(typeof state !== 'undefined' && state.basket) {
+        const sel = document.getElementById('card-' + state.basket);
+        if(sel) sel.classList.add('selected');
+    }
 }
 
 function getEffectivePrice() {
@@ -1075,6 +1070,8 @@ window.addEventListener('load', () => {
 
     // Load baskets from server (updates prices/items from admin panel)
     loadBasketsFromServer();
+    // Load dados públicos da loja (WhatsApp de atendimento p/ botão de imprevisto)
+    loadLoja();
 
     // Spawn floating food emojis
     const foods = ['🍚','🫘','☕','🥛','🍝','🫒','🍅','🌽','🍪','🧂','🍞','🐟','🥫','🌾','🍬','🥔','🍳','🧈','🥩','🍌'];
@@ -2232,6 +2229,7 @@ function showStatus(type) {
             <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;display:none">
                 <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
             </div>
+            <div style="max-width:300px;margin:0 auto">${imprevistoBtn({ codigo: codigo, cesta_nome: b.name })}</div>
             <div class="status-steps" id="live-steps">
                 <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
                 <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
@@ -2333,7 +2331,7 @@ function closeLightbox() {
 // COMPARE
 // ═══════════════════════════════════════
 function openCompare() {
-    const keys = ['x','confort','plus'];
+    const keys = basketOrder.filter(k => BASKETS[k] && BASKETS[k].items && BASKETS[k].items.length);
     const baskets = keys.map(k => BASKETS[k]);
 
     // Collect all unique item names across all baskets
@@ -2368,7 +2366,7 @@ function openCompare() {
         keys.forEach((k,i) => {
             const qty = lookup[k][name];
             if(qty) {
-                html += `<td class="has-item ${colClasses[i]}">${qty}</td>`;
+                html += `<td class="has-item ${colClasses[i]||''}">${qty}</td>`;
             } else {
                 html += `<td class="no-item">—</td>`;
             }
@@ -2384,12 +2382,12 @@ function openCompare() {
     // Price row
     html += `<tr class="compare-price-row"><td style="font-weight:900;color:var(--text)">Preço</td>`;
     keys.forEach((k,i) => {
-        html += `<td class="${colClasses[i]}">R$ ${BASKETS[k].price.toFixed(2).replace('.',',')}</td>`;
+        html += `<td class="${colClasses[i]||''}">R$ ${BASKETS[k].price.toFixed(2).replace('.',',')}</td>`;
     });
     html += `</tr>`;
 
     html += `</tbody>`;
-    html += `<tfoot><tr><td colspan="4" style="text-align:center;padding:12px;font-size:10px;color:var(--text3);font-weight:500">*Imagens ilustrativas. Marcas e valores podem sofrer alterações conforme disponibilidade.</td></tr></tfoot>`;
+    html += `<tfoot><tr><td colspan="${keys.length+1}" style="text-align:center;padding:12px;font-size:10px;color:var(--text3);font-weight:500">*Imagens ilustrativas. Marcas e valores podem sofrer alterações conforme disponibilidade.</td></tr></tfoot>`;
 
     document.getElementById('compare-table-body').innerHTML = html;
     document.getElementById('modal-compare').classList.add('show');
@@ -2421,7 +2419,8 @@ function gerarComprovante() {
     overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
 
     overlay.innerHTML = `
-        <div style="background:var(--bg2);border-radius:20px;max-width:380px;width:100%;padding:28px 20px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+        <div style="max-width:380px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+          <div id="receipt-card" style="background:var(--bg2);border-radius:20px;padding:28px 20px">
             <div style="text-align:center;margin-bottom:16px">
                 <img src="assets/img/logo.png" style="width:48px;height:48px;border-radius:12px;margin-bottom:8px">
                 <div style="font-size:16px;font-weight:900;color:var(--text)">Araquari Cestas</div>
@@ -2471,14 +2470,81 @@ function gerarComprovante() {
             <div style="text-align:center;margin-bottom:12px">
                 <div style="font-size:10px;color:var(--text3)">${dataHora}</div>
             </div>
+          </div>
 
-            <div style="display:flex;gap:8px">
-                <button onclick="document.getElementById('receipt-overlay').remove()" class="btn btn-dark" style="flex:1;padding:10px;font-size:12px;border-radius:10px">Fechar</button>
+            <div style="display:flex;gap:8px;margin-top:14px">
+                <button onclick="baixarComprovante()" class="btn" style="flex:1;padding:10px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700">📥 Baixar</button>
+                <button onclick="compartilharComprovante()" class="btn" style="flex:1;padding:10px;font-size:12px;border-radius:10px;background:var(--green);color:#fff;font-weight:700">📤 Compartilhar</button>
+            </div>
+            ${imprevistoBtn(pedido)}
+            <div style="margin-top:8px">
+                <button onclick="document.getElementById('receipt-overlay').remove()" class="btn btn-dark" style="width:100%;padding:10px;font-size:12px;border-radius:10px">Fechar</button>
             </div>
         </div>
     `;
 
     document.body.appendChild(overlay);
+}
+
+// ═══════════════════════════════════════
+// D1/D2 — baixar/compartilhar comprovante + botão de imprevisto
+// ═══════════════════════════════════════
+let _loja = { whatsapp:'', nome:'', telefone:'' };
+async function loadLoja() {
+    try { const r = await fetch('/api/loja'); if(r.ok) _loja = await r.json(); } catch(e) {}
+}
+// wa.me: só dígitos; adiciona 55 se vier sem código do país
+function waDigits(v) {
+    let d = (v || '').replace(/\D/g, '');
+    if(!d) return '';
+    if(d.length <= 11) d = '55' + d;
+    return d;
+}
+// Botão discreto "Houve algum imprevisto?" (some se não houver WhatsApp configurado)
+function imprevistoBtn(pedido) {
+    const num = waDigits(_loja.whatsapp);
+    if(!num) return '';
+    const cod = (pedido && pedido.codigo) || '';
+    const nome = (pedido && pedido.cesta_nome) || '';
+    const msg = encodeURIComponent('Olá! Tive um imprevisto com o pedido ' + cod + (nome ? ' (' + nome + ')' : '') + '.');
+    return `<div style="margin-top:10px;text-align:center">
+        <a href="https://wa.me/${num}?text=${msg}" target="_blank" rel="noopener" style="display:inline-block;font-size:12px;color:var(--text2);text-decoration:none;border:1px solid var(--border);border-radius:10px;padding:9px 14px">Houve algum imprevisto? Fale conosco no WhatsApp</a>
+    </div>`;
+}
+async function _capturaComprovante() {
+    const card = document.getElementById('receipt-card');
+    if(!card || typeof html2canvas === 'undefined') return null;
+    return await html2canvas(card, { backgroundColor: '#1A1A1A', scale: 2, useCORS: true });
+}
+async function baixarComprovante() {
+    try {
+        showToast('Gerando comprovante...', 'info', 1500);
+        const canvas = await _capturaComprovante();
+        if(!canvas) { showToast('Não foi possível gerar a imagem.', 'error'); return; }
+        const cod = (window._lastPedido && window._lastPedido.codigo) || 'pedido';
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'comprovante-' + cod + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+    } catch(e) { showToast('Erro ao gerar imagem. Tente Compartilhar.', 'error'); }
+}
+async function compartilharComprovante() {
+    try {
+        const canvas = await _capturaComprovante();
+        if(!canvas) { showToast('Não foi possível gerar a imagem.', 'error'); return; }
+        const cod = (window._lastPedido && window._lastPedido.codigo) || '';
+        canvas.toBlob(async (blob) => {
+            if(!blob) { showToast('Falha ao gerar imagem.', 'error'); return; }
+            const file = new File([blob], 'comprovante-' + cod + '.png', { type: 'image/png' });
+            if(navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file], title: 'Comprovante Araquari Cestas', text: 'Comprovante do pedido ' + cod }); }
+                catch(e) { /* usuário cancelou */ }
+            } else {
+                baixarComprovante();
+                showToast('Compartilhamento indisponível — baixei a imagem.', 'info');
+            }
+        }, 'image/png');
+    } catch(e) { showToast('Erro ao compartilhar.', 'error'); }
 }
 
 // ═══════════════════════════════════════
@@ -2606,6 +2672,7 @@ async function openTracking(codigo) {
             <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;${['entregue','confirmado','separacao','pronto','a_caminho'].includes(p.status) ? '' : 'display:none'}">
                 <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
             </div>
+            <div style="max-width:300px;margin:0 auto">${imprevistoBtn({ codigo: codigo, cesta_nome: p.cesta_nome })}</div>
             <div class="status-steps" id="live-steps">
                 <div class="status-step ${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : 'active'}"><div class="step-dot"><img src="assets/img/${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
                 <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : (['confirmado'].includes(p.status) ? 'active' : '')}"><div class="step-dot"><img src="assets/img/${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
