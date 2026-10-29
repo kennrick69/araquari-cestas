@@ -437,10 +437,17 @@ router.get('/config/test-mp', async (req, res) => {
         }
         // Chamada real ao MP com o token em uso (confirma que ele vale)
         const result = await mp._request('GET', '/v1/payment_methods');
+        // Conta vendedora conectada (identifica de quem é o token)
+        let conta = null;
+        try {
+            const me = await mp._request('GET', '/users/me');
+            conta = { id: me.id, nickname: me.nickname, email: me.email };
+        } catch(_) { /* não bloqueia o teste se /users/me falhar */ }
         res.json({
             success: true,
             source,
             origem: origemLabel,
+            conta,
             message: `Conexão OK · origem: ${origemLabel} · ${result.length} métodos de pagamento`
         });
     } catch(err) {
