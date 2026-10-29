@@ -399,8 +399,14 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 /* ── RESPONSIVE ── */
 @media (min-width:500px) {
-    body { display:flex; justify-content:center; background:#000; }
-    #app { max-width:430px; position:relative; border-left:1px solid #222; border-right:1px solid #222; }
+    body { background:#000; }
+    /* App centralizado com largura de celular. Mantém position:fixed (os .screen
+       são position:absolute e colapsariam o #app se ele virasse relative). */
+    #app {
+        position:fixed; top:0; bottom:0; left:50%; right:auto;
+        transform:translateX(-50%); width:430px; max-width:100%;
+        border-left:1px solid #222; border-right:1px solid #222;
+    }
     #splash { max-width:430px; left:50%; transform:translateX(-50%); }
     #splash.hide { transform:translateX(-50%) scale(1.1); }
 }
