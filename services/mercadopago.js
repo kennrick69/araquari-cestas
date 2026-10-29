@@ -120,7 +120,7 @@ class MercadoPago {
             external_reference: pedido.codigo,
             payment_method_id: 'pix',
             payer: {
-                email: pedido.email || 'cliente@araquaricestas.com',
+                email: pedido.email || 'contato@conversecommaria.com.br',
                 first_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ')[0] : 'Cliente',
                 last_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ').slice(1).join(' ') || 'Araquari' : 'Araquari',
                 identification: {
@@ -168,7 +168,7 @@ class MercadoPago {
             statement_descriptor: 'ARAQUARI CESTAS',
             payment_method_id: 'bolbradesco',
             payer: {
-                email: pedido.email || 'cliente@araquaricestas.com',
+                email: pedido.email || 'contato@conversecommaria.com.br',
                 first_name: partes[0] || 'Cliente',
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {
@@ -256,7 +256,7 @@ class MercadoPago {
             token: token,
             installments: parcelas,
             payer: {
-                email: email || pedido.email || 'cliente@araquaricestas.com',
+                email: email || pedido.email || 'contato@conversecommaria.com.br',
                 first_name: partes[0] || 'Cliente',
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {
