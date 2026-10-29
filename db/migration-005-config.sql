@@ -15,5 +15,5 @@ INSERT INTO app_config (chave, valor, descricao, tipo) VALUES
     ('mp_webhook_secret', '', 'Webhook Secret (opcional)', 'password'),
     ('loja_nome', 'Araquari Cestas', 'Nome da loja', 'text'),
     ('loja_telefone', '47996813181', 'Telefone WhatsApp da loja', 'text'),
-    ('loja_email', 'contato@araquaricestas.com', 'E-mail da loja', 'text')
+    ('loja_email', 'contato@conversecommaria.com.br', 'E-mail da loja', 'text')
 ON CONFLICT (chave) DO NOTHING;

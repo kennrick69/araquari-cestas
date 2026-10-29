@@ -94,7 +94,7 @@ app.get('/api/geocode', async (req, res) => {
 
         const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`;
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@conversecommaria.com.br)' },
             signal: AbortSignal.timeout(5000)
         });
 
@@ -123,7 +123,7 @@ app.get('/api/geocode/search', async (req, res) => {
         const viewbox = '-48.85,-26.45,-48.60,-26.30'; // Araquari + surrounding region
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&countrycodes=br&viewbox=${viewbox}&bounded=0`;
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+            headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@conversecommaria.com.br)' },
             signal: AbortSignal.timeout(5000)
         });
         let data = await response.json();
@@ -133,7 +133,7 @@ app.get('/api/geocode/search', async (req, res) => {
             const query2 = encodeURIComponent(q + ', Santa Catarina');
             const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${query2}&limit=5&addressdetails=1&countrycodes=br`;
             const response2 = await fetch(url2, {
-                headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@araquaricestas.com)' },
+                headers: { 'User-Agent': 'AraquariCestas/1.0 (contato@conversecommaria.com.br)' },
                 signal: AbortSignal.timeout(5000)
             });
             data = await response2.json();
