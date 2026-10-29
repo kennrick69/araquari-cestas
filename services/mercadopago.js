@@ -14,6 +14,7 @@ class MercadoPago {
         this.publicKey = process.env.MP_PUBLIC_KEY || null;
         this.pixKey = process.env.MP_PIX_KEY || null;
         this.webhookSecret = process.env.MP_WEBHOOK_SECRET || null;
+        this.lojaEmail = null; // loja_email do app_config; fallback de payer.email (ver _payerEmail)
         this.baseUrl = 'https://api.mercadopago.com';
         this._dbLoaded = false;
         // Origem da credencial em uso: 'database' | 'env' | null (nada setado)
@@ -38,7 +39,7 @@ class MercadoPago {
                 return;
             }
 
-            const result = await pool.query("SELECT chave, valor FROM app_config WHERE chave LIKE 'mp_%'");
+            const result = await pool.query("SELECT chave, valor FROM app_config WHERE chave LIKE 'mp_%' OR chave = 'loja_email'");
             const config = {};
             result.rows.forEach(r => { config[r.chave] = r.valor; });
 
@@ -57,6 +58,7 @@ class MercadoPago {
             // Demais chaves seguem a mesma lógica mas sem log de aviso dedicado
             this.publicKey = config.mp_public_key || process.env.MP_PUBLIC_KEY || null;
             this.webhookSecret = config.mp_webhook_secret || process.env.MP_WEBHOOK_SECRET || null;
+            this.lojaEmail = config.loja_email || null;
 
             this._dbLoaded = true;
             console.log(`[MP] credenciais recarregadas · source=${this.source} · configurado=${this.isConfigured()}`);
@@ -69,6 +71,13 @@ class MercadoPago {
     // Garante que credenciais do DB foram carregadas
     async _ensureLoaded() {
         if(!this._dbLoaded) await this.reloadFromDB();
+    }
+
+    // E-mail do pagador: comprador informado > loja_email do painel (app_config)
+    // > último recurso fixo. ATENÇÃO: não pode ser igual ao e-mail da conta
+    // vendedora do MP — o MP recusa pagamento com payer.email == seller.
+    _payerEmail(pedido, override = null) {
+        return override || (pedido && pedido.email) || this.lojaEmail || 'contato@conversecommaria.com.br';
     }
 
     // ══════════════════════════════
@@ -113,6 +122,7 @@ class MercadoPago {
     // ══════════════════════════════
     async criarPix(pedido) {
         const idempotency = `pix-${pedido.codigo}-${Date.now()}`;
+        await this._ensureLoaded();
 
         const body = {
             transaction_amount: parseFloat(parseFloat(pedido.total).toFixed(2)),
@@ -120,7 +130,7 @@ class MercadoPago {
             external_reference: pedido.codigo,
             payment_method_id: 'pix',
             payer: {
-                email: pedido.email || 'contato@conversecommaria.com.br',
+                email: this._payerEmail(pedido),
                 first_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ')[0] : 'Cliente',
                 last_name: pedido.recebedor_nome ? pedido.recebedor_nome.split(' ').slice(1).join(' ') || 'Araquari' : 'Araquari',
                 identification: {
@@ -148,6 +158,7 @@ class MercadoPago {
     // ══════════════════════════════
     async criarBoleto(pedido, diasVencimento = 3) {
         const idempotency = `boleto-${pedido.codigo}-${Date.now()}`;
+        await this._ensureLoaded();
 
         const vencimento = new Date();
         vencimento.setDate(vencimento.getDate() + diasVencimento);
@@ -168,7 +179,7 @@ class MercadoPago {
             statement_descriptor: 'ARAQUARI CESTAS',
             payment_method_id: 'bolbradesco',
             payer: {
-                email: pedido.email || 'contato@conversecommaria.com.br',
+                email: this._payerEmail(pedido),
                 first_name: partes[0] || 'Cliente',
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {
@@ -243,6 +254,7 @@ class MercadoPago {
     // ══════════════════════════════
     async criarCartao(pedido, token, parcelas = 1, email = null) {
         const idempotency = `card-${pedido.codigo}-${Date.now()}`;
+        await this._ensureLoaded();
 
         const nome = pedido.recebedor_nome || 'Cliente';
         const partes = nome.split(' ');
@@ -256,7 +268,7 @@ class MercadoPago {
             token: token,
             installments: parcelas,
             payer: {
-                email: email || pedido.email || 'contato@conversecommaria.com.br',
+                email: this._payerEmail(pedido, email),
                 first_name: partes[0] || 'Cliente',
                 last_name: partes.slice(1).join(' ') || 'Araquari',
                 identification: {

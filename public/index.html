@@ -680,6 +680,15 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 </div>
             </div>
 
+            <!-- E-mail opcional do comprador (PIX - hidden by default) -->
+            <div id="pix-email-area" style="display:none;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">E-mail para o comprovante <span style="color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">(opcional)</span></label>
+                    <input class="form-input" placeholder="seu@email.com (opcional)" id="input-email-pix" type="email" inputmode="email">
+                    <div style="font-size:11px;color:var(--text3);margin-top:6px;font-weight:500">Se preencher, você recebe o comprovante do PIX por e-mail.</div>
+                </div>
+            </div>
+
             <!-- Boleto 30 dias: document upload area (hidden by default) -->
             <div id="boleto30-area" style="display:none">
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Documentos obrigatórios</div>
@@ -1672,6 +1681,7 @@ function selectPay(method) {
 
     document.getElementById('boleto30-area').style.display = method === 'boleto30' ? 'block' : 'none';
     document.getElementById('payer-data-area').style.display = (method === 'boleto' || method === 'cartao') ? 'block' : 'none';
+    document.getElementById('pix-email-area').style.display = method === 'pix' ? 'block' : 'none';
     document.getElementById('btn-pay').disabled = false;
 
     if(method === 'boleto30') {
@@ -1729,6 +1739,15 @@ async function finalizePay() {
         }
     }
 
+    if(state.payMethod === 'pix') {
+        const emailPix = (document.getElementById('input-email-pix')?.value || '').trim();
+        if(emailPix && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailPix)) {
+            showToast('E-mail inválido. Corrija ou deixe em branco.', 'warning');
+            shakeInput('input-email-pix');
+            return;
+        }
+    }
+
     // Disable button and show loading
     btn.disabled = true;
     btn.textContent = 'Enviando pedido...';
@@ -1764,7 +1783,7 @@ async function finalizePay() {
             desconto: discount,
             total: total,
             cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-cpf-payer')?.value || '') : null,
-            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : null
+            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : state.payMethod === 'pix' ? ((document.getElementById('input-email-pix')?.value || '').trim() || null) : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));
