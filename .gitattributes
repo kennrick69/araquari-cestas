@@ -1,0 +1,24 @@
+# Normalização de fim de linha. O repositório usa LF.
+# Não altera o comportamento em runtime — só padroniza o que o Git versiona.
+* text=auto eol=lf
+
+# Arquivos binários: nunca tratar como texto / nunca normalizar
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.keystore binary
+*.jks   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.aab   binary
+*.apk   binary
+*.zip   binary
+
+# SVG é texto (XML)
+*.svg   text
