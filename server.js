@@ -179,7 +179,7 @@ app.get('/api/cestas', async (req, res) => {
                 tag: row.tag || ''
             };
         });
-        baskets.custom = { name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)", img:"", items:[], packaging:"—" };
+        baskets.custom = { name:"Doação Livre", price:0, emoji:"gift", desc:"Valor personalizado", color:"var(--red)", img:"", items:[], packaging:"—" };
         res.json(baskets);
     } catch(err) {
         console.error('Erro ao carregar cestas:', err.message);

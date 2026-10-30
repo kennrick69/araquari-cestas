@@ -316,18 +316,18 @@ router.post('/webhook', async (req, res) => {
                         'INSERT INTO pedidos_log (pedido_id, status_anterior, status_novo, observacao) VALUES ($1, $2, $3, $4)',
                         [pedido.id, pedido.status, 'confirmado', `Pagamento confirmado via webhook MP (${payment.payment_type_id || 'unknown'})`]
                     );
-                    console.log(`WEBHOOK: ✅ Pagamento CONFIRMADO ${pedido.codigo}`);
+                    console.log(`WEBHOOK: [OK] Pagamento CONFIRMADO ${pedido.codigo}`);
                 } else if (payment.status === 'rejected') {
                     await pool.query(
                         "UPDATE pedidos SET pagamento_status = 'rejeitado', gateway_data = $1 WHERE id = $2",
                         [JSON.stringify({status: payment.status, detail: payment.status_detail}), pedido.id]
                     );
-                    console.log(`WEBHOOK: ❌ Pagamento REJEITADO ${pedido.codigo}: ${payment.status_detail}`);
+                    console.log(`WEBHOOK: [ERRO] Pagamento REJEITADO ${pedido.codigo}: ${payment.status_detail}`);
                 } else {
                     console.log(`WEBHOOK: Status ${payment.status} para ${pedido.codigo} (sem acao)`);
                 }
             } else {
-                console.log('WEBHOOK: ⚠️ Pedido NAO encontrado para payment_id:', paymentId);
+                console.log('WEBHOOK: [AVISO] Pedido NAO encontrado para payment_id:', paymentId);
             }
         } else {
             console.log('WEBHOOK: Tipo nao tratado:', type || action || queryTopic);

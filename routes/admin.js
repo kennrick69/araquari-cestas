@@ -341,7 +341,7 @@ router.post('/cestas', async (req, res) => {
         const result = await pool.query(
             `INSERT INTO cestas_config (tipo, nome, preco, emoji, descricao, embalagem, imagem, cor, tag, itens, ativo, ordem)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-            [tipo, String(nome).trim(), preco || 0, emoji || '📦', descricao || '', embalagem || '',
+            [tipo, String(nome).trim(), preco || 0, emoji || 'shopping-basket', descricao || '', embalagem || '',
              imagem || '', cor || 'var(--green)', tag || '', JSON.stringify(Array.isArray(itens) ? itens : []),
              ativo !== undefined ? ativo : true, ordem]
         );
@@ -560,7 +560,7 @@ router.get('/config/test-mp', async (req, res) => {
         const origemLabel = source === 'database'
             ? 'painel admin (banco)'
             : source === 'env'
-                ? '⚠️ env MP_ACCESS_TOKEN (Railway) — fallback, cadastre no painel'
+                ? 'env MP_ACCESS_TOKEN (Railway) — fallback, cadastre no painel'
                 : 'nenhum';
 
         if(!mp.isConfigured()) {
