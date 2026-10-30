@@ -55,7 +55,13 @@ Nada essencial abaixo de 14px.
   share-2, download, file-text, copy, package, gift, crown, credit-card, store, settings, save,
   trash-2, zap, bar-chart, inbox, image, refresh-cw, home, star, alert-triangle, x, check,
   arrow-left/right, info, volume-x`.
-- As 3 cestas usam o ícone `shopping-basket` tintado na cor de cada uma.
+- **Ícone da cesta (próprio, não o do Lucide):** o `shopping-basket` foi redesenhado para uma cesta com
+  **alça inteira em arco** (traço 2px), porque o original do Lucide tinha a alça em duas diagonais soltas que
+  pareciam "dois riscos" no tamanho pequeno. O nome da chave continua `shopping-basket` (não quebra o que está
+  salvo no banco). Path da alça: `M8 11a4 5 0 0 1 8 0`.
+- As 3 cestas da home usam uma variante **`cesta-ilustrada`** (mesma cesta, com alça mais marcada, trama
+  horizontal e 3 ripas), tintada na cor de cada cesta (verde/laranja/amarelo). Os demais lugares usam o
+  `shopping-basket` padrão. Ícones customizados de cesta (crown, gift…) continuam mostrando o seu próprio.
 - **Campo "Emoji" das cestas virou "Ícone"**: no painel é um seletor de ícones Lucide; no banco a coluna
   `emoji` passa a guardar o **nome** do ícone (migração `migration-010-cesta-icone.sql`, que também
   alarga a coluna e limpa emojis das tags).

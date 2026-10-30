@@ -1178,7 +1178,9 @@ function renderBasketCards() {
             : '';
         // Mockup 2.0: o card usa o ícone Lucide tintado na cor da cesta; a FOTO da
         // cesta aparece no detalhe (tela 02). Mantém identidade visual consistente.
-        const iconInner = `<span style="color:${cor};display:flex">${IC(iconName,32)}</span>`;
+        // Cartões da home usam a cesta ilustrada (mais detalhe); ícones customizados (crown, gift...) mantêm o seu.
+        const cardIcon = iconName === 'shopping-basket' ? 'cesta-ilustrada' : iconName;
+        const iconInner = `<span style="color:${cor};display:flex">${IC(cardIcon,32)}</span>`;
         return `
                 <div class="basket-card anim-card" style="animation-delay:${i*40}ms" onclick="selectBasket('${t}')" id="card-${t}">
                     <div class="basket-icon" style="background:${tint(cor,0.14)}">${iconInner}</div>
