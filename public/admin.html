@@ -4,10 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Araquari Cestas - Painel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/lucide-icons.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a0f;--card:#14141f;--border:#1e1e30;--orange:#E8850C;--green:#3DA33D;--red:#e74c3c;--yellow:#f39c12;--blue:#3498db;--text:#fff;--text2:#a0a0b0;--text3:#606070}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{--bg:#0B0F0E;--card:#151A18;--card2:#1E2421;--border:#2A322E;--orange:#F59E0B;--green:#22C55E;--red:#EF4444;--yellow:#EAB308;--blue:#3B82F6;--success:#10B981;--text:#F9FAFB;--text2:#A1A7A3;--text3:#6B7280}
+body{font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.ic{display:inline-block;vertical-align:middle;flex-shrink:0}
+/* Araquari 2.0: texto escuro sobre laranja (contraste AA) */
+.btn-orange{color:#1A1200 !important}.tab.active,.tab:hover{color:#1A1200 !important}
+.ic-inline{display:inline-flex;align-items:center;gap:6px}
+.ic svg,svg.ic{display:block}
 .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .topbar h1{font-size:16px;font-weight:800;color:var(--orange)}
 .topbar .subtitle{font-size:11px;color:var(--text3);margin-top:2px}
@@ -194,8 +202,8 @@ tr:hover{background:#ffffff05}
         <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">Pedidos</div>
         <div class="tab" data-tab="analise" onclick="switchTab('analise')">Boleto 30d</div>
         <div class="tab" data-tab="naopagos" onclick="switchTab('naopagos')" style="border-color:var(--blue)">Aguardando Pagamento</div>
-        <div class="tab" data-tab="cestas" onclick="switchTab('cestas');loadCestas()" style="border-color:#25d366">🛒 Cestas</div>
-        <div class="tab" data-tab="config" onclick="switchTab('config');loadConfig()" style="border-color:#9b59b6">⚙️ Configurações</div>
+        <div class="tab" data-tab="cestas" onclick="switchTab('cestas');loadCestas()" style="border-color:#25d366"><span data-ic="shopping-basket" data-sz="15" style="vertical-align:-3px"></span> Cestas</div>
+        <div class="tab" data-tab="config" onclick="switchTab('config');loadConfig()" style="border-color:#9b59b6"><span data-ic="settings" data-sz="15" style="vertical-align:-3px"></span> Configurações</div>
     </div>
 
     <!-- Filters -->
@@ -252,8 +260,8 @@ tr:hover{background:#ffffff05}
 <!-- Cestas Editor -->
 <div id="cestas-editor" style="display:none;padding:0 20px 20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <h3 style="margin:0;font-size:18px">🛒 Gerenciar Cestas</h3>
-        <button class="btn btn-sm" style="background:#25d366;color:#fff;font-weight:700;padding:8px 16px" onclick="openNovaCesta()">➕ Nova cesta</button>
+        <h3 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px"><span data-ic="shopping-basket" data-sz="20"></span> Gerenciar Cestas</h3>
+        <button class="btn btn-sm" style="background:#25d366;color:#fff;font-weight:700;padding:8px 16px" onclick="openNovaCesta()"><span class="ic-inline"><span data-ic="plus" data-sz="15"></span> Nova cesta</span></button>
     </div>
     <div style="font-size:12px;color:#888;margin-bottom:14px">Alterações são aplicadas no app em tempo real · cestas vêm fechadas, clique para editar</div>
     <div id="nova-cesta-form" style="display:none;background:#14233a;border:1px solid #25d366;border-radius:14px;padding:18px;margin-bottom:16px"></div>
@@ -263,19 +271,19 @@ tr:hover{background:#ffffff05}
 <!-- CONFIG EDITOR -->
 <div id="config-editor" style="display:none;padding:0 20px 20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 style="margin:0;font-size:18px">⚙️ Configurações</h3>
+        <h3 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px"><span data-ic="settings" data-sz="20"></span> Configurações</h3>
         <span style="font-size:12px;color:#888">Credenciais e dados da loja</span>
     </div>
 
     <!-- Mercado Pago -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-            <span style="font-size:24px">💳</span>
+            <span style="color:var(--orange)"><span data-ic="credit-card" data-sz="22"></span></span>
             <div>
                 <div style="font-weight:800;font-size:15px">Mercado Pago</div>
                 <div style="font-size:11px;color:var(--text3)">Credenciais para receber pagamentos</div>
             </div>
-            <button class="btn btn-sm btn-blue" onclick="testMP()" style="margin-left:auto;padding:6px 12px;font-size:11px">🔌 Testar Conexão</button>
+            <button class="btn btn-sm btn-blue" onclick="testMP()" style="margin-left:auto;padding:6px 12px;font-size:11px"><span class="ic-inline"><span data-ic="zap" data-sz="13"></span> Testar Conexão</span></button>
         </div>
         <div id="mp-test-result"></div>
         <div style="display:flex;flex-direction:column;gap:12px">
@@ -302,7 +310,7 @@ tr:hover{background:#ffffff05}
     <!-- Dados da Loja -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-            <span style="font-size:24px">🏪</span>
+            <span style="color:var(--green)"><span data-ic="store" data-sz="22"></span></span>
             <div>
                 <div style="font-weight:800;font-size:15px">Dados da Loja</div>
                 <div style="font-size:11px;color:var(--text3)">Informações exibidas no app e nas mensagens</div>
@@ -329,7 +337,7 @@ tr:hover{background:#ffffff05}
         </div>
     </div>
 
-    <button class="btn btn-sm btn-green" onclick="saveConfig()" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:12px">💾 Salvar Configurações</button>
+    <button class="btn btn-sm btn-green" onclick="saveConfig()" style="width:100%;padding:14px;font-size:15px;font-weight:800;border-radius:12px"><span class="ic-inline"><span data-ic="save" data-sz="15"></span> Salvar Configurações</button>
 </div>
 
 </div>
@@ -346,7 +354,7 @@ tr:hover{background:#ffffff05}
 
 <!-- Sound Enable Banner -->
 <div class="sound-banner" id="sound-banner" onclick="enableSound()">
-    🔔 Toque aqui para ativar alertas sonoros
+    Toque aqui para ativar alertas sonoros
 </div>
 
 <!-- App Toast -->
@@ -369,15 +377,16 @@ let _toastTimer = null;
 function showToast(msg, type='info', dur=3500) {
     const t = document.getElementById('app-toast');
     t.className = 'app-toast ' + type;
-    const icons = {success:'\u2705',error:'\u274C',warning:'\u26A0\uFE0F',info:'\u2139\uFE0F'};
-    t.innerHTML = (icons[type]||'') + ' ' + msg;
+    const iconMap = {success:'check-circle',error:'x',warning:'alert-triangle',info:'info'};
+    t.innerHTML = '<span class="ic-inline">' + IC(iconMap[type]||'info',16) + '<span>' + msg + '</span></span>';
     clearTimeout(_toastTimer);
     requestAnimationFrame(() => t.classList.add('show'));
     _toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
 function showConfirm(title, msg, onOk, opts={}) {
     const ov = document.getElementById('confirm-overlay');
-    document.getElementById('confirm-icon').textContent = opts.icon || '\u26A0\uFE0F';
+    const _cic = (opts.icon && window.LUCIDE_NAMES && LUCIDE_NAMES.indexOf(opts.icon)>=0) ? opts.icon : 'alert-triangle';
+    document.getElementById('confirm-icon').innerHTML = IC(_cic,34);
     document.getElementById('confirm-title').textContent = title;
     document.getElementById('confirm-msg').textContent = msg;
     const okBtn = document.getElementById('confirm-ok');
@@ -400,6 +409,18 @@ const STATUS_LABELS = {
     'cancelado':'Cancelado','analise':'Em Análise','aprovado':'Aprovado','recusado':'Recusado'
 };
 const PAY_LABELS = {'pix':'PIX','cartao':'Cartao','boleto':'Boleto','boleto30':'Boleto 30d'};
+
+// ── Ícone das cestas (antes "Emoji") — nomes Lucide ──
+const ICON_CHOICES = ['shopping-basket','package','gift','crown','heart','star','utensils','wheat','truck','map-pin'];
+const ICON_LABELS = {'shopping-basket':'Cesta','package':'Caixa','gift':'Presente','crown':'Coroa','heart':'Coração','star':'Estrela','utensils':'Talheres','wheat':'Trigo','truck':'Caminhão','map-pin':'Local'};
+function adminIcon(v) {
+    // migration-010 converte o banco; aqui só validamos o nome do ícone.
+    if(v && window.LUCIDE_NAMES && LUCIDE_NAMES.indexOf(v) >= 0) return v;
+    return 'shopping-basket';
+}
+function iconOptions(sel) {
+    return ICON_CHOICES.map(n => `<option value="${n}" ${n===sel?'selected':''}>${ICON_LABELS[n]||n}</option>`).join('');
+}
 
 // ═══════════════════════════════════════
 // NEW ORDER NOTIFICATION SYSTEM
@@ -429,7 +450,7 @@ window.addEventListener('load', () => {
         if(!soundEnabled) {
             const banner = document.getElementById('sound-banner');
             banner.style.display = 'block';
-            banner.textContent = '\uD83D\uDD14 Toque em qualquer lugar para ativar alertas sonoros';
+            banner.textContent = 'Toque em qualquer lugar para ativar alertas sonoros';
         }
     }, 3000);
 });
@@ -562,7 +583,7 @@ function detectNewOrders(pedidos) {
         if(Notification.permission === 'granted') {
             alertOrders.forEach(p => {
                 try {
-                    new Notification('\uD83D\uDCE6 Novo Pedido Confirmado!', {
+                    new Notification('Novo Pedido Confirmado!', {
                         body: `${p.codigo} - ${p.cesta_nome} - R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}`,
                         icon: '/assets/img/logo.png',
                         tag: 'order-' + p.codigo,
@@ -589,8 +610,8 @@ function showOrderToast(p) {
 
     toast.innerHTML = `
         <div class="toast-header">
-            <span class="toast-badge" style="${isBoleto30 ? 'background:#f39c1230;color:#f39c12' : ''}">${isBoleto30 ? '⚠️ BOLETO 30D — ANÁLISE' : '📦 Novo Pedido'}</span>
-            <button class="toast-close" onclick="dismissToast(this)">✕</button>
+            <span class="toast-badge" style="${isBoleto30 ? 'background:#f39c1230;color:#f39c12' : ''}">${isBoleto30 ? 'BOLETO 30D — ANÁLISE' : 'Novo Pedido'}</span>
+            <button class="toast-close" onclick="dismissToast(this)"><span data-ic="x" data-sz="16"></span></button>
         </div>
         <div class="toast-title">${p.codigo} - ${p.cesta_nome}</div>
         <div class="toast-body">
@@ -598,13 +619,13 @@ function showOrderToast(p) {
             ${endereco || 'Endereço não informado'}<br>
             Tel: ${p.recebedor_telefone || '-'}<br>
             R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} - ${PAY_LABELS[p.pagamento_metodo] || p.pagamento_metodo}
-            ${isBoleto30 ? '<br><span style="color:#f39c12;font-weight:700;font-size:11px">⚠️ Documentos precisam ser analisados</span>' : ''}
+            ${isBoleto30 ? '<br><span style="color:#f39c12;font-weight:700;font-size:11px">Documentos precisam ser analisados</span>' : ''}
         </div>
         <div style="display:flex;gap:6px">
-            <button style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--border);color:var(--text);font-size:12px;font-weight:700;cursor:pointer" onclick="silenceAndDismiss(this)">🔇 Silenciar</button>
+            <button style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--border);color:var(--text);font-size:12px;font-weight:700;cursor:pointer" onclick="silenceAndDismiss(this)"><span class="ic-inline"><span data-ic="volume-x" data-sz="13"></span> Silenciar</button>
             ${isBoleto30
-                ? `<button style="flex:1;padding:10px;border:none;border-radius:8px;background:#f39c12;color:#000;font-size:12px;font-weight:800;cursor:pointer" onclick="openAnalise(${p.id}, this)">🔍 Analisar</button>`
-                : `<button class="toast-accept" onclick="quickAccept(${p.id}, this)">✅ Aceitar Pedido</button>`
+                ? `<button style="flex:1;padding:10px;border:none;border-radius:8px;background:#f39c12;color:#000;font-size:12px;font-weight:800;cursor:pointer" onclick="openAnalise(${p.id}, this)"><span class="ic-inline"><span data-ic="search" data-sz="13"></span> Analisar</span></button>`
+                : `<button class="toast-accept" onclick="quickAccept(${p.id}, this)">Aceitar Pedido</button>`
             }
         </div>
     `;
@@ -646,7 +667,7 @@ function updateClearAllBtn() {
         const clearBtn = document.getElementById('toast-clear-all');
         if(remaining.length > 1 && clearBtn) {
             clearBtn.style.display = 'block';
-            clearBtn.textContent = '🔇 Silenciar todos (' + remaining.length + ' notificações)';
+            clearBtn.textContent = 'Silenciar todos (' + remaining.length + ' notificações)';
         } else if(clearBtn) {
             clearBtn.style.display = 'none';
         }
@@ -930,7 +951,7 @@ async function openDetail(id) {
                     <h3 style="color:var(--orange)">${p.codigo}</h3>
                     <span class="badge badge-${p.status}">${STATUS_LABELS[p.status]||p.status}</span>
                 </div>
-                <button class="btn btn-sm" onclick="closeDetail()" style="background:var(--border);color:var(--text)">✕</button>
+                <button class="btn btn-sm" onclick="closeDetail()" style="background:var(--border);color:var(--text)"><span data-ic="x" data-sz="16"></span></button>
             </div>
 
             <div class="modal-row"><span class="label">Cesta</span><span class="value">${p.cesta_nome}</span></div>
@@ -964,9 +985,9 @@ async function openDetail(id) {
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Mensagens WhatsApp</div>
                 <div style="display:flex;flex-direction:column;gap:6px">
                     ${p.pagamento_metodo === 'boleto30' ? `
-                        ${buildWhatsAppBtn(p, 'b30_recebido', '📋 Documentos recebidos', `Olá! Recebemos seu pedido ${p.codigo} da ${p.cesta_nome} com pagamento via Boleto 30 dias. Seus documentos estão em análise. Assim que aprovados, enviaremos o boleto para pagamento. Agradecemos a paciência! Araquari Cestas.`)}
-                        ${buildWhatsAppBtn(p, 'b30_aprovado', '✅ Boleto aprovado', `Olá! Ótima notícia! Seu pedido ${p.codigo} da ${p.cesta_nome} foi APROVADO! O boleto para pagamento em 30 dias já foi gerado. Acesse o link para pagar: ${p.gateway_data ? (() => { try { const gd = JSON.parse(p.gateway_data); return gd.boletoUrl || '(boleto será enviado em seguida)'; } catch(e) { return '(boleto será enviado em seguida)'; } })() : '(gere o boleto aprovando o pedido)'} Valor: R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} | Vencimento em 30 dias. Agradecemos a confiança! Araquari Cestas.`)}
-                        ${buildWhatsAppBtn(p, 'b30_recusado', '❌ Boleto recusado', `Olá! Infelizmente não foi possível aprovar seu pedido ${p.codigo} da ${p.cesta_nome} via Boleto 30 dias. Os documentos enviados não atenderam aos requisitos necessários. Caso queira, você pode realizar um novo pedido utilizando outra forma de pagamento (PIX, cartão ou boleto à vista). Estamos à disposição! Araquari Cestas.`)}
+                        ${buildWhatsAppBtn(p, 'b30_recebido', 'Documentos recebidos', `Olá! Recebemos seu pedido ${p.codigo} da ${p.cesta_nome} com pagamento via Boleto 30 dias. Seus documentos estão em análise. Assim que aprovados, enviaremos o boleto para pagamento. Agradecemos a paciência! Araquari Cestas.`)}
+                        ${buildWhatsAppBtn(p, 'b30_aprovado', 'Boleto aprovado', `Olá! Ótima notícia! Seu pedido ${p.codigo} da ${p.cesta_nome} foi APROVADO! O boleto para pagamento em 30 dias já foi gerado. Acesse o link para pagar: ${p.gateway_data ? (() => { try { const gd = JSON.parse(p.gateway_data); return gd.boletoUrl || '(boleto será enviado em seguida)'; } catch(e) { return '(boleto será enviado em seguida)'; } })() : '(gere o boleto aprovando o pedido)'} Valor: R$ ${parseFloat(p.total).toFixed(2).replace('.',',')} | Vencimento em 30 dias. Agradecemos a confiança! Araquari Cestas.`)}
+                        ${buildWhatsAppBtn(p, 'b30_recusado', 'Boleto recusado', `Olá! Infelizmente não foi possível aprovar seu pedido ${p.codigo} da ${p.cesta_nome} via Boleto 30 dias. Os documentos enviados não atenderam aos requisitos necessários. Caso queira, você pode realizar um novo pedido utilizando outra forma de pagamento (PIX, cartão ou boleto à vista). Estamos à disposição! Araquari Cestas.`)}
                     ` : `
                         ${buildWhatsAppBtn(p, 'aceito', 'Pedido aceito', `Olá, ${p.recebedor_nome}! Seu pedido ${p.codigo} da ${p.cesta_nome} foi recebido e aceito com sucesso. Estamos preparando tudo com muito cuidado para você. Em breve iniciaremos a separação dos itens. Agradecemos a preferência! Araquari Cestas.`)}
                     `}
@@ -995,11 +1016,11 @@ async function openDetail(id) {
             <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
                 ${p.pagamento_metodo === 'boleto30' && (p.status === 'analise' || p.status === 'novo') ? `
                 <div style="background:#2e2a1a;border:2px solid #f39c12;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center">
-                    <div style="font-size:14px;font-weight:800;color:#f39c12;margin-bottom:6px">⚠️ ANÁLISE DE BOLETO 30 DIAS</div>
+                    <div style="font-size:14px;font-weight:800;color:#f39c12;margin-bottom:6px;display:flex;align-items:center;gap:6px"><span data-ic="alert-triangle" data-sz="16"></span> ANÁLISE DE BOLETO 30 DIAS</div>
                     <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Verifique os documentos acima antes de decidir</div>
                     <div style="display:flex;gap:10px;justify-content:center">
-                        <button class="btn" onclick="aprovarBoleto30(${p.id})" style="flex:1;padding:14px;background:#27ae60;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">✅ APROVAR e Gerar Boleto</button>
-                        <button class="btn" onclick="recusarBoleto30(${p.id})" style="flex:1;padding:14px;background:#e74c3c;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">❌ RECUSAR</button>
+                        <button class="btn" onclick="aprovarBoleto30(${p.id})" style="flex:1;padding:14px;background:#27ae60;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">APROVAR e Gerar Boleto</button>
+                        <button class="btn" onclick="recusarBoleto30(${p.id})" style="flex:1;padding:14px;background:#e74c3c;color:#fff;font-weight:800;font-size:14px;border-radius:10px;border:none;cursor:pointer">RECUSAR</button>
                     </div>
                 </div>
                 ` : ''}
@@ -1064,7 +1085,7 @@ async function updateStatus(id) {
         const data = await res.json();
         if(data.success) {
             if(data.boleto && data.boleto.url) {
-                showToast(`✅ Boleto 30d gerado! Vencimento: ${data.boleto.vencimento}. Envie o link pelo WhatsApp ao cliente.`, 'success', 8000);
+                showToast(`Boleto 30d gerado! Vencimento: ${data.boleto.vencimento}. Envie o link pelo WhatsApp ao cliente.`, 'success', 8000);
             } else {
                 showToast('Status atualizado com sucesso!', 'success');
             }
@@ -1090,11 +1111,11 @@ async function aprovarBoleto30(id) {
             const data = await res.json();
             if(data.success) {
                 if(data.boletoError) {
-                    showToast('⚠️ ' + data.boletoError, 'warning', 10000);
+                    showToast(data.boletoError, 'warning', 10000);
                 } else if(data.boleto && data.boleto.url) {
-                    showToast('✅ Boleto gerado! Envie o link pelo WhatsApp.', 'success', 8000);
+                    showToast('Boleto gerado! Envie o link pelo WhatsApp.', 'success', 8000);
                 } else {
-                    showToast('✅ Pedido aprovado!', 'success');
+                    showToast('Pedido aprovado!', 'success');
                 }
                 openDetail(id);
                 loadPedidos();
@@ -1106,7 +1127,7 @@ async function aprovarBoleto30(id) {
         } catch(e) {
             showToast('Erro ao aprovar', 'error');
         }
-    }, {icon:'✅', okText:'Aprovar'});
+    }, {icon:'check-circle', okText:'Aprovar'});
 }
 
 async function recusarBoleto30(id) {
@@ -1119,7 +1140,7 @@ async function recusarBoleto30(id) {
             });
             const data = await res.json();
             if(data.success) {
-                showToast('❌ Pedido recusado.', 'warning');
+                showToast('Pedido recusado.', 'warning');
                 openDetail(id);
                 loadPedidos();
                 loadDashboard();
@@ -1130,7 +1151,7 @@ async function recusarBoleto30(id) {
         } catch(e) {
             showToast('Erro ao recusar', 'error');
         }
-    }, {icon:'❌', okText:'Recusar', danger:true});
+    }, {icon:'x', okText:'Recusar', danger:true});
 }
 
 async function quickStatus(pedidoId, status, btn) {
@@ -1147,7 +1168,7 @@ async function quickStatus(pedidoId, status, btn) {
             if(data.success) { showToast('Status atualizado!', 'success'); loadDashboard(); loadPedidos(); }
             else { showToast('Erro: ' + data.error, 'error'); btn.disabled = false; btn.textContent = 'Entregue'; }
         } catch(e) { showToast('Erro ao atualizar', 'error'); btn.disabled = false; btn.textContent = 'Entregue'; }
-    }, {icon:'\u2705', okText:'Confirmar'});
+    }, {icon:'check-circle', okText:'Confirmar'});
 }
 
 async function quickDelete(pedidoId, btn) {
@@ -1163,7 +1184,7 @@ async function quickDelete(pedidoId, btn) {
             if(data.success) { showToast('Pedido exclu\u00EDdo!', 'success'); loadDashboard(); loadPedidos(); }
             else { showToast('Erro: ' + data.error, 'error'); btn.disabled = false; btn.textContent = 'Excluir'; }
         } catch(e) { showToast('Erro ao excluir', 'error'); btn.disabled = false; btn.textContent = 'Excluir'; }
-    }, {icon:'\uD83D\uDDD1\uFE0F', okText:'Excluir', danger:true});
+    }, {icon:'trash-2', okText:'Excluir', danger:true});
 }
 
 function buildWhatsAppBtn(p, tipo, label, mensagem) {
@@ -1228,7 +1249,7 @@ async function checkBoleto30Orders() {
             // Browser notification
             if(Notification.permission === 'granted') {
                 newOnes.forEach(p => {
-                    try { new Notification('📋 Boleto 30d - Análise pendente', { body: `${p.codigo} - ${p.cesta_nome} - Documentos enviados`, icon: '/assets/img/logo.png', tag: 'b30-'+p.codigo, requireInteraction: true }); } catch(e) {}
+                    try { new Notification('Boleto 30d - Análise pendente', { body: `${p.codigo} - ${p.cesta_nome} - Documentos enviados`, icon: '/assets/img/logo.png', tag: 'b30-'+p.codigo, requireInteraction: true }); } catch(e) {}
                 });
             }
         }
@@ -1266,7 +1287,7 @@ async function loadCestas() {
         cestasData = data.cestas || [];
         renderCestas();
     } catch(e) {
-        list.innerHTML = '<div style="color:var(--red);padding:20px;background:#1a1a2e;border-radius:12px;text-align:center"><div style="font-size:16px;margin-bottom:8px">❌ Erro ao carregar cestas</div><div style="font-size:12px;color:#888">' + e.message + '</div><div style="margin-top:12px"><button class="btn btn-sm btn-orange" onclick="loadCestas()">Tentar novamente</button></div></div>';
+        list.innerHTML = '<div style="color:var(--red);padding:20px;background:#1a1a2e;border-radius:12px;text-align:center"><div style="font-size:16px;margin-bottom:8px">Erro ao carregar cestas</div><div style="font-size:12px;color:#888">' + e.message + '</div><div style="margin-top:12px"><button class="btn btn-sm btn-orange" onclick="loadCestas()">Tentar novamente</button></div></div>';
     }
 }
 
@@ -1287,10 +1308,10 @@ function renderCestas() {
         <div style="background:#1a1a2e;border:1px solid #333;border-radius:14px;overflow:hidden;${!c.ativo ? 'opacity:0.55' : ''}">
             <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer" onclick="toggleCesta('${c.tipo}')">
                 <div style="display:flex;flex-direction:column;gap:3px" onclick="event.stopPropagation()">
-                    <button title="Subir" onclick="moveCesta('${c.tipo}',-1)" ${i===0?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===0?'opacity:0.3;cursor:default':'cursor:pointer'}">▲</button>
-                    <button title="Descer" onclick="moveCesta('${c.tipo}',1)" ${i===cestasData.length-1?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===cestasData.length-1?'opacity:0.3;cursor:default':'cursor:pointer'}">▼</button>
+                    <button title="Subir" onclick="moveCesta('${c.tipo}',-1)" ${i===0?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===0?'opacity:0.3;cursor:default':'cursor:pointer'}"><span data-ic="chevron-up" data-sz="12"></span></button>
+                    <button title="Descer" onclick="moveCesta('${c.tipo}',1)" ${i===cestasData.length-1?'disabled':''} style="background:#0d0d1a;border:1px solid #333;border-radius:5px;color:#fff;width:26px;height:18px;font-size:10px;line-height:1;${i===cestasData.length-1?'opacity:0.3;cursor:default':'cursor:pointer'}"><span data-ic="chevron-down" data-sz="12"></span></button>
                 </div>
-                <span style="font-size:26px">${c.emoji || '📦'}</span>
+                <span style="color:var(--text2);display:inline-flex">${IC(adminIcon(c.emoji),24)}</span>
                 <div style="flex:1;min-width:0">
                     <div style="font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(c.nome)} ${badge}</div>
                     <div style="font-size:12px;color:#888">Tipo: ${c.tipo}${c.tag ? ' · '+esc(c.tag) : ''}</div>
@@ -1299,7 +1320,7 @@ function renderCestas() {
                 <label title="Ativar/desativar" onclick="event.stopPropagation()" style="display:flex;align-items:center;cursor:pointer">
                     <input type="checkbox" ${c.ativo?'checked':''} onchange="toggleAtivo('${c.tipo}',this.checked)" style="width:18px;height:18px;cursor:pointer">
                 </label>
-                <span id="chev-${c.tipo}" style="color:#888;font-size:12px;width:12px">${open?'▲':'▼'}</span>
+                <span id="chev-${c.tipo}" style="color:#888;display:inline-flex">${open?IC('chevron-up',14):IC('chevron-down',14)}</span>
             </div>
 
             <div id="cesta-body-${c.tipo}" style="display:${open?'block':'none'};padding:14px 16px 18px;border-top:1px solid #333">
@@ -1312,14 +1333,14 @@ function renderCestas() {
                         <input type="text" value="${esc(c.descricao)}" id="cesta-desc-${c.tipo}" style="${CIN}"></div>
                     <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Embalagem</label>
                         <input type="text" value="${esc(c.embalagem||'')}" id="cesta-emb-${c.tipo}" style="${CIN}"></div>
-                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Emoji</label>
-                        <input type="text" value="${esc(c.emoji||'')}" id="cesta-emoji-${c.tipo}" style="${CIN}"></div>
+                    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Ícone</label>
+                        <select id="cesta-emoji-${c.tipo}" style="${CIN}">${iconOptions(adminIcon(c.emoji))}</select></div>
                     <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tag / destaque</label>
                         <input type="text" value="${esc(c.tag||'')}" id="cesta-tag-${c.tipo}" placeholder="ex.: POPULAR" style="${CIN}"></div>
                     <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho) — ou envie um arquivo abaixo</label>
                         <input type="text" value="${esc(c.imagem||'')}" id="cesta-img-${c.tipo}" placeholder="assets/img/cesta-x.png" style="${CIN}"></div>
                     <div style="grid-column:1/3;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                        <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px">📷 Enviar imagem
+                        <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px"><span class="ic-inline"><span data-ic="image" data-sz="14"></span> Enviar imagem</span>
                             <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadCestaImg('${c.tipo}', this)"></label>
                         <img id="imgprev-${c.tipo}" src="${c.imagem ? esc(c.imagem) : ''}" style="${c.imagem?'':'display:none;'}width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid #333">
                         <button type="button" onclick="removeCestaImg('${c.tipo}')" style="${c.imagem?'':'display:none;'}background:none;border:none;color:var(--red);font-size:12px;cursor:pointer" id="imgrm-${c.tipo}">remover</button>
@@ -1338,14 +1359,14 @@ function renderCestas() {
                             <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px" id="item-${c.tipo}-${idx}">
                                 <input type="text" value="${esc(it.name)}" style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="name">
                                 <input type="text" value="${esc(it.qty)}" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="qty">
-                                <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
+                                <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);cursor:pointer;padding:2px 6px"><span data-ic="x" data-sz="15"></span></button>
                             </div>
                         `).join('')}
                     </div>
                 </div>
 
                 <div style="display:flex;gap:8px;justify-content:flex-end">
-                    <button class="btn btn-sm" style="background:var(--orange);color:#fff;font-weight:700;padding:8px 20px" onclick="saveCesta('${c.tipo}')">💾 Salvar</button>
+                    <button class="btn btn-sm" style="background:var(--orange);color:#fff;font-weight:700;padding:8px 20px" onclick="saveCesta('${c.tipo}')"><span class="ic-inline"><span data-ic="save" data-sz="14"></span> Salvar</span></button>
                 </div>
             </div>
         </div>`;
@@ -1357,7 +1378,7 @@ function toggleCesta(tipo) {
     const body = document.getElementById('cesta-body-' + tipo);
     const chev = document.getElementById('chev-' + tipo);
     if(body) body.style.display = expandedCestas[tipo] ? 'block' : 'none';
-    if(chev) chev.textContent = expandedCestas[tipo] ? '▲' : '▼';
+    if(chev) chev.innerHTML = expandedCestas[tipo] ? IC('chevron-up',12) : IC('chevron-down',12);
 }
 
 async function toggleAtivo(tipo, ativo) {
@@ -1402,7 +1423,7 @@ function addItem(tipo) {
     div.innerHTML = `
         <input type="text" value="" placeholder="Nome do item" style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="name">
         <input type="text" value="" placeholder="1x 500 g" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;font-size:12px" data-field="qty">
-        <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
+        <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);cursor:pointer;padding:2px 6px"><span data-ic="x" data-sz="15"></span></button>
     `;
     container.appendChild(div);
     div.querySelector('input').focus();
@@ -1414,7 +1435,7 @@ function confirmRemoveItemEl(btn) {
     const nameInput = row.querySelector('[data-field="name"]');
     const nome = nameInput && nameInput.value.trim();
     if(!nome) { row.remove(); return; } // item vazio: remove direto
-    showConfirm('Remover item', 'Remover ' + nome + '?', () => row.remove(), { danger:true, okText:'Remover', icon:'🗑️' });
+    showConfirm('Remover item', 'Remover ' + nome + '?', () => row.remove(), { danger:true, okText:'Remover', icon:'trash-2' });
 }
 
 function collectItens(tipo) {
@@ -1443,7 +1464,7 @@ async function uploadCestaImg(tipo, inputEl) {
         });
         const data = await res.json();
         if(data.success) {
-            setSt('✓ enviada (' + data.largura + '×' + data.altura + ')', '#25d366');
+            setSt('enviada (' + data.largura + '×' + data.altura + ')', '#25d366');
             const urlInput = document.getElementById('cesta-img-' + tipo);
             if(urlInput) urlInput.value = data.imagem;
             const prev = document.getElementById('imgprev-' + tipo);
@@ -1506,7 +1527,7 @@ function openNovaCesta() {
     if(f.style.display === 'block') { f.style.display = 'none'; return; }
     f.style.display = 'block';
     f.innerHTML = `
-        <div style="font-size:15px;font-weight:800;margin-bottom:12px">➕ Nova cesta</div>
+        <div style="font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span data-ic="plus" data-sz="16"></span> Nova cesta</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
             <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Nome *</label>
                 <input type="text" id="nova-nome" style="${CIN}"></div>
@@ -1514,8 +1535,8 @@ function openNovaCesta() {
                 <input type="text" id="nova-tipo" placeholder="gera do nome" style="${CIN}"></div>
             <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Preço (R$)</label>
                 <input type="number" step="0.01" id="nova-preco" value="0" style="${CIN};font-weight:800"></div>
-            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Emoji</label>
-                <input type="text" id="nova-emoji" value="📦" style="${CIN}"></div>
+            <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Ícone</label>
+                <select id="nova-emoji" style="${CIN}">${iconOptions('shopping-basket')}</select></div>
             <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tag / destaque</label>
                 <input type="text" id="nova-tag" placeholder="ex.: POPULAR" style="${CIN}"></div>
             <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Cor do ícone</label>
@@ -1527,7 +1548,7 @@ function openNovaCesta() {
             <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho) — opcional</label>
                 <input type="text" id="nova-img" placeholder="assets/img/..." style="${CIN}"></div>
             <div style="grid-column:1/3;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px">📷 Escolher imagem
+                <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px"><span class="ic-inline"><span data-ic="image" data-sz="14"></span> Escolher imagem</span>
                     <input type="file" id="nova-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="document.getElementById('nova-img-filename').textContent = this.files[0] ? this.files[0].name : ''"></label>
                 <span id="nova-img-filename" style="font-size:11px;color:#888"></span>
                 <span style="font-size:10px;color:#666;flex-basis:100%">JPG/PNG/WebP · máx 2 MB · enviada ao criar a cesta</span>
@@ -1554,7 +1575,7 @@ async function createCesta() {
         nome,
         tipo: document.getElementById('nova-tipo').value.trim(),
         preco: parseFloat(document.getElementById('nova-preco').value) || 0,
-        emoji: document.getElementById('nova-emoji').value.trim() || '📦',
+        emoji: document.getElementById('nova-emoji').value.trim() || 'shopping-basket',
         tag: document.getElementById('nova-tag').value.trim(),
         cor: document.getElementById('nova-cor').value.trim() || 'var(--green)',
         descricao: document.getElementById('nova-desc').value.trim(),
@@ -1658,7 +1679,7 @@ async function saveConfig() {
         });
         var data = await res.json();
         if(data.success) {
-            showToast('✅ Configurações salvas! ' + count + ' campo(s) atualizado(s).', 'success', 5000);
+            showToast('Configurações salvas! ' + count + ' campo(s) atualizado(s).', 'success', 5000);
             loadConfig();
         } else {
             showToast('Erro: ' + (data.error || 'Falha'), 'error');
@@ -1670,7 +1691,7 @@ async function saveConfig() {
 
 async function testMP() {
     var resultEl = document.getElementById('mp-test-result');
-    resultEl.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--text3)">⏳ Testando conexão...</div>';
+    resultEl.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--text3)">Testando conexão...</div>';
 
     try {
         var res = await fetch('/api/admin/config/test-mp', { headers: {'x-admin-token': TOKEN} });
@@ -1678,17 +1699,17 @@ async function testMP() {
 
         var html = '';
         if(data.success) {
-            html = '<div style="padding:8px 12px;background:#10b98120;border:1px solid var(--green);border-radius:8px;font-size:12px;color:var(--green);margin-bottom:4px;font-weight:700">✅ ' + data.message + '</div>';
+            html = '<div style="padding:8px 12px;background:#10b98120;border:1px solid var(--green);border-radius:8px;font-size:12px;color:var(--green);margin-bottom:4px;font-weight:700">' + data.message + '</div>';
             // Aviso extra quando o token em uso veio da env Railway (sem painel preenchido)
             if (data.source === 'env') {
-                html += '<div style="padding:6px 12px;background:#f59e0b20;border:1px solid #f59e0b;border-radius:8px;font-size:11px;color:#f59e0b;margin-bottom:12px">⚠️ O token em uso vem da env MP_ACCESS_TOKEN (Railway), não do painel. Cadastre as chaves aqui pra que o painel se torne a fonte canônica.</div>';
+                html += '<div style="padding:6px 12px;background:#f59e0b20;border:1px solid #f59e0b;border-radius:8px;font-size:11px;color:#f59e0b;margin-bottom:12px">O token em uso vem da env MP_ACCESS_TOKEN (Railway), não do painel. Cadastre as chaves aqui pra que o painel se torne a fonte canônica.</div>';
             }
         } else {
-            html = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px;font-weight:700">❌ ' + data.message + '</div>';
+            html = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px;font-weight:700">' + data.message + '</div>';
         }
         resultEl.innerHTML = html;
     } catch(e) {
-        resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px">❌ Erro de conexão</div>';
+        resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px">Erro de conexão</div>';
     }
 }
 </script>

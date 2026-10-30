@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Araquari Cestas - Entregador</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/lucide-icons.js"></script>
 <style>
-:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#f0f0f5;--text2:#a0a0b0;--text3:#606070;--green:#10b981;--orange:#E8850C;--red:#ef4444;--yellow:#f39c12;--blue:#3b82f6;--glass:rgba(18,18,26,.95)}
+.ic{display:inline-block;vertical-align:middle;flex-shrink:0}.ic-inline{display:inline-flex;align-items:center;gap:6px}
+:root{--bg:#0B0F0E;--card:#151A18;--card2:#1E2421;--border:#2A322E;--text:#F9FAFB;--text2:#A1A7A3;--text3:#6B7280;--green:#22C55E;--success:#10b981;--orange:#F59E0B;--red:#EF4444;--yellow:#EAB308;--blue:#3b82f6;--glass:rgba(18,18,26,.95)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
@@ -86,7 +90,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div id="login-screen">
     <div class="login-box">
-        <div style="font-size:36px;margin-bottom:12px">🚚</div>
+        <div style="margin-bottom:12px;color:var(--orange)"><span data-ic="truck" data-sz="36"></span></div>
         <h2>Área do Entregador</h2>
         <p>Digite o código de acesso</p>
         <input type="password" id="driver-token" placeholder="Código do entregador" onkeydown="if(event.key==='Enter')doLogin()">
@@ -98,20 +102,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="panel" style="display:none">
     <div class="topbar">
         <div>
-            <h1>🚚 Entregador</h1>
+            <h1 style="display:flex;align-items:center;gap:8px"><span data-ic="truck" data-sz="22"></span> Entregador</h1>
             <div class="sub">Araquari Cestas</div>
         </div>
         <div style="display:flex;gap:6px">
-            <button class="top-btn" onclick="loadOrders()">🔄</button>
+            <button class="top-btn" onclick="loadOrders()"><span data-ic="refresh-cw" data-sz="18"></span></button>
             <button class="top-btn" onclick="doLogout()">Sair</button>
         </div>
     </div>
     <div class="content">
         <div class="stats-row" id="stats"></div>
         <div class="tabs" id="tabs">
-            <div class="tab active" onclick="switchTab('prontos',this)">🎁 Prontos <span class="cnt" id="c-prontos">0</span></div>
-            <div class="tab" onclick="switchTab('caminho',this)">🚚 A Caminho <span class="cnt" id="c-caminho">0</span></div>
-            <div class="tab" onclick="switchTab('entregues',this)">✅ Entregues</div>
+            <div class="tab active" onclick="switchTab('prontos',this)"><span data-ic="gift" data-sz="15" style="vertical-align:-3px"></span> Prontos <span class="cnt" id="c-prontos">0</span></div>
+            <div class="tab" onclick="switchTab('caminho',this)"><span data-ic="truck" data-sz="15" style="vertical-align:-3px"></span> A Caminho <span class="cnt" id="c-caminho">0</span></div>
+            <div class="tab" onclick="switchTab('entregues',this)"><span data-ic="check-circle" data-sz="15" style="vertical-align:-3px"></span> Entregues</div>
         </div>
         <div id="list"><div class="spin"></div></div>
     </div>
@@ -171,7 +175,7 @@ async function loadOrders() {
         updateStats();
         render();
     } catch(e) {
-        el.innerHTML = '<div class="empty-state"><div class="ico">⚠️</div><p>Erro ao carregar</p></div>';
+        el.innerHTML = '<div class="empty-state"><div class="ico" style="color:var(--orange)">' + IC('alert-triangle',32) + '</div><p>Erro ao carregar</p></div>';
     }
 }
 
@@ -204,8 +208,8 @@ function render() {
 
     if(!filtered.length) {
         var msgs = {prontos:'Nenhum pedido pronto',caminho:'Nenhuma entrega em andamento',entregues:'Nenhuma entrega concluída'};
-        var icons = {prontos:'📭',caminho:'🚚',entregues:'✅'};
-        el.innerHTML = '<div class="empty-state"><div class="ico">' + icons[curTab] + '</div><p>' + msgs[curTab] + '</p></div>';
+        var icons = {prontos:'inbox',caminho:'truck',entregues:'check-circle'};
+        el.innerHTML = '<div class="empty-state"><div class="ico" style="color:var(--text3)">' + IC(icons[curTab],48) + '</div><p>' + msgs[curTab] + '</p></div>';
         return;
     }
 
@@ -228,30 +232,30 @@ function renderCard(p) {
     var badgeMap = {confirmado:'b-confirmado',separacao:'b-separacao',pronto:'b-pronto',a_caminho:'b-caminho',entregue:'b-entregue'};
 
     var statusBtn = '';
-    if(p.status === 'confirmado') statusBtn = '<button class="status-btn separar" onclick="doStatus(' + p.id + ',\'separacao\',this)">📦 INICIAR SEPARAÇÃO</button>';
-    else if(p.status === 'separacao') statusBtn = '<button class="status-btn pronto" onclick="doStatus(' + p.id + ',\'pronto\',this)">🎁 MARCAR COMO PRONTO</button>';
-    else if(p.status === 'pronto') statusBtn = '<button class="status-btn sair" onclick="doStatus(' + p.id + ',\'a_caminho\',this)">🚚 SAÍ PARA ENTREGA</button>';
-    else if(p.status === 'a_caminho') statusBtn = '<button class="status-btn entregar" onclick="doStatus(' + p.id + ',\'entregue\',this)">✅ CONFIRMAR ENTREGA</button>';
+    if(p.status === 'confirmado') statusBtn = '<button class="status-btn separar" onclick="doStatus(' + p.id + ',\'separacao\',this)">' + IC('package',16) + ' INICIAR SEPARAÇÃO</button>';
+    else if(p.status === 'separacao') statusBtn = '<button class="status-btn pronto" onclick="doStatus(' + p.id + ',\'pronto\',this)">' + IC('gift',16) + ' MARCAR COMO PRONTO</button>';
+    else if(p.status === 'pronto') statusBtn = '<button class="status-btn sair" onclick="doStatus(' + p.id + ',\'a_caminho\',this)">' + IC('truck',16) + ' SAÍ PARA ENTREGA</button>';
+    else if(p.status === 'a_caminho') statusBtn = '<button class="status-btn entregar" onclick="doStatus(' + p.id + ',\'entregue\',this)">' + IC('check-circle',16) + ' CONFIRMAR ENTREGA</button>';
 
     var whatsMsg = encodeURIComponent('Olá ' + p.recebedor_nome + '! Sou o entregador do Araquari Cestas, estou a caminho com seu pedido ' + p.codigo + '.');
 
     var h = '<div class="ocard">';
     h += '<div class="ocard-top"><div><div class="ocard-code">' + p.codigo + '</div><div style="font-size:11px;color:var(--text3)">' + (p.cesta_nome||'') + ' · ' + (p.quantidade||1) + 'x</div></div><span class="ocard-badge ' + (badgeMap[p.status]||'') + '">' + (statusMap[p.status]||p.status) + '</span></div>';
-    h += '<div class="ocard-body"><strong>📍 ' + (addr || 'Endereço não informado') + '</strong>';
-    if(p.endereco_complemento) h += '<div>🏠 ' + p.endereco_complemento + '</div>';
-    if(p.endereco_referencia) h += '<div style="color:var(--yellow)">📌 ' + p.endereco_referencia + '</div>';
-    h += '<div style="margin-top:6px">👤 <strong>' + p.recebedor_nome + '</strong></div>';
-    h += '<div>📞 ' + (p.recebedor_telefone || '-') + '</div></div>';
+    h += '<div class="ocard-body"><strong>'+IC('map-pin',15)+' ' + (addr || 'Endereço não informado') + '</strong>';
+    if(p.endereco_complemento) h += '<div>'+IC('home',14)+' ' + p.endereco_complemento + '</div>';
+    if(p.endereco_referencia) h += '<div style="color:var(--yellow)">'+IC('map-pin',14)+' ' + p.endereco_referencia + '</div>';
+    h += '<div style="margin-top:6px">'+IC('user',14)+' <strong>' + p.recebedor_nome + '</strong></div>';
+    h += '<div>'+IC('phone',14)+' ' + (p.recebedor_telefone || '-') + '</div></div>';
 
     if(hasGeo) {
-        h += '<div class="ocard-coords"><span>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</span><button class="copy-btn" onclick="copyC(' + lat + ',' + lng + ',this)">📋 Copiar</button></div>';
+        h += '<div class="ocard-coords"><span>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</span><button class="copy-btn" onclick="copyC(' + lat + ',' + lng + ',this)">' + IC('copy',14) + ' Copiar</button></div>';
         h += '<div class="ocard-map" id="m-' + p.id + '"></div>';
     }
 
     h += '<div class="nav-row">';
-    if(hasGeo) h += '<a class="nav-btn nav-google" href="https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=driving" target="_blank">📍 Maps</a>';
-    if(hasGeo) h += '<a class="nav-btn nav-waze" href="https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes" target="_blank">🧭 Waze</a>';
-    if(tel) h += '<a class="nav-btn nav-whats" href="https://wa.me/' + telFmt + '?text=' + whatsMsg + '" target="_blank">💬 WhatsApp</a>';
+    if(hasGeo) h += '<a class="nav-btn nav-google" href="https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=driving" target="_blank">' + IC('map-pin',14) + ' Maps</a>';
+    if(hasGeo) h += '<a class="nav-btn nav-waze" href="https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes" target="_blank">Waze</a>';
+    if(tel) h += '<a class="nav-btn nav-whats" href="https://wa.me/' + telFmt + '?text=' + whatsMsg + '" target="_blank">WhatsApp</a>';
     h += '</div>';
 
     if(statusBtn) h += '<div class="status-action">' + statusBtn + '</div>';
@@ -271,7 +275,7 @@ function initMaps(list) {
         var m = L.map(el, {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false});
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(m);
         m.setView([lat, lng], 17);
-        var icon = L.divIcon({html:'<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">📍</div>', iconSize:[28,28], iconAnchor:[14,28], className:''});
+        var icon = L.divIcon({html:'<div style="color:var(--red);filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">'+IC('map-pin',28)+'</div>', iconSize:[28,28], iconAnchor:[14,28], className:''});
         L.marker([lat, lng], {icon:icon}).addTo(m);
         L.circle([lat, lng], {radius:25, color:'#3b82f6', fillColor:'#3b82f6', fillOpacity:0.1, weight:1}).addTo(m);
         maps[p.id] = m;
@@ -282,8 +286,8 @@ function copyC(lat, lng, btn) {
     var t = lat.toFixed(6) + ', ' + lng.toFixed(6);
     if(navigator.clipboard) {
         navigator.clipboard.writeText(t).then(function() {
-            btn.textContent = '✅ Copiado!';
-            setTimeout(function() { btn.textContent = '📋 Copiar'; }, 1500);
+            btn.textContent = 'Copiado!';
+            setTimeout(function() { btn.textContent = 'Copiar'; }, 1500);
         });
     } else {
         prompt('Coordenadas:', t);
@@ -301,7 +305,7 @@ async function doStatus(id, newStatus, btn) {
 
     var origText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '⏳ Atualizando...';
+    btn.textContent = 'Atualizando...';
 
     try {
         var res = await fetch(API + '/pedidos/' + id + '/status', {
@@ -327,9 +331,9 @@ async function doStatus(id, newStatus, btn) {
             throw new Error(data.error || 'Falha ao atualizar');
         }
 
-        var labels = {separacao:'📦 Em separação!',pronto:'🎁 Pronto!',a_caminho:'🚚 Saiu para entrega!',entregue:'✅ Entregue!'};
+        var labels = {separacao:'Em separação!',pronto:'Pronto!',a_caminho:'Saiu para entrega!',entregue:'Entregue!'};
         toast(labels[newStatus] || 'Status atualizado!');
-        btn.textContent = '✅ Feito!';
+        btn.textContent = 'Feito!';
         setTimeout(function() { loadOrders(); }, 800);
 
     } catch(e) {
