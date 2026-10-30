@@ -1,0 +1,21 @@
+{
+  "name": "araquari-cestas-app",
+  "version": "1.0.0",
+  "description": "Capacitor wrapper for Araquari Cestas PWA",
+  "private": true,
+  "scripts": {
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "icons": "npx @capacitor/assets generate --android"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
+  }
+}
