@@ -5,4 +5,7 @@
     <color name="colorAccent">#E8850C</color>
     <color name="statusBarColor">#0a0a0f</color>
     <color name="navigationBarColor">#0a0a0f</color>
+    <!-- Splash (Android 12+) e fundo do ícone adaptativo: cor escura da marca -->
+    <color name="splashScreenBackground">#0a0a0f</color>
+    <color name="iconLauncherBackground">#0a0a0f</color>
 </resources>
