@@ -1818,7 +1818,7 @@ function selectPay(method) {
     if((method === 'boleto' || method === 'boleto30') && state.basket) {
         const total = getEffectivePrice() * state.qty;
         if(total < 5) {
-            showToast('Valor m00EDnimo para boleto 00E9 R$ 5,00. Escolha PIX ou cart00E3o.', 'warning');
+            showToast('Valor mínimo para boleto é R$ 5,00. Escolha PIX ou cartão.', 'warning');
             return;
         }
     }
@@ -1856,7 +1856,7 @@ function handleUpload(type, el) {
 
 async function finalizePay() {
     if(!state.payMethod) return;
-    if(!state.address) { showToast('Defina o endere00E7o de entrega primeiro.', 'warning'); return; }
+    if(!state.address) { showToast('Defina o endereço de entrega primeiro.', 'warning'); return; }
 
     const btn = document.getElementById('btn-pay');
     const originalText = btn.textContent;
