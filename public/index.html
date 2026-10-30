@@ -7,39 +7,54 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1A1A1A">
+<meta name="theme-color" content="#0B0F0E">
 <title>Araquari Cestas</title>
 <link rel="icon" type="image/png" href="assets/img/logo.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/lucide-icons.js"></script>
 <style>
 :root {
-    --bg: #0D0D0D;
-    --bg2: #1A1A1A;
-    --bg3: #242424;
-    --card: #1E1E1E;
-    --card2: #2A2A2A;
-    --text: #FFFFFF;
-    --text2: #B0B0B0;
-    --text3: #707070;
-    --orange: #E8850C;
-    --orange-l: #F5A623;
-    --orange-d: #C06A00;
-    --green: #34C759;
-    --green-d: #2DA44E;
-    --blue: #4DB8E8;
-    --red: #FF3B30;
-    --yellow: #FFD93D;
-    --border: rgba(255,255,255,0.08);
-    --glass: rgba(26,26,26,0.85);
-    --glass2: rgba(26,26,26,0.95);
-    --radius: 16px;
-    --radius-lg: 24px;
-    --radius-xl: 32px;
+    /* Araquari Cestas 2.0 — design system */
+    --bg: #0B0F0E;          /* Background */
+    --bg2: #151A18;         /* Surface */
+    --bg3: #1E2421;         /* Surface Elevated */
+    --card: #151A18;        /* Surface */
+    --card2: #1E2421;       /* Surface Elevated */
+    --text: #F9FAFB;        /* Text Primary */
+    --text2: #A1A7A3;       /* Text Secondary */
+    --text3: #6B7280;       /* Text inativo */
+    --orange: #F59E0B;      /* Confort / primário */
+    --orange-l: #FBBF24;
+    --orange-d: #D97706;
+    --green: #22C55E;       /* Cesta X */
+    --green-d: #16A34A;
+    --blue: #3B82F6;        /* Info */
+    --red: #EF4444;         /* Error */
+    --yellow: #EAB308;      /* Plus */
+    --success: #10B981;     /* Success */
+    --border: #2A322E;      /* Border */
+    --glass: rgba(21,26,24,0.82);
+    --glass2: rgba(21,26,24,0.94);
+    --on-primary: #1A1200;  /* texto escuro sobre botão laranja */
+    --radius: 16px;         /* botões */
+    --radius-card: 20px;    /* cards */
+    --radius-field: 12px;   /* campos */
+    --radius-lg: 20px;
+    --radius-xl: 28px;      /* painéis inferiores */
+    --ease-out: cubic-bezier(0.22,1,0.36,1);
+    --dur-press: 120ms;
+    --dur-card: 220ms;
+    --dur-sheet: 280ms;
+    --dur-screen: 240ms;
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:var(--text); overflow:hidden; height:100vh; height:100dvh; }
+body { font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; height:100vh; height:100dvh; -webkit-font-smoothing:antialiased; }
+/* ── Lucide icon base ── */
+.ic { display:inline-block; vertical-align:middle; flex-shrink:0; }
+.ic-btn { display:inline-flex; align-items:center; justify-content:center; }
 ::-webkit-scrollbar { width:0; }
 
 /* ── SPLASH ── */
@@ -165,28 +180,30 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 }
 .bottom-sheet.collapsed { transform:translateY(calc(100% - 80px)); }
 .sheet-handle { width:36px; height:4px; background:var(--text3); border-radius:2px; margin:0 auto 16px; }
-.sheet-title { font-size:20px; font-weight:800; margin-bottom:4px; }
-.sheet-sub { font-size:13px; color:var(--text2); font-weight:600; margin-bottom:20px; }
+.sheet-title { font-size:28px; line-height:1.15; font-weight:800; margin-bottom:6px; letter-spacing:-0.3px; }
+.sheet-sub { font-size:15px; color:var(--text2); font-weight:500; margin-bottom:20px; }
 
 /* ── BASKET CARDS ── */
 .basket-cards { display:flex; flex-direction:column; gap:12px; }
 .basket-card {
-    display:flex; align-items:center; gap:14px; padding:16px;
+    display:flex; align-items:center; gap:14px; padding:18px 16px; min-height:90px;
     background:var(--card); border-radius:var(--radius); cursor:pointer;
-    border:2.5px solid transparent; transition:all 0.25s;
+    border:2px solid var(--border); transition:all 0.25s;
     position:relative; overflow:hidden;
 }
 .basket-card:hover, .basket-card:active { border-color:var(--orange); background:var(--card2); }
 .basket-card.selected { border-color:var(--orange); background:rgba(232,133,12,0.08); }
-.basket-icon { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
-.basket-info { flex:1; }
-.basket-name { font-size:16px; font-weight:800; margin-bottom:2px; }
-.basket-desc { font-size:12px; color:var(--text2); font-weight:500; }
-.basket-items-preview { font-size:11px; color:var(--text3); margin-top:4px; font-weight:500; }
-.basket-price { text-align:right; }
-.basket-price-val { font-size:20px; font-weight:800; color:var(--orange); }
-.basket-price-sub { font-size:11px; color:var(--text3); font-weight:600; }
-.basket-tag { position:absolute; top:8px; right:8px; padding:3px 8px; border-radius:6px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; }
+.basket-icon { width:54px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.basket-info { flex:1; min-width:0; }
+.basket-name { font-size:18px; line-height:1.3; font-weight:700; margin-bottom:2px; }
+.basket-desc { font-size:14px; color:var(--text2); font-weight:500; }
+.basket-items-preview { font-size:13px; color:var(--text3); margin-top:4px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.basket-price { display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0; }
+.basket-price-val { font-size:23px; line-height:1; font-weight:800; }
+.basket-price-val small { font-size:15px; font-weight:800; }
+.basket-price-sub { font-size:12px; color:var(--text3); font-weight:600; }
+.basket-chevron { color:var(--text3); flex-shrink:0; margin-left:2px; display:flex; align-items:center; }
+.basket-tag { padding:3px 9px; border-radius:7px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; }
 
 /* ── SEARCH / ADDRESS BAR ── */
 .address-bar {
@@ -218,8 +235,11 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 /* ── FORM ── */
 .form-group { margin-bottom:14px; }
-.form-label { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:6px; display:block; text-transform:uppercase; letter-spacing:0.5px; }
+.form-label { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:8px; display:block; }
 .form-label .req { color:var(--red); }
+.input-ic { position:relative; }
+.input-ic .ii { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text3); display:flex; pointer-events:none; }
+.input-ic .form-input { padding-left:44px; }
 .form-input {
     width:100%; padding:14px 16px; background:var(--card); border:2px solid var(--border);
     border-radius:12px; color:var(--text); font-family:inherit; font-size:14px; font-weight:600; outline:none;
@@ -282,25 +302,30 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 .card-pay-btn:disabled { background:var(--text3);cursor:not-allowed; }
 .payment-waiting { display:flex;align-items:center;gap:8px;justify-content:center;margin:12px 0;font-size:13px;color:var(--green);font-weight:700; }
 .payment-waiting .spin-sm { width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;display:inline-block; }
-.status-steps { width:100%; max-width:340px; margin-bottom:32px; }
-.status-step { display:flex; align-items:flex-start; gap:14px; position:relative; padding-bottom:24px; }
+.status-steps { width:100%; max-width:360px; margin-bottom:32px; }
+.status-step { display:flex; align-items:flex-start; gap:14px; position:relative; padding-bottom:26px; }
 .status-step:last-child { padding-bottom:0; }
-.status-step::before { content:''; position:absolute; left:15px; top:34px; bottom:0; width:2px; background:var(--border); }
+.status-step::before { content:''; position:absolute; left:20px; top:46px; bottom:2px; width:2px; background:var(--border); }
 .status-step:last-child::before { display:none; }
 .status-step.active::before { background:var(--orange); }
 .status-step.done::before { background:var(--green); }
-.step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:var(--card); border:2px solid var(--border); overflow:hidden; }
-.status-step.done .step-dot { background:var(--green); border-color:var(--green); }
-.status-step.active .step-dot { background:var(--orange); border-color:var(--orange); animation:pulse 2s infinite; }
-.step-text { padding-top:4px; }
-.step-title { font-size:14px; font-weight:700; }
-.step-desc { font-size:11px; color:var(--text3); font-weight:500; margin-top:2px; }
+.step-dot { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--card); border:2px solid var(--border); overflow:hidden; color:var(--text3); }
+.status-step.done .step-dot { background:var(--green); border-color:var(--green); color:#fff; }
+.status-step.active .step-dot { background:var(--orange); border-color:var(--orange); color:#fff; animation:pulse 2s infinite; }
+.status-step:not(.done):not(.active){ opacity:.6; }
+.step-text { padding-top:3px; flex:1; min-width:0; }
+.step-title { font-size:16px; font-weight:700; }
+.status-step:not(.done):not(.active) .step-title { color:var(--text2); }
+.step-desc { font-size:13px; color:var(--text3); font-weight:500; margin-top:3px; }
+.step-time { padding-top:3px; font-size:12px; font-weight:700; color:var(--text3); flex-shrink:0; font-variant-numeric:tabular-nums; }
+.status-step.done .step-time { color:var(--green); }
+.status-step.active .step-time { color:var(--orange); }
 
 /* ── SUMMARY ROW ── */
 .summary { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
 .summary-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; }
-.summary-row span:first-child { color:var(--text2); font-size:13px; font-weight:600; }
-.summary-row span:last-child { font-size:13px; font-weight:700; }
+.summary-row span:first-child { color:var(--text2); font-size:15px; font-weight:600; }
+.summary-row span:last-child { font-size:15px; font-weight:700; }
 .summary-total { border-top:1px solid var(--border); margin-top:8px; padding-top:12px; }
 .summary-total span:last-child { font-size:18px; color:var(--orange); }
 .discount { color:var(--green) !important; }
@@ -311,13 +336,13 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 /* ── BASKET DETAIL ── */
 .detail-hero { padding:20px; padding-top:max(60px, calc(env(safe-area-inset-top) + 48px)); text-align:center; }
 .detail-icon-wrap { width:80px; height:80px; border-radius:22px; display:flex; align-items:center; justify-content:center; font-size:40px; margin:0 auto 14px; }
-.detail-name { font-size:26px; font-weight:900; margin-bottom:2px; }
-.detail-desc { font-size:13px; color:var(--text2); font-weight:600; }
+.detail-name { font-size:26px; line-height:1.15; font-weight:800; margin-bottom:2px; }
+.detail-desc { font-size:15px; color:var(--text2); font-weight:500; }
 .detail-price-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:14px; }
-.detail-price { font-size:32px; font-weight:900; color:var(--orange); }
-.detail-price-pix { font-size:13px; color:var(--green); font-weight:700; background:rgba(52,199,89,0.1); padding:4px 10px; border-radius:8px; }
+.detail-price { font-size:34px; line-height:1.1; font-weight:800; color:var(--orange); }
+.detail-price-pix { font-size:14px; color:var(--green); font-weight:700; background:rgba(52,199,89,0.1); padding:5px 11px; border-radius:8px; }
 
-.detail-section-label { font-size:11px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:1px; padding:16px 20px 10px; }
+.detail-section-label { font-size:13px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:1px; padding:18px 20px 10px; }
 
 .detail-items { padding:0 20px; }
 .detail-item {
@@ -325,10 +350,10 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
     padding:13px 0; border-bottom:1px solid var(--border);
 }
 .detail-item:last-child { border-bottom:none; }
-.detail-item-left { display:flex; align-items:center; gap:12px; }
-.detail-item-dot { width:6px; height:6px; border-radius:50%; background:var(--orange); flex-shrink:0; }
-.detail-item-name { font-size:14px; font-weight:600; }
-.detail-item-qty { font-size:12px; color:var(--text3); font-weight:600; }
+.detail-item-left { display:flex; align-items:center; gap:11px; }
+.detail-item-ic { display:inline-flex; flex-shrink:0; }
+.detail-item-name { font-size:16px; font-weight:500; }
+.detail-item-qty { font-size:14px; color:var(--text3); font-weight:600; }
 
 .detail-footer {
     position:sticky; bottom:0; padding:16px 20px; padding-bottom:max(16px, env(safe-area-inset-bottom));
@@ -373,15 +398,17 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 }
 .compare-header { padding:0 20px 16px; border-bottom:1px solid var(--border); }
 .compare-body { overflow-x:auto; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
-.compare-table { width:100%; border-collapse:collapse; font-size:11px; }
+.compare-table { width:100%; border-collapse:collapse; font-size:14px; }
 .compare-table thead { position:sticky; top:0; z-index:2; }
 .compare-table th {
     padding:10px 5px; text-align:center; font-weight:800; font-size:10px;
     background:var(--bg2); border-bottom:2px solid var(--border); white-space:nowrap;
 }
 .compare-table th:first-child { text-align:left; padding-left:10px; min-width:100px; position:sticky; left:0; background:var(--bg2); z-index:3; }
-.compare-table td { padding:8px 5px; text-align:center; border-bottom:1px solid var(--border); color:var(--text2); font-weight:500; font-size:11px; }
-.compare-table td:first-child { text-align:left; padding-left:10px; color:var(--text); font-weight:600; position:sticky; left:0; background:var(--bg); z-index:1; }
+.compare-table td { padding:11px 7px; text-align:center; border-bottom:1px solid var(--border); color:var(--text2); font-weight:500; font-size:14px; }
+.compare-table td:first-child { text-align:left; padding-left:10px; color:var(--text); font-weight:600; position:sticky; left:0; background:var(--bg); z-index:1; min-width:150px; }
+.compare-item { display:inline-flex; align-items:center; gap:8px; }
+.compare-item .ci-ic { color:var(--text3); display:inline-flex; flex-shrink:0; }
 .compare-table .col-x { color:var(--green); font-weight:700; }
 .compare-table .col-c { color:var(--orange); font-weight:700; }
 .compare-table .col-p { color:var(--yellow); font-weight:700; }
@@ -450,6 +477,97 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 .confirm-btn-cancel { background:var(--border); color:var(--text); }
 .confirm-btn-ok { background:var(--orange); color:#fff; }
 .confirm-btn-danger { background:var(--red); color:#fff; }
+
+/* ═══════════════════════════════════════════════════════════
+   ARAQUARI CESTAS 2.0 — component polish + motion system
+   (transform/opacity only; honors prefers-reduced-motion)
+   ═══════════════════════════════════════════════════════════ */
+.btn-primary { color:var(--on-primary); }
+.btn-primary:hover { background:var(--orange-l); color:var(--on-primary); }
+.btn .ic { stroke-width:2; }
+.basket-card { border-radius:var(--radius-card); border-width:2px; }
+.form-input { border-radius:var(--radius-field); border-width:1.5px; }
+.bottom-sheet, .modal, .compare-sheet { border-radius:var(--radius-xl) var(--radius-xl) 0 0; }
+.header-btn { border-radius:14px; }
+.summary, .pay-method { border-radius:var(--radius-card); }
+.sheet-title { letter-spacing:-0.3px; }
+.basket-tag { letter-spacing:0.6px; border:1px solid transparent; }
+
+/* basket icon tile holds a Lucide svg tinted per cesta */
+.basket-icon .ic { width:30px; height:30px; }
+.detail-icon-wrap .ic { width:40px; height:40px; }
+
+/* back / header icon buttons use line icons */
+.back-btn .ic, .header-btn .ic { width:22px; height:22px; }
+
+/* ── Buttons: press feedback 0.98 / 120ms ── */
+.btn:active { transform:scale(0.98); }
+.basket-card:active, .pay-method:active, .qty-btn:active, .pix-copy-btn:active { transform:scale(0.98); }
+.basket-card, .pay-method { transition: transform var(--dur-press) ease-out, border-color .2s, background .2s; }
+
+/* ── Card entry (stagger set inline via animationDelay) ── */
+@keyframes cardIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.anim-card { animation: cardIn var(--dur-card) ease-out both; }
+
+/* ── Screen transition: slide + fade 240ms ── */
+.screen.active { animation: screenIn var(--dur-screen) ease-in-out; }
+@keyframes screenIn { from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── Bottom sheets / modais: 280ms ── */
+.bottom-sheet { transition: transform var(--dur-sheet) var(--ease-out); }
+.modal, .compare-sheet { animation: sheetUp var(--dur-sheet) var(--ease-out); }
+@keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+
+/* ── Comprovante: fade + slight rise ── */
+@keyframes receiptIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.anim-receipt { animation: receiptIn var(--dur-card) ease-out both; }
+
+/* ── Price / quantity bump ── */
+.detail-price, .basket-price-val, .qty-val { transition: transform .18s var(--ease-out); }
+.bump { animation: bump .28s var(--ease-out); }
+@keyframes bump { 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
+
+/* ── Timeline: steps acendem em sequência + linha preenche ── */
+.status-steps .status-step { animation: stepIn .3s ease-out both; }
+.status-steps .status-step:nth-child(1){animation-delay:.04s}
+.status-steps .status-step:nth-child(2){animation-delay:.10s}
+.status-steps .status-step:nth-child(3){animation-delay:.16s}
+.status-steps .status-step:nth-child(4){animation-delay:.22s}
+.status-steps .status-step:nth-child(5){animation-delay:.28s}
+.status-steps .status-step:nth-child(6){animation-delay:.34s}
+.status-steps .status-step:nth-child(7){animation-delay:.40s}
+@keyframes stepIn { from{ opacity:0; transform:translateX(-10px) } to{ opacity:1; transform:translateX(0) } }
+.status-steps .status-step .step-dot { animation: stepPop .26s ease-out both; animation-delay:inherit; }
+@keyframes stepPop { from{ transform:scale(.55) } to{ transform:scale(1) } }
+.status-step.done::before, .status-step.active::before { transform-origin:top; animation: lineFill .4s ease-out both; animation-delay:inherit; }
+@keyframes lineFill { from{ transform:scaleY(0) } to{ transform:scaleY(1) } }
+
+/* ── Animated check (stroke draw) ── */
+.check-anim { width:72px; height:72px; }
+.check-anim circle { stroke:var(--success); stroke-width:2.5; fill:none; stroke-dasharray:166; stroke-dashoffset:166; animation: drawRing .5s ease-out forwards; }
+.check-anim path { stroke:var(--success); stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:48; stroke-dashoffset:48; animation: drawCheck .36s .32s ease-out forwards; }
+@keyframes drawRing { to { stroke-dashoffset:0; } }
+@keyframes drawCheck { to { stroke-dashoffset:0; } }
+.check-badge { width:84px; height:84px; border-radius:50%; background:rgba(16,185,129,0.12); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; animation: badgePop .4s var(--ease-out) both; }
+@keyframes badgePop { from{ transform:scale(.5); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+/* ── Skeleton shimmer ── */
+.skeleton { position:relative; overflow:hidden; background:var(--bg3); border-radius:var(--radius-card); }
+.skeleton::after { content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); animation: shimmer 1.25s infinite; }
+@keyframes shimmer { 100% { transform:translateX(100%); } }
+.skel-card { height:84px; margin-bottom:12px; }
+
+/* ── Dashed receipt code box (mockup 08) ── */
+.receipt-code { border:1.5px dashed var(--border); border-radius:var(--radius-field); padding:12px; text-align:center; letter-spacing:1px; }
+
+/* ── prefers-reduced-motion: kill all motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, .screen.active, .anim-card, .anim-receipt, .check-anim circle, .check-anim path,
+  .status-step.lit .step-dot, .status-step.done::before, .status-step.active::before,
+  .skeleton::after, .bump { animation:none !important; transition:none !important; }
+  .check-anim circle, .check-anim path { stroke-dashoffset:0 !important; }
+  .anim-card, .anim-receipt { opacity:1 !important; transform:none !important; }
+}
 </style>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -470,7 +588,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     <div class="splash-center">
         <div class="splash-logo-wrap"><img src="assets/img/logo.png" alt="Logo"></div>
         <div class="splash-brand">Araquari <span>Cestas</span></div>
-        <div class="splash-tagline">🛒 Cesta básica na sua porta</div>
+        <div class="splash-tagline">Cesta básica na sua porta</div>
         <div class="splash-video-wrap">
             <video autoplay muted playsinline loop id="splash-video">
                 <source src="assets/video/splash.mp4" type="video/mp4">
@@ -486,7 +604,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
     <!-- MAP (always present behind everything) -->
     <div id="map-container"><div id="map"></div></div>
     <div class="map-gradient-top"></div>
-    <div class="center-pin" id="center-pin" style="display:none">📍</div>
+    <div class="center-pin" id="center-pin" style="display:none;color:var(--red)"><span data-ic="map-pin" data-sz="40"></span></div>
     <div class="center-pin-shadow" id="center-pin-shadow" style="display:none"></div>
 
     <!-- ═══ SCREEN: HOME ═══ -->
@@ -504,18 +622,18 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <div class="bottom-sheet" id="home-sheet">
             <div class="sheet-handle"></div>
-            <div class="sheet-title">Escolha sua cesta 🛒</div>
+            <div class="sheet-title">Escolha sua cesta</div>
             <div class="sheet-sub">Selecione o tipo e peça agora</div>
 
             <!-- Action buttons row -->
             <div style="display:flex;gap:8px;margin-bottom:12px" id="action-buttons-row">
-                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
-                <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta</button>
+                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px"><span data-ic="arrow-left-right" data-sz="16" style="vertical-align:-3px;margin-right:4px"></span> Comparar</button>
+                <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px"><span data-ic="heart" data-sz="16" style="vertical-align:-3px;margin-right:4px"></span> Doar cesta</button>
             </div>
 
             <!-- Donation mode banner (hidden by default) -->
             <div class="donation-banner" id="donation-mode-banner" style="display:none">
-                <div class="donation-banner-text">&#x2764;&#xFE0F; Modo Doa&#xE7;&#xE3;o Ativado</div>
+                <div class="donation-banner-text" style="display:flex;align-items:center;justify-content:center;gap:6px"><span data-ic="heart" data-sz="16"></span> Modo Doa&#xE7;&#xE3;o Ativado</div>
                 <div class="donation-banner-sub">Escolha a cesta que deseja doar. N&#xF3;s encontraremos uma fam&#xED;lia que precisa na regi&#xE3;o de Araquari.</div>
             </div>
 
@@ -527,7 +645,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
                 <!-- Donation custom value card (hidden by default) -->
                 <div class="basket-card" onclick="selectCustomDonation()" id="card-custom" style="display:none;border:2px dashed var(--orange)">
-                    <div class="basket-icon" style="background:rgba(255,59,48,0.12)"><span style="font-size:24px">💝</span></div>
+                    <div class="basket-icon" style="background:rgba(239,68,68,0.12)"><span style="color:var(--red);display:flex" data-ic="gift" data-sz="26"></span></div>
                     <div class="basket-info" style="flex:1">
                         <div class="basket-name">Valor livre</div>
                         <div class="basket-desc">Digite o valor que deseja doar</div>
@@ -553,11 +671,11 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
     <!-- ═══ SCREEN: MAP (choose address) ═══ -->
     <div id="screen-map" class="screen" style="pointer-events:none">
-        <div class="back-btn" style="pointer-events:auto" onclick="showScreen('home')">←</div>
+        <div class="back-btn" style="pointer-events:auto" onclick="showScreen('home')"><span data-ic="arrow-left" data-sz="22"></span></div>
 
         <!-- Search bar -->
         <div style="position:absolute;top:12px;left:52px;right:12px;z-index:600;pointer-events:auto">
-            <input type="text" id="map-search-input" placeholder="🔍 Buscar endereço, rua, bairro..."
+            <input type="text" id="map-search-input" placeholder="Buscar endereço, rua, bairro..."
                 oninput="searchAddress(this.value)"
                 onfocus="this.select()"
                 style="width:100%;padding:10px 14px;border-radius:50px;border:1px solid var(--border);background:var(--glass2);backdrop-filter:blur(20px);color:var(--text);font-size:13px;font-weight:600;outline:none">
@@ -566,13 +684,13 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <!-- Map toggle + GPS buttons -->
         <div style="position:absolute;bottom:200px;right:16px;z-index:500;pointer-events:auto;display:flex;flex-direction:column;gap:8px">
-            <div class="header-btn" id="btn-map-toggle" onclick="toggleMapLayer()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px);cursor:pointer">🛰️</div>
-            <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;font-size:20px;background:var(--glass2);backdrop-filter:blur(20px)"><img src="assets/img/nav-gps.png" style="width:24px;height:24px"></div>
+            <div class="header-btn" id="btn-map-toggle" onclick="toggleMapLayer()" style="width:48px;height:48px;border-radius:50%;background:var(--glass2);backdrop-filter:blur(20px);cursor:pointer"><span data-ic="satellite" data-sz="22"></span></div>
+            <div class="header-btn" onclick="centerOnUser()" style="width:48px;height:48px;border-radius:50%;background:var(--glass2);backdrop-filter:blur(20px)"><span data-ic="locate-fixed" data-sz="22"></span></div>
         </div>
 
         <div class="bottom-sheet" style="max-height:50vh;pointer-events:auto">
             <div class="sheet-handle"></div>
-            <div class="sheet-title">Onde deseja entregar? 📍</div>
+            <div class="sheet-title">Onde deseja entregar?</div>
             <div class="sheet-sub">Busque o endereço ou arraste o mapa</div>
 
             <div class="address-bar" style="cursor:default;margin-bottom:12px">
@@ -589,10 +707,10 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
     <!-- ═══ SCREEN: PAYMENT ═══ -->
     <div id="screen-payment" class="screen" style="background:var(--bg);overflow-y:auto">
-        <div class="back-btn" onclick="goBackFromDetail()">←</div>
+        <div class="back-btn" onclick="goBackFromDetail()"><span data-ic="arrow-left" data-sz="22"></span></div>
 
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
-            <div class="sheet-title" id="payment-title">Pagamento 💳</div>
+            <div class="sheet-title" id="payment-title">Pagamento</div>
             <div class="sheet-sub" id="payment-sub">Escolha como deseja pagar</div>
 
             <!-- Order summary -->
@@ -663,7 +781,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             <div id="boleto30-area" style="display:none">
                 <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Documentos obrigatórios</div>
                 <div style="background:rgba(232,133,12,0.06);border:1px solid rgba(232,133,12,0.15);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:12px;color:var(--orange);font-weight:600">
-                    ⚠️ Para boleto 30 dias é necessário enviar seus documentos para análise de crédito.
+                    <span data-ic="alert-triangle" data-sz="15" style="vertical-align:-2px"></span> Para boleto 30 dias é necessário enviar seus documentos para análise de crédito.
                 </div>
 
                 <div class="form-group">
@@ -678,12 +796,12 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
                 <label class="file-upload" id="upload-doc">
                     <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('doc',this)">
-                    <div class="upload-icon"><img src="assets/img/nav-upload.png" style="width:22px;height:22px"></div>
+                    <div class="upload-icon"><span data-ic="file-text" data-sz="22"></span></div>
                     <p>RG ou CNH (foto ou PDF)</p>
                 </label>
                 <label class="file-upload" id="upload-res">
                     <input type="file" accept=".jpg,.png,.pdf" style="display:none" onchange="handleUpload('res',this)">
-                    <div class="upload-icon"><img src="assets/img/nav-upload.png" style="width:22px;height:22px"></div>
+                    <div class="upload-icon"><span data-ic="file-text" data-sz="22"></span></div>
                     <p>Comprovante de Residência</p>
                 </label>
             </div>
@@ -700,16 +818,16 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
     <!-- ═══ SCREEN: BASKET DETAIL ═══ -->
     <div id="screen-detail" class="screen" style="background:var(--bg);overflow-y:auto">
-        <div class="back-btn" onclick="goBackFromDetail()">←</div>
+        <div class="back-btn" onclick="goBackFromDetail()"><span data-ic="arrow-left" data-sz="22"></span></div>
         <div id="detail-content"></div>
         <div class="detail-footer" id="detail-footer"></div>
     </div>
 
     <!-- ═══ SCREEN: ORDERS (history) ═══ -->
     <div id="screen-orders" class="screen" style="background:var(--bg);overflow-y:auto">
-        <div class="back-btn" onclick="showScreen('home')">←</div>
+        <div class="back-btn" onclick="showScreen('home')"><span data-ic="arrow-left" data-sz="22"></span></div>
         <div style="padding:20px;padding-top:max(60px, calc(env(safe-area-inset-top) + 48px))">
-            <div class="sheet-title">Rastreio 📦</div>
+            <div class="sheet-title">Rastreio</div>
             <div class="sheet-sub">Acompanhe seus pedidos</div>
 
             <div id="saved-orders-list"></div>
@@ -730,7 +848,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 <div class="modal-overlay" id="modal-address">
     <div class="modal">
         <div style="text-align:center;margin-bottom:20px">
-            <div style="margin-bottom:8px"><img src="assets/img/nav-local.png" style="width:48px;height:48px"></div>
+            <div style="margin-bottom:8px;color:var(--red);display:flex;justify-content:center"><span data-ic="map-pin" data-sz="44"></span></div>
             <div style="font-size:18px;font-weight:800">Confirme o endereço</div>
         </div>
 
@@ -744,28 +862,28 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <div class="form-group">
             <label class="form-label">Quem vai receber <span class="req">*</span></label>
-            <input class="form-input" placeholder="Nome completo de quem recebe" id="input-recebedor">
+            <div class="input-ic"><span class="ii" data-ic="user" data-sz="19"></span><input class="form-input" placeholder="Nome completo de quem recebe" id="input-recebedor"></div>
         </div>
         <div class="form-group">
             <label class="form-label">Telefone de contato <span class="req">*</span></label>
-            <input class="form-input" placeholder="(00) 00000-0000" id="input-telefone" inputmode="tel" oninput="this.value=maskPhone(this.value)">
+            <div class="input-ic"><span class="ii" data-ic="phone" data-sz="19"></span><input class="form-input" placeholder="(00) 00000-0000" id="input-telefone" inputmode="tel" oninput="this.value=maskPhone(this.value)"></div>
         </div>
         <div class="form-group">
             <label class="form-label">Número <span class="req">*</span></label>
-            <input class="form-input" placeholder="Nº da casa/apto" id="input-numero" inputmode="numeric" type="text">
+            <div class="input-ic"><span class="ii" data-ic="home" data-sz="19"></span><input class="form-input" placeholder="Nº da casa/apto" id="input-numero" inputmode="numeric" type="text"></div>
         </div>
         <div class="form-group">
             <label class="form-label">Ponto de referência <span class="req">*</span></label>
-            <input class="form-input" placeholder="Ex: próximo ao mercado, casa azul..." id="input-ref">
+            <div class="input-ic"><span class="ii" data-ic="map-pin" data-sz="19"></span><input class="form-input" placeholder="Ex: próximo ao mercado, casa azul..." id="input-ref"></div>
         </div>
         <div class="form-group">
             <label class="form-label">Complemento</label>
-            <input class="form-input" placeholder="Apto, bloco, fundos..." id="input-comp">
+            <div class="input-ic"><span class="ii" data-ic="file-text" data-sz="19"></span><input class="form-input" placeholder="Apto, bloco, fundos..." id="input-comp"></div>
         </div>
 
         <div style="display:flex;gap:10px;margin-top:8px">
             <button class="btn btn-dark" style="flex:1" onclick="closeModal()">Cancelar</button>
-            <button class="btn btn-primary" style="flex:2" onclick="saveAddress()">✓ Confirmar endereço</button>
+            <button class="btn btn-primary" style="flex:2" onclick="saveAddress()"><span data-ic="check" data-sz="18"></span> Confirmar endereço</button>
         </div>
     </div>
 </div>
@@ -774,7 +892,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 <div class="modal-overlay" id="modal-donation-contact">
     <div class="modal" style="max-width:380px">
         <div style="text-align:center;margin-bottom:16px">
-            <div style="font-size:48px;margin-bottom:8px">&#x2764;&#xFE0F;</div>
+            <div style="margin-bottom:8px;color:var(--green)"><span data-ic="hand-heart" data-sz="44"></span></div>
             <div style="font-size:18px;font-weight:800;color:var(--green)">Que lindo gesto!</div>
             <div style="font-size:13px;color:var(--text2);margin-top:8px;line-height:1.6">
                 Gostaria de saber qual fam&#xED;lia foi beneficiada e onde a cesta foi entregue?
@@ -783,7 +901,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <div id="donation-contact-fields" style="display:none">
             <div style="background:rgba(61,163,61,0.08);border:1px solid rgba(61,163,61,0.2);border-radius:12px;padding:14px;margin-bottom:16px">
-                <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:4px">&#x1F4E9; Como funciona:</div>
+                <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span data-ic="inbox" data-sz="15"></span> Como funciona:</div>
                 <div style="font-size:12px;color:var(--text2);line-height:1.6">
                     Assim que a cesta for entregue, enviaremos pelo WhatsApp os dados da fam&#xED;lia beneficiada, foto da entrega e localiza&#xE7;&#xE3;o.
                 </div>
@@ -809,7 +927,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 Sim, quero saber!
             </button>
             <button class="btn btn-dark" style="width:100%;margin-top:10px;font-size:13px" onclick="skipDonationContact()">
-                N&#xE3;o precisa, apenas quero doar &#x2764;&#xFE0F;
+                N&#xE3;o precisa, apenas quero doar
             </button>
         </div>
     </div>
@@ -817,7 +935,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
 <!-- ═══ LIGHTBOX ═══ -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
-    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-close" onclick="closeLightbox()"><span data-ic="x" data-sz="18"></span></button>
     <img id="lightbox-img" src="" alt="">
 </div>
 
@@ -827,10 +945,10 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
         <div class="compare-header">
             <div style="display:flex;align-items:center;justify-content:space-between">
                 <div>
-                    <div style="font-size:18px;font-weight:800">📊 Comparativo de Cestas</div>
-                    <div style="font-size:12px;color:var(--text3);margin-top:2px">Deslize para ver todas</div>
+                    <div style="font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px"><span data-ic="bar-chart" data-sz="20" style="color:var(--orange)"></span> Comparativo de Cestas</div>
+                    <div style="font-size:13px;color:var(--text3);margin-top:2px">Veja todos os itens e quantidades</div>
                 </div>
-                <div class="header-btn" onclick="closeCompare()" style="font-size:14px;cursor:pointer">✕</div>
+                <div class="header-btn" onclick="closeCompare()" style="cursor:pointer"><span data-ic="x" data-sz="20"></span></div>
             </div>
         </div>
         <div class="compare-body">
@@ -863,15 +981,16 @@ let toastTimer = null;
 function showToast(msg, type='info', duration=3500) {
     const t = document.getElementById('app-toast');
     t.className = 'app-toast ' + type;
-    const icons = {success:'\u2705',error:'\u274C',warning:'\u26A0\uFE0F',info:'\u2139\uFE0F'};
-    t.innerHTML = (icons[type]||'') + ' ' + msg;
+    const iconMap = {success:'check-circle',error:'x',warning:'alert-triangle',info:'info'};
+    t.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center">' + IC(iconMap[type]||'info',16) + '<span>' + msg + '</span></span>';
     clearTimeout(toastTimer);
     requestAnimationFrame(() => { t.classList.add('show'); });
     toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
 function showConfirm(title, msg, onOk, opts={}) {
     const ov = document.getElementById('confirm-overlay');
-    document.getElementById('confirm-icon').textContent = opts.icon || '\u26A0\uFE0F';
+    const _cic = (opts.icon && window.LUCIDE_NAMES && LUCIDE_NAMES.indexOf(opts.icon) >= 0) ? opts.icon : 'alert-triangle';
+    document.getElementById('confirm-icon').innerHTML = '<span style="color:var(--orange)">' + IC(_cic,34) + '</span>';
     document.getElementById('confirm-title').textContent = title;
     document.getElementById('confirm-msg').textContent = msg;
     const okBtn = document.getElementById('confirm-ok');
@@ -907,7 +1026,7 @@ const state = {
 
 const BASKETS = {
     x: {
-        name:"Cesta X", price:1.00, emoji:"🍚", desc:"Essencial · 11 itens", color:"var(--green)", tag:"",
+        name:"Cesta X", price:1.00, emoji:"shopping-basket", desc:"Essencial · 11 itens", color:"var(--green)", tag:"",
         img:"assets/img/cesta-x.png",
         items:[
             { name:"Açúcar Refinado Especial", qty:"1x 1 kg" },
@@ -925,7 +1044,7 @@ const BASKETS = {
         packaging:"Embalagem Saco Plástico Transparente"
     },
     confort: {
-        name:"Cesta Confort", price:2.00, emoji:"🛒", desc:"Família · 14 itens", color:"var(--orange)", tag:"POPULAR",
+        name:"Cesta Confort", price:2.00, emoji:"shopping-basket", desc:"Família · 14 itens", color:"var(--orange)", tag:"POPULAR",
         img:"assets/img/cesta-confort.png",
         items:[
             { name:"Açúcar Refinado Especial", qty:"2x 1 kg" },
@@ -946,7 +1065,7 @@ const BASKETS = {
         packaging:"Caixa de Papelão Corrugado Duplo"
     },
     plus: {
-        name:"Cesta Plus", price:3.00, emoji:"👑", desc:"Premium · 33 itens", color:"var(--yellow)", tag:"⭐ PREMIUM",
+        name:"Cesta Plus", price:3.00, emoji:"shopping-basket", desc:"Premium · 33 itens", color:"var(--yellow)", tag:"PREMIUM",
         img:"assets/img/cesta-plus.png",
         items:[
             { name:"Achocolatado em Pó", qty:"1x 370 g" },
@@ -986,7 +1105,7 @@ const BASKETS = {
         packaging:"Caixas de Papelão Corrugado Duplo"
     },
     custom: {
-        name:"Doação Livre", price:0, emoji:"💝", desc:"Valor personalizado", color:"var(--red)",
+        name:"Doação Livre", price:0, emoji:"gift", desc:"Valor personalizado", color:"var(--red)",
         img:"assets/img/icon-cesta-x.svg",
         items:[{ name:"Doação de valor livre", qty:"—" }],
         packaging:"—"
@@ -999,13 +1118,31 @@ let basketOrder = ['x','confort','plus'];
 // Tint: reproduz EXATAMENTE as rgba de hoje p/ as cores conhecidas (idêntico em
 // qualquer webview); cai pra color-mix em cores customizadas de cestas novas.
 function tint(cor, a) {
-    const map = { 'var(--green)':'52,199,89', 'var(--orange)':'232,133,12', 'var(--yellow)':'255,217,61', 'var(--red)':'255,59,48', 'var(--blue)':'77,184,232' };
+    const map = { 'var(--green)':'34,197,94', 'var(--orange)':'245,158,11', 'var(--yellow)':'234,179,8', 'var(--red)':'239,68,68', 'var(--blue)':'59,130,246', 'var(--success)':'16,185,129' };
     if(map[cor]) return `rgba(${map[cor]},${a})`;
     return `color-mix(in srgb, ${cor} ${Math.round(a*100)}%, transparent)`;
+}
+// Campo "emoji" das cestas agora guarda um NOME de ícone Lucide. Migra valores
+// antigos (emoji ou vazio) p/ um ícone válido; default = cesta.
+function lucideName(v) {
+    // migration-010 converte o banco p/ nomes de ícone; aqui só validamos.
+    if(v && typeof v === 'string' && window.LUCIDE_NAMES && LUCIDE_NAMES.indexOf(v) >= 0) return v;
+    return 'shopping-basket';
+}
+
+// Animated check (stroke draw) — usado em confirmações/comprovante
+function animCheck(size) {
+    const s = size || 72;
+    return '<div class="check-badge"><svg class="check-anim" width="'+s+'" height="'+s+'" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M14 27 l8 8 l16 -18"/></svg></div>';
 }
 
 // Load baskets from server (admin-editable): define cards, ordem e ativo
 async function loadBasketsFromServer() {
+    // Skeleton/shimmer enquanto carrega (evita tela vazia)
+    const wrapSk = document.getElementById('dynamic-baskets');
+    if(wrapSk && !wrapSk.children.length) {
+        wrapSk.innerHTML = '<div class="skeleton skel-card"></div><div class="skeleton skel-card"></div><div class="skeleton skel-card"></div>';
+    }
     try {
         const res = await fetch('/api/cestas');
         if(res.ok) {
@@ -1026,36 +1163,36 @@ async function loadBasketsFromServer() {
 function renderBasketCards() {
     const wrap = document.getElementById('dynamic-baskets');
     if(!wrap) return;
-    wrap.innerHTML = basketOrder.map(t => {
+    wrap.innerHTML = basketOrder.map((t, i) => {
         const b = BASKETS[t];
         if(!b) return '';
         const intPart = Math.floor(b.price);
         const decPart = (b.price % 1).toFixed(2).substring(1).replace('.', ',');
         const cor = b.color || 'var(--green)';
-        const emoji = b.emoji || '📦';
+        const iconName = lucideName(b.emoji);
         const preview = (b.items && b.items.length)
             ? b.items.slice(0,5).map(it => (it.name||'').split(' ')[0]).filter(Boolean).join(', ') + '...'
             : '';
         const tagHtml = b.tag
-            ? `<div class="basket-tag" style="background:${tint(cor,0.15)};color:${cor}">${b.tag}</div>`
+            ? `<div class="basket-tag" style="background:${tint(cor,0.15)};color:${cor};border-color:${tint(cor,0.3)}">${b.tag}</div>`
             : '';
-        // Com imagem enviada/URL → mostra a foto; sem imagem → ícone SVG por tipo com fallback p/ emoji (3 cestas atuais ficam idênticas).
-        const iconInner = b.img
-            ? `<img src="${b.img}" alt="${b.name}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
-            : `<img src="assets/img/icon-cesta-${t}.svg" style="width:36px;height:36px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="font-size:30px;display:none">${emoji}</span>`;
+        // Mockup 2.0: o card usa o ícone Lucide tintado na cor da cesta; a FOTO da
+        // cesta aparece no detalhe (tela 02). Mantém identidade visual consistente.
+        const iconInner = `<span style="color:${cor};display:flex">${IC(iconName,32)}</span>`;
         return `
-                <div class="basket-card" onclick="selectBasket('${t}')" id="card-${t}">
-                    <div class="basket-icon" style="background:${tint(cor,0.12)};overflow:hidden">${iconInner}</div>
+                <div class="basket-card anim-card" style="animation-delay:${i*40}ms" onclick="selectBasket('${t}')" id="card-${t}">
+                    <div class="basket-icon" style="background:${tint(cor,0.14)}">${iconInner}</div>
                     <div class="basket-info">
                         <div class="basket-name">${b.name}</div>
                         <div class="basket-desc">${b.desc||''}</div>
                         <div class="basket-items-preview">${preview}</div>
                     </div>
                     <div class="basket-price">
-                        <div class="basket-price-val">R$ ${intPart}<small>${decPart}</small></div>
+                        ${tagHtml}
+                        <div class="basket-price-val" style="color:${cor}">R$ ${intPart}<small>${decPart}</small></div>
                         <div class="basket-price-sub">à vista</div>
                     </div>
-                    ${tagHtml}
+                    <div class="basket-chevron">${IC('chevron-right',22)}</div>
                 </div>`;
     }).join('');
     // Reaplica seleção visual se já havia cesta escolhida
@@ -1083,15 +1220,18 @@ window.addEventListener('load', () => {
     // Load dados públicos da loja (WhatsApp de atendimento p/ botão de imprevisto)
     loadLoja();
 
-    // Spawn floating food emojis
-    const foods = ['🍚','🫘','☕','🥛','🍝','🫒','🍅','🌽','🍪','🧂','🍞','🐟','🥫','🌾','🍬','🥔','🍳','🧈','🥩','🍌'];
+    // Partículas sutis (sem emoji) — pontos luminosos nas cores da marca
     const container = document.getElementById('splash-foods');
-    for(let i = 0; i < 24; i++) {
+    const sparkColors = ['var(--green)','var(--orange)','var(--yellow)'];
+    for(let i = 0; i < 18; i++) {
         const el = document.createElement('div');
         el.className = 'splash-food';
-        el.textContent = foods[i % foods.length];
+        const sz = 4 + Math.random() * 6;
+        el.style.width = sz + 'px'; el.style.height = sz + 'px';
+        el.style.borderRadius = '50%';
+        el.style.background = sparkColors[i % sparkColors.length];
+        el.style.opacity = '0.5';
         el.style.left = (Math.random() * 100) + '%';
-        el.style.fontSize = (20 + Math.random() * 18) + 'px';
         el.style.animationDuration = (3 + Math.random() * 4) + 's';
         el.style.animationDelay = (Math.random() * 3.5) + 's';
         container.appendChild(el);
@@ -1158,12 +1298,12 @@ function toggleMapLayer() {
         map.removeLayer(layers.satellite);
         layers.street.addTo(map);
         layers.current = 'street';
-        document.getElementById('btn-map-toggle').textContent = '🛰️';
+        document.getElementById('btn-map-toggle').innerHTML = IC('satellite',22);
     } else {
         map.removeLayer(layers.street);
         layers.satellite.addTo(map);
         layers.current = 'satellite';
-        document.getElementById('btn-map-toggle').textContent = '🗺️';
+        document.getElementById('btn-map-toggle').innerHTML = IC('map',22);
     }
 }
 
@@ -1325,12 +1465,12 @@ function goBackFromDetail() {
         document.getElementById('card-custom').style.display = 'flex';
         const row = document.getElementById('action-buttons-row');
         row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
-            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">🛒 Voltar a comprar</button>
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
+            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">${IC('arrow-left',15)} Voltar a comprar</button>
         `;
         const title = document.querySelector('#home-sheet .sheet-title');
         const sub = document.querySelector('#home-sheet .sheet-sub');
-        if(title) title.innerHTML = 'Doe uma cesta \u2764\uFE0F';
+        if(title) title.innerHTML = 'Doe uma cesta';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     }
 }
@@ -1355,7 +1495,7 @@ function selectCustomDonation() {
     // Deselect other cards
     document.querySelectorAll('.basket-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('card-custom').classList.add('selected');
-    document.getElementById('custom-donation-check').innerHTML = '✓';
+    document.getElementById('custom-donation-check').innerHTML = IC('check',14);
 
     // Set state with custom basket
     state.basket = 'custom';
@@ -1394,7 +1534,7 @@ function renderDetail() {
 
     const donationHero = state.isDonation ? `
         <div style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.25);border-radius:14px;padding:16px;margin:0 20px 16px;text-align:center">
-            <div style="font-size:28px;margin-bottom:6px">\u2764\uFE0F</div>
+            <div style="margin-bottom:6px;color:var(--green)">${IC('hand-heart',28)}</div>
             <div style="font-size:15px;font-weight:800;color:#D4AF37">Voc\u00EA est\u00E1 doando esta cesta</div>
             <div style="font-size:12px;color:rgba(212,175,55,0.7);margin-top:6px;line-height:1.5">
                 Esta cesta ser\u00E1 entregue a uma fam\u00EDlia em situa\u00E7\u00E3o de vulnerabilidade na regi\u00E3o de Araquari.
@@ -1404,7 +1544,7 @@ function renderDetail() {
 
     document.getElementById('detail-content').innerHTML = `
         <div class="detail-hero">
-            <div class="detail-name">${state.isDonation ? '\u2764\uFE0F ' : ''}${b.name}</div>
+            <div class="detail-name">${state.isDonation ? IC('heart',22)+' ' : ''}${b.name}</div>
             <div class="detail-desc">${b.desc}</div>
             <div class="detail-price-row">
                 <div class="detail-price">R$ ${b.price.toFixed(2).replace('.',',')}</div>
@@ -1421,7 +1561,7 @@ function renderDetail() {
             ${b.items.map(item => `
                 <div class="detail-item">
                     <div class="detail-item-left">
-                        <div class="detail-item-dot" ${state.isDonation ? 'style="background:#D4AF37"' : ''}></div>
+                        <span class="detail-item-ic" style="color:${state.isDonation ? '#D4AF37' : (b.color||'var(--orange)')}">${IC('shopping-basket',17)}</span>
                         <div class="detail-item-name">${item.name}</div>
                     </div>
                     <div class="detail-item-qty">${item.qty}</div>
@@ -1444,7 +1584,7 @@ function renderDetail() {
             <button class="qty-btn" onclick="changeQty(1)">+</button>
         </div>
         <button class="btn ${state.isDonation ? 'btn-donate' : 'btn-primary'}" style="flex:1" onclick="proceedFromDetail()">
-            ${state.isDonation ? '\u2764\uFE0F Doar' : 'Pedir'} \u00B7 R$ ${totalPrice}
+            ${state.isDonation ? IC('heart',16)+' Doar' : 'Pedir'} \u00B7 R$ ${totalPrice}
         </button>
     `;
 }
@@ -1526,10 +1666,10 @@ function toggleDonationMode() {
         banner.style.display = 'block';
         if(customCard) customCard.style.display = 'flex';
         row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
-            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">🛒 Voltar a comprar</button>
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
+            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">${IC('arrow-left',15)} Voltar a comprar</button>
         `;
-        if(title) title.innerHTML = 'Doe uma cesta &#x2764;&#xFE0F;';
+        if(title) title.innerHTML = 'Doe uma cesta';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     } else {
         exitDonationMode();
@@ -1552,11 +1692,11 @@ function exitDonationMode() {
     if(customCheck) customCheck.innerHTML = '';
     if(row) {
         row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-comparar.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Comparar</button>
-            <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:8px 12px;font-size:12px;border-radius:10px"><img src="assets/img/nav-doacao.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Doar cesta</button>
+            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
+            <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px">${IC('heart',16)} Doar cesta</button>
         `;
     }
-    if(title) title.innerHTML = 'Escolha sua cesta \uD83D\uDED2';
+    if(title) title.innerHTML = 'Escolha sua cesta';
     if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
 }
 
@@ -1626,7 +1766,7 @@ function renderPaymentSummary() {
     // Update payment screen title for donation mode
     const payTitle = document.getElementById('payment-title');
     const paySub = document.getElementById('payment-sub');
-    if(payTitle) payTitle.innerHTML = state.isDonation ? '\u2764\uFE0F Finalizar Doa\u00E7\u00E3o' : 'Pagamento \uD83D\uDCB3';
+    if(payTitle) payTitle.innerHTML = state.isDonation ? IC('heart',20)+' Finalizar Doa\u00E7\u00E3o' : 'Pagamento';
     if(paySub) paySub.textContent = state.isDonation ? 'Escolha como deseja pagar sua doa\u00E7\u00E3o' : 'Escolha como deseja pagar';
 
     const b = BASKETS[state.basket];
@@ -1637,7 +1777,7 @@ function renderPaymentSummary() {
     const total = subtotal - discount;
 
     const donationBadge = state.isDonation ? `<div style="background:rgba(61,163,61,0.12);border:1px solid rgba(61,163,61,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center">
-        <div style="font-size:14px;font-weight:800;color:var(--green)">&#x2764;&#xFE0F; Voc\u00EA est\u00E1 fazendo uma doa\u00E7\u00E3o!</div>
+        <div style="font-size:14px;font-weight:800;color:var(--green);display:flex;align-items:center;justify-content:center;gap:6px">${IC('hand-heart',18)} Voc\u00EA est\u00E1 fazendo uma doa\u00E7\u00E3o!</div>
         <div style="font-size:11px;color:var(--text2);margin-top:4px">N\u00F3s encontraremos uma fam\u00EDlia que precisa na regi\u00E3o de Araquari</div>
     </div>` : '';
 
@@ -1649,7 +1789,7 @@ function renderPaymentSummary() {
                 <div style="font-size:11px;color:var(--text3);margin-bottom:2px">SEUS DADOS PARA ACOMPANHAMENTO</div>
                 <div style="font-size:13px;font-weight:700">${state.donorContact.nome}</div>
                 <div style="font-size:11px;color:var(--text2)">${state.donorContact.telefone}</div>
-                <div style="font-size:10px;color:var(--green);margin-top:4px">\u2705 Voc\u00EA ser\u00E1 notificado quando a cesta for entregue</div>
+                <div style="font-size:10px;color:var(--green);margin-top:4px;display:flex;align-items:center;gap:4px">${IC('check',12)} Voc\u00EA ser\u00E1 notificado quando a cesta for entregue</div>
             </div>` : ''}
         </div>` : (state.address ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">ENTREGAR EM</div>
@@ -1665,9 +1805,9 @@ function renderPaymentSummary() {
 
     document.getElementById('payment-summary').innerHTML = `
         ${donationBadge}
-        <div class="summary-row"><span>${b.emoji} ${b.name} \u00D7 ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
-        <div class="summary-row"><span>${state.isDonation ? '\u2764\uFE0F Doa\u00E7\u00E3o' : '\uD83D\uDE9A Entrega'}</span><span style="color:var(--green)">Gr\u00E1tis</span></div>
-        ${isPix ? `<div class="summary-row"><span>\uD83D\uDCF1 Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
+        <div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px"><span style="color:${b.color||'var(--text2)'};display:inline-flex">${IC(lucideName(b.emoji),16)}</span>${b.name} \u00D7 ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
+        <div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px">${state.isDonation ? IC('heart',14)+' Doa\u00E7\u00E3o' : IC('truck',14)+' Entrega'}</span><span style="color:var(--green)">Gr\u00E1tis</span></div>
+        ${isPix ? `<div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px">${IC('zap',14)} Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
         <div class="summary-row summary-total"><span style="font-weight:800;color:var(--text)">Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
         ${addressBlock}
     `;
@@ -1692,9 +1832,9 @@ function selectPay(method) {
     document.getElementById('btn-pay').disabled = false;
 
     if(method === 'boleto30') {
-        document.getElementById('btn-pay').textContent = '📩 Enviar para Análise';
+        document.getElementById('btn-pay').textContent = 'Enviar para Análise';
     } else if(state.isDonation) {
-        document.getElementById('btn-pay').textContent = '\u2764\uFE0F Finalizar Doa\u00E7\u00E3o';
+        document.getElementById('btn-pay').textContent = 'Finalizar Doa\u00E7\u00E3o';
         document.getElementById('btn-pay').className = 'btn btn-donate';
     } else {
         document.getElementById('btn-pay').textContent = 'Finalizar Pedido';
@@ -1710,7 +1850,7 @@ function handleUpload(type, el) {
         state.uploadFiles[type] = el.files[0];
         const container = el.closest('.file-upload');
         container.classList.add('done');
-        container.innerHTML = `<input type="file" style="display:none"><div class="file-ok">✅ ${el.files[0].name}</div>`;
+        container.innerHTML = `<input type="file" style="display:none"><div class="file-ok">${IC('check',14)} ${el.files[0].name}</div>`;
     }
 }
 
@@ -1880,7 +2020,7 @@ async function processPixPayment(codigo) {
                     <img src="data:image/png;base64,${data.qrcodeBase64 || ''}" alt="QR Code PIX" onerror="this.parentElement.innerHTML='<div style=color:var(--text3);font-size:13px>QR Code indisponível.<br>Use o código abaixo.</div>'">
                 </div>
                 <div class="pix-code" id="pix-code-text">${data.qrcode || data.qr_code || ''}</div>
-                <button class="pix-copy-btn" onclick="copyPixCode()">📋 Copiar código PIX</button>
+                <button class="pix-copy-btn" onclick="copyPixCode()">Copiar código PIX</button>
             </div>
             <div class="payment-waiting" id="pix-waiting">
                 <div class="spin-sm"></div> Aguardando pagamento...
@@ -1892,7 +2032,7 @@ async function processPixPayment(codigo) {
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
             </div>
-            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Já paguei — ver status do pedido ▸</button>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Já paguei — ver status do pedido ${IC('chevron-right',16)}</button>
         `;
 
         // Poll for payment confirmation
@@ -1901,7 +2041,7 @@ async function processPixPayment(codigo) {
     } catch(err) {
         console.error('Erro PIX:', err);
         el.innerHTML = `
-            <div class="status-icon">⚠️</div>
+            <div class="status-icon" style="color:var(--orange)">${IC('alert-triangle',64)}</div>
             <div class="status-title">Erro no PIX</div>
             <div class="status-sub">${err.message}</div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
@@ -1919,13 +2059,13 @@ function copyPixCode() {
     if(!code) return;
     navigator.clipboard.writeText(code).then(() => {
         const btn = document.querySelector('.pix-copy-btn');
-        if(btn) { btn.textContent = '✅ Código copiado!'; setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000); }
+        if(btn) { btn.textContent = 'Código copiado!'; setTimeout(() => btn.textContent = 'Copiar código PIX', 2000); }
     }).catch(() => {
         // Fallback
         const ta = document.createElement('textarea');
         ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
         const btn = document.querySelector('.pix-copy-btn');
-        if(btn) { btn.textContent = '✅ Código copiado!'; setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000); }
+        if(btn) { btn.textContent = 'Código copiado!'; setTimeout(() => btn.textContent = 'Copiar código PIX', 2000); }
     });
 }
 
@@ -1942,7 +2082,7 @@ function startPixPolling(codigo) {
             if(data.pagamentoAprovado || data.status === 'approved') {
                 clearInterval(pixPollInterval);
                 const waiting = document.getElementById('pix-waiting');
-                if(waiting) waiting.innerHTML = '<span style="color:var(--green);font-weight:800">✅ Pagamento confirmado!</span>';
+                if(waiting) waiting.innerHTML = '<span style="color:var(--green);font-weight:800;display:inline-flex;align-items:center;gap:6px">'+IC('check-circle',16)+' Pagamento confirmado!</span>';
                 setTimeout(() => showStatus('separacao'), 1500);
             }
         } catch(e) {}
@@ -1979,21 +2119,21 @@ async function processBoletoPayment(codigo) {
             <div style="font-size:13px;color:var(--text2);margin-bottom:4px;text-align:center">Vencimento: ${data.vencimento || '3 dias uteis'}</div>
             <div class="boleto-box">
                 ${data.boletoBarcode ? `<div class="boleto-barcode">${data.boletoBarcode}</div>` : ''}
-                ${data.boletoUrl ? `<a href="${data.boletoUrl}" target="_blank" class="boleto-link-btn">📄 Abrir Boleto</a>` : ''}
-                ${data.boletoPdf ? `<a href="${data.boletoPdf}" target="_blank" class="boleto-link-btn" style="margin-top:8px;background:var(--green)">📥 Baixar PDF</a>` : ''}
-                ${data.boletoBarcode ? `<button class="pix-copy-btn" style="background:var(--orange)" onclick="navigator.clipboard.writeText('${data.boletoBarcode}');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar código de barras',2000)">📋 Copiar código de barras</button>` : ''}
+                ${data.boletoUrl ? `<a href="${data.boletoUrl}" target="_blank" class="boleto-link-btn">${IC('file-text',16)} Abrir Boleto</a>` : ''}
+                ${data.boletoPdf ? `<a href="${data.boletoPdf}" target="_blank" class="boleto-link-btn" style="margin-top:8px;background:var(--green)">${IC('download',16)} Baixar PDF</a>` : ''}
+                ${data.boletoBarcode ? `<button class="pix-copy-btn" style="background:var(--orange)" onclick="navigator.clipboard.writeText('${data.boletoBarcode}');this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar código de barras',2000)">${IC('copy',15)} Copiar código de barras</button>` : ''}
             </div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
                 <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:4px">${codigo}</div>
             </div>
-            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ver status do pedido ▸</button>
+            <button class="btn btn-dark" onclick="showStatus('separacao')" style="max-width:300px;margin-top:8px">Ver status do pedido ${IC('chevron-right',16)}</button>
         `;
 
     } catch(err) {
         console.error('Erro Boleto:', err);
         el.innerHTML = `
-            <div class="status-icon">⚠️</div>
+            <div class="status-icon" style="color:var(--orange)">${IC('alert-triangle',64)}</div>
             <div class="status-title">Erro no Boleto</div>
             <div class="status-sub">${err.message}</div>
             <div style="background:var(--card);border-radius:12px;padding:10px 14px;margin:16px auto;max-width:280px;text-align:center">
@@ -2126,16 +2266,16 @@ async function initSecureFields(codigo, amount, cpf, email) {
                         }
 
                         if(data.pendingReview) {
-                            statusEl.innerHTML = '<div style="color:var(--orange);font-weight:800;font-size:14px">⏳ Pagamento em análise pelo banco. Você será notificado em breve!</div>';
+                            statusEl.innerHTML = '<div style="color:var(--orange);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px">'+IC('clock',16)+' Pagamento em análise pelo banco. Você será notificado em breve!</div>';
                             setTimeout(() => showStatus('separacao'), 2500);
                         } else {
-                            statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px">✅ Pagamento aprovado!</div>';
+                            statusEl.innerHTML = '<div style="color:var(--green);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:6px">'+IC('check-circle',18)+' Pagamento aprovado!</div>';
                             setTimeout(() => showStatus('separacao'), 1500);
                         }
 
                     } catch(err) {
                         console.error('Erro cartao:', err);
-                        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">❌ ${err.message}</div>`;
+                        statusEl.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:13px">${IC('x',14)} ${err.message}</div>`;
                         btn.disabled = false;
                         btn.textContent = 'Tentar novamente';
                         // Token é de uso único - reinicializar form para gerar novo token
@@ -2152,7 +2292,7 @@ async function initSecureFields(codigo, amount, cpf, email) {
         });
     } catch(err) {
         console.error('Erro ao inicializar Secure Fields:', err);
-        document.getElementById('card-status').innerHTML = '<div style="color:var(--red);">❌ Erro ao carregar formulário</div>';
+        document.getElementById('card-status').innerHTML = '<div style="color:var(--red);">Erro ao carregar formulário</div>';
     }
 }
 
@@ -2164,7 +2304,7 @@ function showStatus(type) {
 
     if(type === 'analise') {
         el.innerHTML = `
-            <div class="status-icon"><img src="assets/img/status-aguardando.png" style="width:64px;height:64px"></div>
+            <div class="status-icon" style="color:var(--orange)">${IC('clock',64)}</div>
             <div class="status-title">Em An\u00E1lise</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
@@ -2172,26 +2312,26 @@ function showStatus(type) {
             </div>
             <div class="status-sub">Seus documentos foram enviados e estão sendo analisados. Você receberá uma notificação assim que for aprovado.</div>
             <div class="status-steps">
-                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
-                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
-                <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
-                <div class="status-step"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
+                <div class="status-step done"><div class="step-dot">${IC('check-circle',18)}</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Agora mesmo</div></div></div>
+                <div class="status-step done"><div class="step-dot">${IC('check-circle',18)}</div><div class="step-text"><div class="step-title">Documentos enviados</div><div class="step-desc">2 documentos recebidos</div></div></div>
+                <div class="status-step active"><div class="step-dot">${IC('clock',18)}</div><div class="step-text"><div class="step-title">Em análise de crédito</div><div class="step-desc">Prazo: até 24h úteis</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('clock',18)}</div><div class="step-text"><div class="step-title">Aguardando aprovação</div><div class="step-desc">Notificaremos por WhatsApp</div></div></div>
             </div>
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
+                <div style="margin-bottom:6px;color:#D4AF37">${IC('hand-heart',28)}</div>
                 <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Enquanto espera seu alimento...</div>
                 <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bênção de Maria, Mãe de Jesus</div>
                 <div style="font-size:11px;color:#a594d6">Baixe grátis o app Converse com Maria</div>
-                <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800">Baixar no Google Play ▸</div>
+                <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:4px">Baixar no Google Play ${IC('chevron-right',14)}</div>
             </a>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">${IC('arrow-left',16)} Voltar ao início</button>
         `;
         // Poll for status updates
         startStatusPolling(codigo);
     } else if(state.isDonation) {
         const dataHora = new Date().toLocaleString('pt-BR');
         el.innerHTML = `
-            <div style="font-size:60px;margin-bottom:12px">&#x2764;&#xFE0F;</div>
+            <div style="margin-bottom:12px;color:var(--green)">${IC('hand-heart',56)}</div>
             <div class="status-title" style="color:var(--green)">Doa\u00E7\u00E3o Registrada!</div>
             <div class="status-sub">Obrigado pelo seu gesto de solidariedade. A equipe Araquari Cestas ir\u00E1 encontrar uma fam\u00EDlia que precisa e entregar a cesta em seu nome.</div>
 
@@ -2219,7 +2359,7 @@ function showStatus(type) {
             </div>
 
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                <div style="font-size:28px;margin-bottom:6px">\uD83D\uDE4F\u2728</div>
+                <div style="margin-bottom:6px;color:#c9b8ff">${IC('hand-heart',28)}</div>
                 <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Um gesto lindo merece uma b\u00EAn\u00E7\u00E3o...</div>
                 <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Converse com Maria, M\u00E3e de Jesus</div>
                 <div style="font-size:11px;color:#a594d6">Baixe gr\u00E1tis o app Converse com Maria</div>
@@ -2228,8 +2368,12 @@ function showStatus(type) {
             <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">\u2190 Voltar ao in\u00EDcio</button>
         `;
     } else {
+        const _t0 = new Date((window._lastPedido && window._lastPedido.created_at) || Date.now());
+        const _fmt = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const _hora1 = _fmt(_t0);
+        const _hora2 = _fmt(new Date(_t0.getTime() + 60000));
         el.innerHTML = `
-            <div class="status-icon"><img src="assets/img/status-pronto.png" style="width:64px;height:64px"></div>
+            ${animCheck(72)}
             <div class="status-title">Pedido Criado!</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
@@ -2237,25 +2381,25 @@ function showStatus(type) {
             </div>
             <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
             <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;display:none">
-                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
+                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">${IC('file-text',15)} Gerar Comprovante</button>
             </div>
             <div style="max-width:300px;margin:0 auto">${imprevistoBtn({ codigo: codigo, cesta_nome: b.name })}</div>
             <div class="status-steps" id="live-steps">
-                <div class="status-step done"><div class="step-dot"><img src="assets/img/status-confirmado.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
-                <div class="status-step active"><div class="step-dot"><img src="assets/img/status-aguardando.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
-                <div class="status-step"><div class="step-dot"><img src="assets/img/status-separacao.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
-                <div class="status-step"><div class="step-dot"><img src="assets/img/status-pronto.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
-                <div class="status-step"><div class="step-dot"><img src="assets/img/status-caminho.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
-                <div class="status-step"><div class="step-dot"><img src="assets/img/status-entregue.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
+                <div class="status-step done"><div class="step-dot">${IC('check-circle',22)}</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div><div class="step-time">${_hora1}</div></div>
+                <div class="status-step active"><div class="step-dot">${IC('clock',22)}</div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div><div class="step-time">${_hora2}</div></div>
+                <div class="status-step"><div class="step-dot">${IC('package',22)}</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('inbox',22)}</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Sua cesta está pronta</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('truck',22)}</div><div class="step-text"><div class="step-title">Saiu para entrega</div><div class="step-desc">A caminho do seu endereço</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('badge-check',22)}</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Cesta entregue com sucesso</div></div></div>
             </div>
             <a href="https://play.google.com/store/apps/details?id=com.conversemaria.app&pcampaignid=web_share" target="_blank" style="display:block;max-width:340px;margin:20px auto 16px;text-decoration:none;background:linear-gradient(135deg,#1a1a4e,#2d1b69);border:1px solid #3d2d7a;border-radius:16px;padding:16px 18px;text-align:center;transition:transform .2s;box-shadow:0 4px 20px rgba(45,27,105,.3)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                <div style="font-size:28px;margin-bottom:6px">🙏✨</div>
+                <div style="margin-bottom:6px;color:#D4AF37">${IC('hand-heart',28)}</div>
                 <div style="font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:4px">Enquanto espera seu alimento...</div>
                 <div style="font-size:15px;color:#fff;font-weight:800;margin-bottom:4px">Receba uma bênção de Maria, Mãe de Jesus</div>
                 <div style="font-size:11px;color:#a594d6">Baixe grátis o app Converse com Maria</div>
-                <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800">Baixar no Google Play ▸</div>
+                <div style="margin-top:10px;display:inline-block;background:#3DA33D;color:#fff;padding:6px 18px;border-radius:8px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:4px">Baixar no Google Play ${IC('chevron-right',14)}</div>
             </a>
-            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">← Voltar ao início</button>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">${IC('arrow-left',16)} Voltar ao início</button>
         `;
         // Poll for status updates
         startStatusPolling(codigo);
@@ -2295,7 +2439,7 @@ function startStatusPolling(codigo) {
                 step.classList.remove('done', 'active');
                 if(i < targetStep) {
                     step.classList.add('done');
-                    step.querySelector('.step-dot').innerHTML = '<img src="assets/img/status-confirmado.png" style="width:28px;height:28px">';
+                    step.querySelector('.step-dot').innerHTML = IC('check-circle',18);
                 } else if(i === targetStep) {
                     step.classList.add('active');
                 }
@@ -2303,11 +2447,11 @@ function startStatusPolling(codigo) {
 
             // Update title
             const titles = { 'novo':'Pedido Criado!', 'confirmado':'Confirmado!', 'separacao':'Em Separa\u00E7\u00E3o!', 'pronto':'Pronto p/ Entrega!', 'a_caminho':'A Caminho!', 'entregue':'Entregue!' };
-            const iconImgs = { 'novo':'status-pronto', 'confirmado':'status-confirmado', 'separacao':'status-separacao', 'pronto':'status-pronto', 'a_caminho':'status-caminho', 'entregue':'status-entregue' };
+            const iconNames = { 'novo':'inbox', 'confirmado':'check-circle', 'separacao':'package', 'pronto':'inbox', 'a_caminho':'truck', 'entregue':'badge-check' };
             const titleEl = document.querySelector('#status-content .status-title');
             const iconEl = document.querySelector('#status-content .status-icon');
             if(titleEl) titleEl.textContent = titles[pedido.status] || pedido.status;
-            if(iconEl) iconEl.innerHTML = '<img src="assets/img/' + (iconImgs[pedido.status] || 'status-pronto') + '.png" style="width:64px;height:64px">';
+            if(iconEl) { iconEl.style.color = (pedido.status === 'entregue' ? 'var(--green)' : 'var(--orange)'); iconEl.innerHTML = IC(iconNames[pedido.status] || 'inbox', 64); }
 
             // Show receipt button when confirmed+
             const receiptBtn = document.getElementById('receipt-btn-area');
@@ -2367,12 +2511,12 @@ function openCompare() {
 
     let html = `<thead><tr>
         <th>Item</th>
-        ${baskets.map((b,i) => `<th><span style="display:block;font-size:18px;margin-bottom:2px">${b.emoji}</span>${b.name}</th>`).join('')}
+        ${baskets.map((b,i) => `<th><span style="display:flex;justify-content:center;margin-bottom:2px;color:${b.color||'var(--text2)'}">${IC(lucideName(b.emoji),18)}</span>${b.name}</th>`).join('')}
     </tr></thead><tbody>`;
 
     allItems.forEach(name => {
         html += `<tr>`;
-        html += `<td>${name}</td>`;
+        html += `<td><span class="compare-item"><span class="ci-ic">${IC('package',16)}</span>${name}</span></td>`;
         keys.forEach((k,i) => {
             const qty = lookup[k][name];
             if(qty) {
@@ -2425,71 +2569,57 @@ function gerarComprovante() {
 
     const overlay = document.createElement('div');
     overlay.id = 'receipt-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);display:flex;align-items:flex-start;justify-content:center;padding:24px 20px;overflow-y:auto';
     overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
 
+    const _metodo = {'pix':'PIX','cartao':'Cartão','boleto':'Boleto','boleto30':'Boleto 30d'}[pedido.pagamento_metodo] || pedido.pagamento_metodo || '—';
+    const _temItens = b.items && b.items.length > 0 && pedido.cesta_tipo !== 'custom';
     overlay.innerHTML = `
-        <div style="max-width:380px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
-          <div id="receipt-card" style="background:var(--bg2);border-radius:20px;padding:28px 20px">
-            <div style="text-align:center;margin-bottom:16px">
-                <img src="assets/img/logo.png" style="width:48px;height:48px;border-radius:12px;margin-bottom:8px">
-                <div style="font-size:16px;font-weight:900;color:var(--text)">Araquari Cestas</div>
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-top:4px">Comprovante de Pedido</div>
-            </div>
-            <div style="width:100%;height:2px;background:var(--orange);margin-bottom:16px;border-radius:2px"></div>
+        <div style="max-width:380px;width:100%;max-height:94vh;overflow-y:auto;padding:2px" onclick="event.stopPropagation()">
+          <div id="receipt-card" class="anim-receipt" style="background:var(--bg2);border-radius:20px;padding:28px 20px 22px">
+            <div style="text-align:center;margin-bottom:6px">${animCheck(66)}</div>
+            <div style="text-align:center;font-size:23px;font-weight:800;letter-spacing:-.3px">Confirmado!</div>
+            <div style="text-align:center;font-size:14px;color:var(--text2);margin-top:4px;margin-bottom:20px">Sua ${pedido.cesta_nome || b.name} foi registrada.</div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-                <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
-                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código</div>
-                    <div style="font-size:14px;font-weight:900;color:var(--orange);margin-top:4px">${pedido.codigo}</div>
-                </div>
-                <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
-                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Status</div>
-                    <div style="font-size:14px;font-weight:900;color:var(--green);margin-top:4px">${statusLabels[pedido.status] || pedido.status}</div>
-                </div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px">Código do Pedido</div>
+                <div style="font-size:22px;font-weight:900;color:var(--green);letter-spacing:1px;margin-top:6px">${pedido.codigo}</div>
             </div>
 
-            <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                    <span style="font-size:11px;color:var(--text3)">Cesta</span>
-                    <span style="font-size:13px;font-weight:800">${pedido.cesta_nome || b.name}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                    <span style="font-size:11px;color:var(--text3)">Quantidade</span>
-                    <span style="font-size:13px;font-weight:800">${pedido.quantidade || state.qty}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                    <span style="font-size:11px;color:var(--text3)">Pagamento</span>
-                    <span style="font-size:13px;font-weight:800">${{'pix':'PIX','cartao':'Cartão','boleto':'Boleto','boleto30':'Boleto 30d'}[pedido.pagamento_metodo] || pedido.pagamento_metodo}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border)">
-                    <span style="font-size:13px;font-weight:900;color:var(--text)">Total</span>
-                    <span style="font-size:16px;font-weight:900;color:var(--green)">R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.',',')}</span>
-                </div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:4px 16px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;color:var(--text2)">Cesta</span><span style="font-size:15px;font-weight:800">${pedido.cesta_nome || b.name}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;color:var(--text2)">Quantidade</span><span style="font-size:15px;font-weight:800">${pedido.quantidade || state.qty}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px;color:var(--text2)">Pagamento</span><span style="font-size:15px;font-weight:800">${_metodo}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 10px"><span style="font-size:15px;font-weight:900">Total</span><span style="font-size:22px;font-weight:900;color:var(--green)">R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.',',')}</span></div>
             </div>
 
-            ${itensHtml}
-
-            ${pedido.endereco_rua ? `<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
-                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Entrega</div>
-                <div style="font-size:12px;font-weight:700">${pedido.endereco_rua}${pedido.endereco_numero ? ', ' + pedido.endereco_numero : ''}</div>
-                <div style="font-size:11px;color:var(--text2)">${pedido.endereco_bairro || ''} - ${pedido.endereco_cidade || 'Araquari'}/${pedido.endereco_estado || 'SC'}</div>
-                ${pedido.recebedor_nome ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Recebedor: ${pedido.recebedor_nome}</div>` : ''}
+            ${_temItens ? `
+            <button type="button" onclick="(function(el){var it=document.getElementById('receipt-itens');var op=it.style.display==='none';it.style.display=op?'block':'none';var c=el.querySelector('.rv-chev');if(c)c.style.transform=op?'rotate(90deg)':'';})(this)" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;color:var(--text);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">
+                <span>Ver itens da cesta</span><span class="rv-chev" style="display:flex;color:var(--text3);transition:transform .2s">${IC('chevron-right',18)}</span>
+            </button>
+            <div id="receipt-itens" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:4px 16px;margin-bottom:12px">
+                ${b.items.map(i => `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px solid var(--border)"><span>${i.name}</span><span style="color:var(--text2);font-weight:600">${i.qty}</span></div>`).join('')}
             </div>` : ''}
 
-            <div style="text-align:center;margin-bottom:12px">
-                <div style="font-size:10px;color:var(--text3)">${dataHora}</div>
-            </div>
+            ${pedido.endereco_rua ? `<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:2px">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Entrega</div>
+                <div style="font-size:13px;font-weight:700">${pedido.endereco_rua}${pedido.endereco_numero ? ', ' + pedido.endereco_numero : ''}</div>
+                <div style="font-size:12px;color:var(--text2)">${pedido.endereco_bairro || ''} - ${pedido.endereco_cidade || 'Araquari'}/${pedido.endereco_estado || 'SC'}</div>
+                ${pedido.recebedor_nome ? `<div style="font-size:12px;color:var(--text2);margin-top:4px">Recebedor: ${pedido.recebedor_nome}</div>` : ''}
+            </div>` : ''}
           </div>
 
-            <div style="display:flex;gap:8px;margin-top:14px">
-                <button onclick="baixarComprovante()" class="btn" style="flex:1;padding:10px;font-size:12px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700">📥 Baixar</button>
-                <button onclick="compartilharComprovante()" class="btn" style="flex:1;padding:10px;font-size:12px;border-radius:10px;background:var(--green);color:#fff;font-weight:700">📤 Compartilhar</button>
-            </div>
-            ${imprevistoBtn(pedido)}
-            <div style="margin-top:8px">
-                <button onclick="document.getElementById('receipt-overlay').remove()" class="btn btn-dark" style="width:100%;padding:10px;font-size:12px;border-radius:10px">Fechar</button>
-            </div>
+          <div style="margin-top:14px">
+            <button onclick="baixarComprovante()" class="btn btn-green" style="width:100%;padding:15px;font-size:15px">${IC('file-text',18)} Gerar comprovante</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="compartilharComprovante()" class="btn btn-dark" style="flex:1;padding:14px;font-size:14px">${IC('share-2',17)} Compartilhar</button>
+            <button onclick="document.getElementById('receipt-overlay').remove();showScreen('home')" class="btn btn-dark" title="Início" style="width:58px;flex:none;padding:14px">${IC('home',18)}</button>
+          </div>
+          ${imprevistoBtn(pedido)}
+          <div style="margin-top:8px">
+            <button onclick="document.getElementById('receipt-overlay').remove()" class="btn btn-ghost" style="width:100%;padding:10px;font-size:13px">Fechar</button>
+          </div>
         </div>
     `;
 
@@ -2524,7 +2654,13 @@ function imprevistoBtn(pedido) {
 async function _capturaComprovante() {
     const card = document.getElementById('receipt-card');
     if(!card || typeof html2canvas === 'undefined') return null;
-    return await html2canvas(card, { backgroundColor: '#1A1A1A', scale: 2, useCORS: true });
+    // garante que os itens entrem na imagem mesmo se o usuário deixou recolhido
+    const it = document.getElementById('receipt-itens');
+    const prev = it ? it.style.display : null;
+    if(it) it.style.display = 'block';
+    const canvas = await html2canvas(card, { backgroundColor: '#151A18', scale: 2, useCORS: true });
+    if(it) it.style.display = prev;
+    return canvas;
 }
 async function baixarComprovante() {
     try {
@@ -2592,7 +2728,7 @@ function loadSavedOrders() {
     if(saved.length === 0) {
         listEl.innerHTML = `
             <div style="text-align:center;padding:30px;color:var(--text3)">
-                <div style="font-size:48px;margin-bottom:12px">📭</div>
+                <div style="margin-bottom:12px;color:var(--text3)">${IC('inbox',48)}</div>
                 <p style="font-weight:600">Nenhum pedido ainda</p>
                 <p style="font-size:12px;margin-top:4px">Seus pedidos aparecerão aqui automaticamente</p>
             </div>`;
@@ -2615,8 +2751,8 @@ async function refreshSavedOrders(saved, listEl) {
         'cancelado':'var(--red)','analise':'var(--yellow)','aprovado':'var(--green)','recusado':'var(--red)'
     };
     const statusIcons = {
-        'novo':'⏳','confirmado':'✅','separacao':'📦','pronto':'🎁',
-        'a_caminho':'🚚','entregue':'✅','cancelado':'❌','analise':'📋','aprovado':'✅','recusado':'❌'
+        'novo':'clock','confirmado':'check-circle','separacao':'package','pronto':'gift',
+        'a_caminho':'truck','entregue':'check-circle','cancelado':'x','analise':'clipboard-list','aprovado':'check-circle','recusado':'x'
     };
 
     // Try to refresh statuses from server
@@ -2634,21 +2770,21 @@ async function refreshSavedOrders(saved, listEl) {
 
     listEl.innerHTML = saved.map(p => {
         const statusColor = statusColors[p.status] || 'var(--text3)';
-        const statusIcon = statusIcons[p.status] || '📦';
+        const statusIcon = statusIcons[p.status] || 'package';
         const isActive = !['entregue','cancelado','recusado'].includes(p.status);
         return `
         <div onclick="openTracking('${p.codigo}')" style="background:var(--card);border:1px solid ${isActive ? statusColor : 'var(--border)'};border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;position:relative;${isActive ? 'box-shadow:0 0 12px ' + statusColor + '20' : 'opacity:0.7'}">
             ${isActive ? '<div style="position:absolute;top:10px;right:12px;width:8px;height:8px;border-radius:50%;background:'+statusColor+';animation:pulse 2s infinite"></div>' : ''}
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                 <span style="font-weight:900;font-size:13px;color:var(--text);letter-spacing:0.5px">${p.codigo}</span>
-                <span style="font-size:11px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:3px 10px;border-radius:20px">${statusIcon} ${statusLabels[p.status] || p.status}</span>
+                <span style="font-size:11px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">${IC(statusIcon,12)} ${statusLabels[p.status] || p.status}</span>
             </div>
-            <div style="font-size:13px;font-weight:600;color:var(--text2)">${p.isDonation ? '❤️ Doação: ' : ''}${p.cesta_nome || ''}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text2)">${p.isDonation ? IC('heart',13)+' Doação: ' : ''}${p.cesta_nome || ''}</div>
             <div style="display:flex;justify-content:space-between;margin-top:6px">
                 <span style="font-size:12px;color:var(--text3)">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                 <span style="font-size:14px;font-weight:800;color:var(--green)">R$ ${parseFloat(p.total || 0).toFixed(2).replace('.',',')}</span>
             </div>
-            ${isActive ? '<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Toque para acompanhar →</div>' : ''}
+            ${isActive ? '<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px">Toque para acompanhar '+IC('arrow-right',12)+'</div>' : ''}
         </div>`;
     }).join('');
 }
@@ -2669,10 +2805,10 @@ async function openTracking(codigo) {
         const el = document.getElementById('status-content');
         const b = BASKETS[state.basket] || BASKETS.x;
         const statusLabels = {'novo':'Pedido Criado','confirmado':'Confirmado!','separacao':'Em Separação!','pronto':'Pronto!','a_caminho':'A Caminho!','entregue':'Entregue!','analise':'Em Análise','aprovado':'Aprovado!','cancelado':'Cancelado'};
-        const statusIcons = {'novo':'status-pronto','confirmado':'status-confirmado','separacao':'status-separacao','pronto':'status-pronto','a_caminho':'status-caminho','entregue':'status-entregue','analise':'status-aguardando','aprovado':'status-confirmado'};
+        const statusIcons = {'novo':'inbox','confirmado':'check-circle','separacao':'package','pronto':'inbox','a_caminho':'truck','entregue':'badge-check','analise':'clock','aprovado':'check-circle'};
 
         el.innerHTML = `
-            <div class="status-icon"><img src="assets/img/${statusIcons[p.status] || 'status-pronto'}.png" style="width:64px;height:64px"></div>
+            <div class="status-icon" style="color:${p.status==='entregue'?'var(--green)':'var(--orange)'}">${IC(statusIcons[p.status] || 'inbox',64)}</div>
             <div class="status-title">${statusLabels[p.status] || p.status}</div>
             <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
                 <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
@@ -2680,18 +2816,18 @@ async function openTracking(codigo) {
             </div>
             <div class="status-sub">${p.cesta_nome} · R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</div>
             <div id="receipt-btn-area" style="margin:12px auto;max-width:300px;${['entregue','confirmado','separacao','pronto','a_caminho'].includes(p.status) ? '' : 'display:none'}">
-                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">📄 Gerar Comprovante</button>
+                <button class="btn" onclick="gerarComprovante()" style="width:100%;background:var(--green);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:13px">${IC('file-text',15)} Gerar Comprovante</button>
             </div>
             <div style="max-width:300px;margin:0 auto">${imprevistoBtn({ codigo: codigo, cesta_nome: p.cesta_nome })}</div>
             <div class="status-steps" id="live-steps">
-                <div class="status-step ${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : 'active'}"><div class="step-dot"><img src="assets/img/${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
-                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : (['confirmado'].includes(p.status) ? 'active' : '')}"><div class="step-dot"><img src="assets/img/${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-aguardando'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
-                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-separacao'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
-                <div class="status-step ${['pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['pronto','a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-pronto'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
-                <div class="status-step ${['a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${['a_caminho','entregue'].includes(p.status) ? 'status-confirmado' : 'status-caminho'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
-                <div class="status-step ${p.status === 'entregue' ? 'done' : ''}"><div class="step-dot"><img src="assets/img/${p.status === 'entregue' ? 'status-confirmado' : 'status-entregue'}.png" style="width:28px;height:28px"></div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
+                <div class="status-step ${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : 'active'}"><div class="step-dot">${['confirmado','separacao','pronto','a_caminho','entregue'].includes(p.status) ? IC('check-circle',18) : IC('clock',18)}</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">Pagamento registrado</div></div></div>
+                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : (['confirmado'].includes(p.status) ? 'active' : '')}"><div class="step-dot">${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? IC('check-circle',18) : IC('clock',18)}</div><div class="step-text"><div class="step-title">Aguardando confirmação</div><div class="step-desc">Verificando pagamento</div></div></div>
+                <div class="status-step ${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot">${['separacao','pronto','a_caminho','entregue'].includes(p.status) ? IC('check-circle',18) : IC('package',18)}</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step ${['pronto','a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot">${['pronto','a_caminho','entregue'].includes(p.status) ? IC('check-circle',18) : IC('inbox',18)}</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Aguardando entregador</div></div></div>
+                <div class="status-step ${['a_caminho','entregue'].includes(p.status) ? 'done' : ''}"><div class="step-dot">${['a_caminho','entregue'].includes(p.status) ? IC('check-circle',18) : IC('truck',18)}</div><div class="step-text"><div class="step-title">A caminho</div><div class="step-desc">Entregador saiu</div></div></div>
+                <div class="status-step ${p.status === 'entregue' ? 'done' : ''}"><div class="step-dot">${p.status === 'entregue' ? IC('check-circle',18) : IC('badge-check',18)}</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Bom apetite!</div></div></div>
             </div>
-            <button class="btn btn-dark" onclick="showScreen('orders')" style="max-width:300px">← Voltar ao rastreio</button>
+            <button class="btn btn-dark" onclick="showScreen('orders')" style="max-width:300px">${IC('arrow-left',16)} Voltar ao rastreio</button>
         `;
         startStatusPolling(codigo);
     } catch(e) {
@@ -2729,7 +2865,7 @@ async function buscarPedidos() {
         if(pedidos.length === 0) {
             listEl.innerHTML = `
                 <div style="text-align:center;padding:30px;color:var(--text3)">
-                    <div style="font-size:40px;margin-bottom:8px">🔍</div>
+                    <div style="margin-bottom:8px;color:var(--text3)">${IC('search',40)}</div>
                     <p style="font-weight:600">Nenhum pedido encontrado</p>
                     <p style="font-size:12px;margin-top:4px">Verifique o código ou telefone digitado</p>
                 </div>`;
@@ -2761,7 +2897,7 @@ async function buscarPedidos() {
                     <span style="font-size:12px;color:var(--text3)">${new Date(p.criado_em).toLocaleDateString('pt-BR')} ${new Date(p.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                     <span style="font-size:14px;font-weight:800;color:var(--green)">R$ ${parseFloat(p.total).toFixed(2).replace('.',',')}</span>
                 </div>
-                <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Toque para acompanhar →</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;display:inline-flex;align-items:center;gap:4px">Toque para acompanhar ${IC('arrow-right',12)}</div>
             </div>
         `).join('');
 
