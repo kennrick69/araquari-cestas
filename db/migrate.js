@@ -24,7 +24,7 @@ async function migrate() {
         }
 
         // Rodar migracoes adicionais
-        const migrations = ['migration-002-gateway.sql', 'migration-003-email.sql', 'migration-004-baskets.sql', 'migration-005-config.sql', 'migration-006-config-unify.sql', 'migration-007-cesta-tag.sql', 'migration-008-loja-whatsapp.sql', 'migration-009-cesta-imagem.sql'];
+        const migrations = ['migration-002-gateway.sql', 'migration-003-email.sql', 'migration-004-baskets.sql', 'migration-005-config.sql', 'migration-006-config-unify.sql', 'migration-007-cesta-tag.sql', 'migration-008-loja-whatsapp.sql', 'migration-009-cesta-imagem.sql', 'migration-010-cesta-icone.sql'];
         for (const file of migrations) {
             const filePath = path.join(__dirname, file);
             if (fs.existsSync(filePath)) {
