@@ -1316,8 +1316,16 @@ function renderCestas() {
                         <input type="text" value="${esc(c.emoji||'')}" id="cesta-emoji-${c.tipo}" style="${CIN}"></div>
                     <div><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Tag / destaque</label>
                         <input type="text" value="${esc(c.tag||'')}" id="cesta-tag-${c.tipo}" placeholder="ex.: POPULAR" style="${CIN}"></div>
-                    <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho)</label>
+                    <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho) — ou envie um arquivo abaixo</label>
                         <input type="text" value="${esc(c.imagem||'')}" id="cesta-img-${c.tipo}" placeholder="assets/img/cesta-x.png" style="${CIN}"></div>
+                    <div style="grid-column:1/3;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                        <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px">📷 Enviar imagem
+                            <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadCestaImg('${c.tipo}', this)"></label>
+                        <img id="imgprev-${c.tipo}" src="${c.imagem ? esc(c.imagem) : ''}" style="${c.imagem?'':'display:none;'}width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid #333">
+                        <button type="button" onclick="removeCestaImg('${c.tipo}')" style="${c.imagem?'':'display:none;'}background:none;border:none;color:var(--red);font-size:12px;cursor:pointer" id="imgrm-${c.tipo}">remover</button>
+                        <span id="imgstatus-${c.tipo}" style="font-size:11px;color:#888"></span>
+                        <span style="font-size:10px;color:#666;flex-basis:100%">JPG/PNG/WebP · máx 2 MB · redimensionada p/ 800px no servidor</span>
+                    </div>
                 </div>
 
                 <div style="margin-bottom:12px">
@@ -1421,6 +1429,50 @@ function collectItens(tipo) {
     return itens;
 }
 
+async function uploadCestaImg(tipo, inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if(!file) return;
+    const st = document.getElementById('imgstatus-' + tipo);
+    const setSt = (t, c) => { if(st){ st.textContent = t; st.style.color = c || '#888'; } };
+    if(file.size > 2 * 1024 * 1024) { setSt('Arquivo acima de 2 MB', 'var(--red)'); inputEl.value = ''; return; }
+    setSt('Enviando…', '#888');
+    const fd = new FormData(); fd.append('imagem', file);
+    try {
+        const res = await fetch('/api/admin/cestas/' + tipo + '/imagem', {
+            method: 'POST', headers: { 'x-admin-token': TOKEN }, body: fd
+        });
+        const data = await res.json();
+        if(data.success) {
+            setSt('✓ enviada (' + data.largura + '×' + data.altura + ')', '#25d366');
+            const urlInput = document.getElementById('cesta-img-' + tipo);
+            if(urlInput) urlInput.value = data.imagem;
+            const prev = document.getElementById('imgprev-' + tipo);
+            if(prev){ prev.src = data.imagem; prev.style.display = 'inline-block'; }
+            const rm = document.getElementById('imgrm-' + tipo);
+            if(rm) rm.style.display = 'inline';
+            showToast('Imagem enviada e vinculada à cesta. Já aparece no app.', 'success');
+        } else {
+            setSt(data.error || 'Falha', 'var(--red)');
+            showToast('Erro: ' + (data.error || 'falha ao enviar'), 'error');
+        }
+    } catch(e) {
+        setSt('Erro de conexão', 'var(--red)');
+    }
+    inputEl.value = '';
+}
+
+async function removeCestaImg(tipo) {
+    if(!confirm('Remover a imagem desta cesta?')) return;
+    try {
+        const res = await fetch('/api/admin/cestas/' + tipo + '/imagem', {
+            method: 'DELETE', headers: { 'x-admin-token': TOKEN }
+        });
+        const data = await res.json();
+        if(data.success) { showToast('Imagem removida.', 'success'); loadCestas(); }
+        else showToast('Erro ao remover imagem', 'error');
+    } catch(e) { showToast('Erro de conexão', 'error'); }
+}
+
 async function saveCesta(tipo) {
     const nome = document.getElementById('cesta-nome-' + tipo).value;
     const preco = parseFloat(document.getElementById('cesta-preco-' + tipo).value);
@@ -1474,6 +1526,12 @@ function openNovaCesta() {
                 <input type="text" id="nova-emb" style="${CIN}"></div>
             <div style="grid-column:1/3"><label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Imagem (URL/caminho) — opcional</label>
                 <input type="text" id="nova-img" placeholder="assets/img/..." style="${CIN}"></div>
+            <div style="grid-column:1/3;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <label class="btn btn-sm" style="background:#2a2a40;color:#fff;font-size:11px;padding:7px 14px;cursor:pointer;border-radius:8px">📷 Escolher imagem
+                    <input type="file" id="nova-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="document.getElementById('nova-img-filename').textContent = this.files[0] ? this.files[0].name : ''"></label>
+                <span id="nova-img-filename" style="font-size:11px;color:#888"></span>
+                <span style="font-size:10px;color:#666;flex-basis:100%">JPG/PNG/WebP · máx 2 MB · enviada ao criar a cesta</span>
+            </div>
         </div>
         <div style="margin-bottom:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1512,6 +1570,23 @@ async function createCesta() {
         });
         const data = await res.json();
         if(data.success) {
+            // Se o admin escolheu um arquivo, envia agora (cesta já existe → tem tipo).
+            const fileInput = document.getElementById('nova-img-file');
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if(file && data.cesta) {
+                if(file.size > 2 * 1024 * 1024) {
+                    showToast('Cesta criada, mas a imagem passa de 2 MB e não foi enviada.', 'warning');
+                } else {
+                    const fd = new FormData(); fd.append('imagem', file);
+                    try {
+                        const up = await fetch('/api/admin/cestas/' + data.cesta.tipo + '/imagem', {
+                            method: 'POST', headers: { 'x-admin-token': TOKEN }, body: fd
+                        });
+                        const ud = await up.json();
+                        if(!ud.success) showToast('Cesta criada, mas a imagem falhou: ' + (ud.error || ''), 'warning');
+                    } catch(e) { showToast('Cesta criada, mas a imagem não foi enviada (conexão).', 'warning'); }
+                }
+            }
             showToast('Cesta "' + nome + '" criada! Já aparece no app.', 'success');
             document.getElementById('nova-cesta-form').style.display = 'none';
             if(data.cesta) expandedCestas[data.cesta.tipo] = true;

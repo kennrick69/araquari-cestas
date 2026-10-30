@@ -187,6 +187,23 @@ app.get('/api/cestas', async (req, res) => {
     }
 });
 
+// Imagem da cesta (pública) — servida do Postgres (sobrevive a deploy do Railway).
+// Enviada pelo painel admin via POST /api/admin/cestas/:tipo/imagem.
+app.get('/api/cestas/:tipo/imagem', async (req, res) => {
+    try {
+        const r = await pool.query('SELECT mime, dados, atualizado_em FROM cesta_imagens WHERE tipo = $1', [req.params.tipo]);
+        if (r.rows.length === 0) return res.status(404).end();
+        const row = r.rows[0];
+        res.setHeader('Content-Type', row.mime || 'image/webp');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        if (row.atualizado_em) res.setHeader('Last-Modified', new Date(row.atualizado_em).toUTCString());
+        res.end(row.dados);
+    } catch (err) {
+        // Tabela pode ainda não existir em banco muito antigo; trata como "sem imagem".
+        res.status(404).end();
+    }
+});
+
 // ══════════════════════════════════════
 // Health check
 // ══════════════════════════════════════

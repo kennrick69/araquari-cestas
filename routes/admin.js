@@ -1,6 +1,18 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const pool = require('../db/pool');
+
+// Upload de imagem de cesta: em memória (vai pro Postgres, não pro disco efêmero).
+// Limite 2 MB, só JPG/PNG/WebP. O resize (máx 800px) é feito no servidor com sharp.
+const uploadImagemCesta = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
+        cb(ok ? null : new Error('Formato inválido. Use JPG, PNG ou WebP.'), ok);
+    }
+});
 
 // ══════════════════════════════════════
 // Middleware: autenticação admin simples (token)
@@ -400,6 +412,67 @@ router.put('/cestas/:tipo', async (req, res) => {
     } catch(err) {
         console.error('Erro ao atualizar cesta:', err.message);
         res.status(500).json({ error: 'Erro ao atualizar cesta' });
+    }
+});
+
+// POST /api/admin/cestas/:tipo/imagem - enviar/trocar imagem (multipart, campo "imagem")
+// Redimensiona p/ no máx 800px (sharp) e guarda os BYTES no Postgres (sobrevive a deploy).
+// Também grava o endpoint público em cestas_config.imagem (campo URL continua como alternativa).
+router.post('/cestas/:tipo/imagem', (req, res) => {
+    uploadImagemCesta.single('imagem')(req, res, async (err) => {
+        if (err) {
+            const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Imagem acima de 2 MB.' : err.message;
+            return res.status(400).json({ error: msg });
+        }
+        if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado (campo "imagem").' });
+        try {
+            const { tipo } = req.params;
+            const ex = await pool.query('SELECT 1 FROM cestas_config WHERE tipo = $1', [tipo]);
+            if (ex.rows.length === 0) return res.status(404).json({ error: 'Cesta não encontrada' });
+
+            let sharp;
+            try { sharp = require('sharp'); }
+            catch (e) { return res.status(500).json({ error: 'Processamento de imagem indisponível no servidor.' }); }
+
+            // rotate() aplica a orientação EXIF (fotos de celular) antes do resize.
+            const out = await sharp(req.file.buffer, { failOn: 'none' })
+                .rotate()
+                .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+                .webp({ quality: 82 })
+                .toBuffer();
+            const meta = await sharp(out).metadata();
+
+            await pool.query(
+                `INSERT INTO cesta_imagens (tipo, mime, dados, largura, altura, bytes, atualizado_em)
+                 VALUES ($1, 'image/webp', $2, $3, $4, $5, NOW())
+                 ON CONFLICT (tipo) DO UPDATE SET mime = 'image/webp', dados = $2,
+                   largura = $3, altura = $4, bytes = $5, atualizado_em = NOW()`,
+                [tipo, out, meta.width, meta.height, out.length]
+            );
+            const url = `/api/cestas/${encodeURIComponent(tipo)}/imagem?v=${Date.now()}`;
+            await pool.query('UPDATE cestas_config SET imagem = $1, atualizado_em = NOW() WHERE tipo = $2', [url, tipo]);
+
+            res.json({ success: true, imagem: url, largura: meta.width, altura: meta.height, bytes: out.length });
+        } catch (e) {
+            console.error('Erro no upload de imagem da cesta:', e.message);
+            res.status(500).json({ error: 'Erro ao processar imagem: ' + e.message });
+        }
+    });
+});
+
+// DELETE /api/admin/cestas/:tipo/imagem - remover imagem enviada
+router.delete('/cestas/:tipo/imagem', async (req, res) => {
+    try {
+        const { tipo } = req.params;
+        await pool.query('DELETE FROM cesta_imagens WHERE tipo = $1', [tipo]);
+        // Só limpa o campo se ele apontava pro nosso endpoint (preserva URL externa que o admin tenha posto)
+        await pool.query(
+            `UPDATE cestas_config SET imagem = '', atualizado_em = NOW()
+             WHERE tipo = $1 AND imagem LIKE '/api/cestas/%/imagem%'`, [tipo]);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Erro ao remover imagem da cesta:', e.message);
+        res.status(500).json({ error: 'Erro ao remover imagem' });
     }
 });
 

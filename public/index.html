@@ -1039,9 +1039,13 @@ function renderBasketCards() {
         const tagHtml = b.tag
             ? `<div class="basket-tag" style="background:${tint(cor,0.15)};color:${cor}">${b.tag}</div>`
             : '';
+        // Com imagem enviada/URL → mostra a foto; sem imagem → ícone SVG por tipo com fallback p/ emoji (3 cestas atuais ficam idênticas).
+        const iconInner = b.img
+            ? `<img src="${b.img}" alt="${b.name}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
+            : `<img src="assets/img/icon-cesta-${t}.svg" style="width:36px;height:36px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="font-size:30px;display:none">${emoji}</span>`;
         return `
                 <div class="basket-card" onclick="selectBasket('${t}')" id="card-${t}">
-                    <div class="basket-icon" style="background:${tint(cor,0.12)}"><img src="assets/img/icon-cesta-${t}.svg" style="width:36px;height:36px" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="font-size:30px;display:none">${emoji}</span></div>
+                    <div class="basket-icon" style="background:${tint(cor,0.12)};overflow:hidden">${iconInner}</div>
                     <div class="basket-info">
                         <div class="basket-name">${b.name}</div>
                         <div class="basket-desc">${b.desc||''}</div>
