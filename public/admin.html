@@ -1042,6 +1042,7 @@ async function openDetail(id) {
                 </div>
             </div>
         `;
+        if(window.hydrateIcons) hydrateIcons(content);
         loadDocImages(content);
     } catch(e) {
         content.innerHTML = '<div style="color:var(--red);padding:20px">Erro ao carregar pedido</div>';
@@ -1371,6 +1372,8 @@ function renderCestas() {
             </div>
         </div>`;
     }).join('');
+    // Hidrata os ícones data-ic recém-inseridos (ex.: o "x" de excluir item, salvar, chevrons).
+    if(window.hydrateIcons) hydrateIcons(list);
 }
 
 function toggleCesta(tipo) {
@@ -1426,6 +1429,7 @@ function addItem(tipo) {
         <button onclick="confirmRemoveItemEl(this)" style="background:none;border:none;color:var(--red);cursor:pointer;padding:2px 6px"><span data-ic="x" data-sz="15"></span></button>
     `;
     container.appendChild(div);
+    if(window.hydrateIcons) hydrateIcons(div); // mostra o "x" de excluir no item novo
     div.querySelector('input').focus();
 }
 
@@ -1565,6 +1569,7 @@ function openNovaCesta() {
             <button class="btn btn-sm" style="background:#333;color:#fff;padding:8px 16px" onclick="document.getElementById('nova-cesta-form').style.display='none'">Cancelar</button>
             <button class="btn btn-sm" style="background:#25d366;color:#fff;font-weight:700;padding:8px 20px" onclick="createCesta()">Criar cesta</button>
         </div>`;
+    if(window.hydrateIcons) hydrateIcons(f);
     document.getElementById('nova-nome').focus();
 }
 
