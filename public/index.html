@@ -416,6 +416,17 @@ body { font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif; backgr
 .compare-table .no-item { color:var(--text3); }
 .compare-price-row td { font-size:16px; font-weight:900; padding:14px 8px; border-top:2px solid var(--border); background:var(--bg2); }
 .compare-price-row td:first-child { background:var(--bg2); }
+.compare-pickers { display:flex; align-items:center; gap:10px; margin-top:14px; }
+.compare-pickers .cmp-sel {
+    flex:1; min-width:0; padding:11px 30px 11px 13px; border-radius:12px;
+    background:var(--bg2); border:1.5px solid var(--border); color:var(--text);
+    font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;
+    appearance:none; -webkit-appearance:none; text-overflow:ellipsis;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m4 6 4 4 4-4'/></svg>");
+    background-repeat:no-repeat; background-position:right 10px center;
+}
+.compare-pickers .cmp-sel:focus { outline:none; }
+.compare-pickers .cmp-vs { flex-shrink:0; color:var(--text3); display:inline-flex; }
 
 /* ── CONFIRM ADDRESS MODAL ── */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:900; display:none; align-items:flex-end; justify-content:center; }
@@ -946,10 +957,11 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             <div style="display:flex;align-items:center;justify-content:space-between">
                 <div>
                     <div style="font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px"><span data-ic="bar-chart" data-sz="20" style="color:var(--orange)"></span> Comparativo de Cestas</div>
-                    <div style="font-size:13px;color:var(--text3);margin-top:2px">Veja todos os itens e quantidades</div>
+                    <div style="font-size:13px;color:var(--text3);margin-top:2px">Escolha 2 cestas para comparar lado a lado</div>
                 </div>
                 <div class="header-btn" onclick="closeCompare()" style="cursor:pointer"><span data-ic="x" data-sz="20"></span></div>
             </div>
+            <div class="compare-pickers" id="compare-pickers"></div>
         </div>
         <div class="compare-body">
             <table class="compare-table" id="compare-table-body"></table>
@@ -2486,67 +2498,104 @@ function closeLightbox() {
 // ═══════════════════════════════════════
 // COMPARE
 // ═══════════════════════════════════════
+// Comparação: o cliente escolhe 2 cestas e vê lado a lado. Escala pra qualquer
+// quantidade de cestas no catálogo sem estourar a largura do celular.
+let compareSel = [null, null];
+
+// Cestas que podem entrar na comparação: ativas (já vêm filtradas de /api/cestas) e com itens.
+function comparableKeys() {
+    return basketOrder.filter(k => k !== 'custom' && BASKETS[k] && BASKETS[k].items && BASKETS[k].items.length);
+}
+
 function openCompare() {
-    const keys = basketOrder.filter(k => BASKETS[k] && BASKETS[k].items && BASKETS[k].items.length);
+    const keys = comparableKeys();
+    const pickers = document.getElementById('compare-pickers');
+    const overlay = document.getElementById('modal-compare');
+
+    if(keys.length < 2) {
+        if(pickers) { pickers.style.display = 'none'; pickers.innerHTML = ''; }
+        document.getElementById('compare-table-body').innerHTML =
+            `<tbody><tr><td style="padding:34px 18px;text-align:center;color:var(--text3);font-weight:500">
+                <span style="display:flex;justify-content:center;color:var(--text3)">${IC('bar-chart',30)}</span>
+                <div style="margin-top:10px">É preciso ter pelo menos 2 cestas com itens para comparar.</div>
+            </td></tr></tbody>`;
+        overlay.classList.add('show');
+        return;
+    }
+
+    // Seleção inicial: prefere a cesta aberta (state.basket); mantém a escolha anterior se ainda válida.
+    let a = compareSel[0], b = compareSel[1];
+    if(keys.indexOf(a) < 0) a = (keys.indexOf(state.basket) >= 0 ? state.basket : keys[0]);
+    if(keys.indexOf(b) < 0 || b === a) b = keys.find(k => k !== a);
+    compareSel = [a, b];
+
+    if(pickers) pickers.style.display = '';
+    renderComparePickers(keys);
+    renderCompareTable();
+    overlay.classList.add('show');
+}
+
+// Monta os dois seletores (A ⇄ B), cada um com a cor da cesta escolhida.
+function renderComparePickers(keys) {
+    keys = keys || comparableKeys();
+    const mk = (slot, sel) => {
+        const cor = (BASKETS[sel] && BASKETS[sel].color) || 'var(--text2)';
+        const opts = keys.map(k => `<option value="${k}" ${k===sel?'selected':''}>${BASKETS[k].name}</option>`).join('');
+        return `<select class="cmp-sel" id="cmp-${slot}" aria-label="Cesta ${slot.toUpperCase()}" onchange="onComparePick('${slot}',this.value)" style="border-color:${cor};color:${cor}">${opts}</select>`;
+    };
+    document.getElementById('compare-pickers').innerHTML =
+        mk('a', compareSel[0]) + `<span class="cmp-vs">${IC('arrow-left-right',16)}</span>` + mk('b', compareSel[1]);
+}
+
+// Troca de cesta num dos lados; evita comparar a mesma cesta dos dois lados.
+function onComparePick(slot, val) {
+    const i = (slot === 'a') ? 0 : 1, other = i === 0 ? 1 : 0;
+    if(val === compareSel[other]) {
+        const keys = comparableKeys();
+        compareSel[other] = keys.find(k => k !== val) || compareSel[other];
+    }
+    compareSel[i] = val;
+    renderComparePickers();
+    renderCompareTable();
+}
+
+// Tabela de 2 colunas: união dos itens das 2 cestas, embalagem e preço.
+function renderCompareTable() {
+    const keys = [compareSel[0], compareSel[1]];
     const baskets = keys.map(k => BASKETS[k]);
 
-    // Collect all unique item names across all baskets
     const allItems = [];
     const seen = new Set();
-    keys.forEach(k => {
-        BASKETS[k].items.forEach(item => {
-            if(!seen.has(item.name)) {
-                seen.add(item.name);
-                allItems.push(item.name);
-            }
-        });
-    });
+    keys.forEach(k => BASKETS[k].items.forEach(item => {
+        if(!seen.has(item.name)) { seen.add(item.name); allItems.push(item.name); }
+    }));
 
-    // Build lookup: basket key -> item name -> qty
     const lookup = {};
-    keys.forEach(k => {
-        lookup[k] = {};
-        BASKETS[k].items.forEach(item => { lookup[k][item.name] = item.qty; });
-    });
-
-    const colClasses = ['col-x','col-c','col-p'];
+    keys.forEach(k => { lookup[k] = {}; BASKETS[k].items.forEach(item => { lookup[k][item.name] = item.qty; }); });
 
     let html = `<thead><tr>
         <th>Item</th>
-        ${baskets.map((b,i) => `<th><span style="display:flex;justify-content:center;margin-bottom:2px;color:${b.color||'var(--text2)'}">${IC(lucideName(b.emoji),18)}</span>${b.name}</th>`).join('')}
+        ${baskets.map(b => `<th><span style="display:flex;justify-content:center;margin-bottom:2px;color:${b.color||'var(--text2)'}">${IC(lucideName(b.emoji),18)}</span>${b.name}</th>`).join('')}
     </tr></thead><tbody>`;
 
     allItems.forEach(name => {
         html += `<tr>`;
         html += `<td><span class="compare-item"><span class="ci-ic">${IC('package',16)}</span>${name}</span></td>`;
-        keys.forEach((k,i) => {
+        keys.forEach(k => {
             const qty = lookup[k][name];
-            if(qty) {
-                html += `<td class="has-item ${colClasses[i]||''}">${qty}</td>`;
-            } else {
-                html += `<td class="no-item">—</td>`;
-            }
+            html += qty
+                ? `<td class="has-item" style="color:${BASKETS[k].color||'var(--text)'};font-weight:700">${qty}</td>`
+                : `<td class="no-item">—</td>`;
         });
         html += `</tr>`;
     });
 
-    // Packaging row
-    html += `<tr><td>Embalagem</td>`;
-    keys.forEach((k,i) => { html += `<td class="has-item" style="font-size:11px">${BASKETS[k].packaging}</td>`; });
-    html += `</tr>`;
-
-    // Price row
-    html += `<tr class="compare-price-row"><td style="font-weight:900;color:var(--text)">Preço</td>`;
-    keys.forEach((k,i) => {
-        html += `<td class="${colClasses[i]||''}">R$ ${BASKETS[k].price.toFixed(2).replace('.',',')}</td>`;
-    });
-    html += `</tr>`;
-
+    html += `<tr><td>Embalagem</td>${keys.map(k => `<td class="has-item" style="font-size:11px">${BASKETS[k].packaging||'—'}</td>`).join('')}</tr>`;
+    html += `<tr class="compare-price-row"><td style="font-weight:900;color:var(--text)">Preço</td>${keys.map(k => `<td style="color:${BASKETS[k].color||'var(--text)'};font-weight:900">R$ ${BASKETS[k].price.toFixed(2).replace('.',',')}</td>`).join('')}</tr>`;
     html += `</tbody>`;
-    html += `<tfoot><tr><td colspan="${keys.length+1}" style="text-align:center;padding:12px;font-size:10px;color:var(--text3);font-weight:500">*Imagens ilustrativas. Marcas e valores podem sofrer alterações conforme disponibilidade.</td></tr></tfoot>`;
+    html += `<tfoot><tr><td colspan="3" style="text-align:center;padding:12px;font-size:10px;color:var(--text3);font-weight:500">*Imagens ilustrativas. Marcas e valores podem sofrer alterações conforme disponibilidade.</td></tr></tfoot>`;
 
     document.getElementById('compare-table-body').innerHTML = html;
-    document.getElementById('modal-compare').classList.add('show');
 }
 
 function closeCompare() {
