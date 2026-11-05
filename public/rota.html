@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Araquari Cestas - Rota de Entrega</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/assets/lucide-icons.js"></script>
+<style>
+.ic{display:inline-block;vertical-align:middle;flex-shrink:0}.ic-inline{display:inline-flex;align-items:center;gap:6px}
+:root{--bg:#0B0F0E;--card:#151A18;--card2:#1E2421;--border:#2A322E;--text:#F9FAFB;--text2:#A1A7A3;--text3:#6B7280;--green:#22C55E;--success:#10b981;--orange:#F59E0B;--red:#EF4444;--yellow:#EAB308;--blue:#3b82f6;--glass:rgba(18,18,26,.95)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.ic svg{display:block}
+
+.topbar{background:var(--glass);backdrop-filter:blur(20px);padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.topbar h1{font-size:15px;font-weight:800;color:var(--green);display:flex;align-items:center;gap:8px}
+.topbar .sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+.content{padding:16px;max-width:560px;margin:0 auto;padding-bottom:40px}
+
+.banner{border-radius:12px;padding:12px 14px;font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.banner.warn{background:#f59e0b20;border:1px solid var(--orange);color:var(--orange)}
+.banner.ok{background:#22c55e20;border:1px solid var(--green);color:var(--green)}
+.banner.err{background:#ef444420;border:1px solid var(--red);color:var(--red)}
+
+.progress-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.progress-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:10px}
+.progress-top .n{font-weight:900;font-size:18px}
+.progress-bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden}
+.progress-bar > div{height:100%;background:var(--green);border-radius:6px;transition:width .4s}
+
+.btn-full{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;color:#fff;text-decoration:none;margin-bottom:10px}
+.btn-gmaps{background:var(--blue)}
+.btn-gmaps:active{opacity:.9}
+
+.sec-title{font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin:20px 0 10px}
+
+.stop{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.stop.done{opacity:.6}
+.stop-top{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.stop-num{width:34px;height:34px;border-radius:50%;background:var(--green);color:#06130b;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stop.done .stop-num{background:var(--border);color:var(--text3)}
+.stop-head{flex:1;min-width:0}
+.stop-name{font-weight:800;font-size:15px;line-height:1.2}
+.stop-code{font-size:11px;color:var(--text3);margin-top:2px}
+.stop-body{padding:0 14px 12px;font-size:13px;color:var(--text2);line-height:1.7}
+.stop-body strong{color:var(--text)}
+.stop-body .ref{color:var(--yellow)}
+.stop-map{height:150px;width:100%}
+.stop-nav{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg)}
+.nav-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;color:#fff}
+.nav-waze{background:#33ccff;color:#000}
+.nav-gmaps{background:var(--blue)}
+.nav-call{background:var(--card2);color:var(--text)}
+.deliver-wrap{padding:10px 14px 14px;border-top:1px solid var(--border)}
+.deliver-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;background:var(--green);color:#06130b}
+.deliver-btn:disabled{opacity:.6;cursor:not-allowed}
+.deliver-done{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;font-size:13px;font-weight:800;color:var(--green)}
+
+.spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:sp .6s linear infinite;margin:50px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:999;max-width:90%;color:#fff}
+.toast.success{background:var(--success)}.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1><span data-ic="truck" data-sz="20"></span> Rota de Entrega</h1>
+    <div class="sub" id="sub">Araquari Cestas</div>
+</div>
+
+<div class="content" id="content">
+    <div class="spin"></div>
+</div>
+
+<div id="toast-area"></div>
+
+<script>
+var TOKEN = decodeURIComponent((location.pathname.split('/r/')[1] || '').replace(/\/$/, ''));
+var DATA = null;
+
+function toast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type || 'success');
+    el.textContent = msg;
+    document.getElementById('toast-area').appendChild(el);
+    setTimeout(function(){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(function(){ el.remove(); }, 300); }, 2600);
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function endereco(p){
+    return [p.endereco_rua, p.endereco_numero, p.endereco_bairro, p.endereco_cidade].filter(Boolean).join(', ');
+}
+
+// Monta os links "Abrir rota completa no Google Maps", dividindo em partes
+// quando passa do limite de waypoints por URL (origem + até 9 + destino).
+function buildGmapsParts(origem, stops){
+    var CHUNK = 10; // paradas por parte (9 waypoints + 1 destino)
+    var parts = [];
+    var partOrigin = origem;
+    for(var i=0; i<stops.length; i+=CHUNK){
+        var chunk = stops.slice(i, i+CHUNK);
+        var dest = chunk[chunk.length-1];
+        var wps = chunk.slice(0, chunk.length-1);
+        var url = 'https://www.google.com/maps/dir/?api=1&travelmode=driving'
+            + '&origin=' + partOrigin.lat + ',' + partOrigin.lng
+            + '&destination=' + dest.lat + ',' + dest.lng;
+        if(wps.length) url += '&waypoints=' + wps.map(function(s){ return s.lat+','+s.lng; }).join('%7C');
+        parts.push(url);
+        partOrigin = dest;
+    }
+    return parts;
+}
+
+function render(){
+    var c = document.getElementById('content');
+    if(!DATA){ c.innerHTML = '<div class="empty"><div style="color:var(--red);margin-bottom:10px">'+IC('alert-triangle',40)+'</div><p>Rota não encontrada.<br>Confira o link.</p></div>'; return; }
+
+    var paradas = DATA.paradas || [];
+    var entregues = paradas.filter(function(p){ return p.entregue; }).length;
+    var total = paradas.length;
+    var pct = total ? Math.round(entregues/total*100) : 0;
+
+    document.getElementById('sub').textContent = DATA.entregador_nome ? ('Entregador: ' + DATA.entregador_nome) : 'Araquari Cestas';
+
+    var h = '';
+
+    // Banner de estado
+    if(DATA.status === 'concluida' || (total && entregues === total)){
+        h += '<div class="banner ok">'+IC('check-circle',18)+' Rota concluída — todas as entregas feitas!</div>';
+    } else if(DATA.status === 'expirada'){
+        h += '<div class="banner warn">'+IC('clock',18)+' Este link expirou. Peça um novo ao escritório.</div>';
+    } else if(DATA.status === 'cancelada'){
+        h += '<div class="banner err">'+IC('x-circle',18)+' Rota cancelada.</div>';
+    }
+
+    // Progresso
+    h += '<div class="progress-wrap"><div class="progress-top"><div>Entregas</div>'
+       + '<div><span class="n" style="color:var(--green)">'+entregues+'</span> / '+total+'</div></div>'
+       + '<div class="progress-bar"><div style="width:'+pct+'%"></div></div></div>';
+
+    // Botão rota completa (origem = loja)
+    if(total && DATA.origem && DATA.origem.lat){
+        var stops = paradas.map(function(p){ return { lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }; })
+                           .filter(function(s){ return s.lat && s.lng; });
+        var parts = buildGmapsParts(DATA.origem, stops);
+        if(parts.length === 1){
+            h += '<a class="btn-full btn-gmaps" href="'+parts[0]+'" target="_blank" rel="noopener">'+IC('navigation',18)+' Abrir rota completa no Google Maps</a>';
+        } else {
+            for(var pi=0; pi<parts.length; pi++){
+                h += '<a class="btn-full btn-gmaps" href="'+parts[pi]+'" target="_blank" rel="noopener">'+IC('navigation',18)+' Abrir rota no Google Maps — Parte '+(pi+1)+'</a>';
+            }
+        }
+    }
+
+    h += '<div class="sec-title">Paradas em ordem</div>';
+
+    if(!total){
+        h += '<div class="empty"><p>Nenhuma parada nesta rota.</p></div>';
+    }
+
+    for(var i=0; i<paradas.length; i++){
+        h += renderStop(paradas[i]);
+    }
+
+    c.innerHTML = h;
+    if(window.hydrateIcons) hydrateIcons(c);
+    setTimeout(function(){ initMaps(paradas); }, 120);
+}
+
+function renderStop(p){
+    var lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+    var hasGeo = lat && lng && lat !== 0;
+    var tel = (p.recebedor_telefone || '').replace(/\D/g, '');
+    var ativa = DATA.ativa && !p.entregue;
+
+    var h = '<div class="stop'+(p.entregue?' done':'')+'" id="stop-'+p.pedido_id+'">';
+    h += '<div class="stop-top"><div class="stop-num">'+(p.entregue?IC('check',16):p.ordem)+'</div>'
+       + '<div class="stop-head"><div class="stop-name">'+esc(p.recebedor_nome)+'</div>'
+       + '<div class="stop-code">'+esc(p.codigo)+' · '+esc(p.cesta_nome||'')+' · '+(p.quantidade||1)+'x</div></div></div>';
+
+    h += '<div class="stop-body"><strong>'+IC('map-pin',14)+' '+esc(endereco(p)||'Endereço não informado')+'</strong>';
+    if(p.endereco_complemento) h += '<div>'+IC('home',13)+' '+esc(p.endereco_complemento)+'</div>';
+    if(p.endereco_referencia) h += '<div class="ref">'+IC('info',13)+' '+esc(p.endereco_referencia)+'</div>';
+    if(p.recebedor_telefone) h += '<div>'+IC('phone',13)+' '+esc(p.recebedor_telefone)+'</div>';
+    h += '</div>';
+
+    if(hasGeo) h += '<div class="stop-map" id="m-'+p.pedido_id+'"></div>';
+
+    h += '<div class="stop-nav">';
+    if(hasGeo){
+        h += '<a class="nav-btn nav-waze" href="https://waze.com/ul?ll='+lat+','+lng+'&navigate=yes" target="_blank" rel="noopener">'+IC('navigation',13)+' Waze</a>';
+        h += '<a class="nav-btn nav-gmaps" href="https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng+'&travelmode=driving" target="_blank" rel="noopener">'+IC('map-pin',13)+' Maps</a>';
+    }
+    if(tel) h += '<a class="nav-btn nav-call" href="tel:'+tel+'">'+IC('phone',13)+' Ligar</a>';
+    h += '</div>';
+
+    h += '<div class="deliver-wrap">';
+    if(p.entregue){
+        h += '<div class="deliver-done">'+IC('check-circle',16)+' Entregue</div>';
+    } else if(ativa){
+        h += '<button class="deliver-btn" onclick="marcarEntregue('+p.pedido_id+',this)">'+IC('check-circle',16)+' Marcar como entregue</button>';
+    } else {
+        h += '<div class="deliver-done" style="color:var(--text3)">'+IC('lock',15)+' Indisponível</div>';
+    }
+    h += '</div></div>';
+    return h;
+}
+
+var maps = {};
+function initMaps(paradas){
+    for(var i=0;i<paradas.length;i++){
+        var p = paradas[i];
+        var lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+        if(!lat || !lng || lat===0) continue;
+        var el = document.getElementById('m-'+p.pedido_id);
+        if(!el || maps[p.pedido_id]) continue;
+        var m = L.map(el, {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(m);
+        m.setView([lat,lng], 16);
+        var icon = L.divIcon({html:'<div style="color:var(--red);filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">'+IC('map-pin',30)+'</div>', iconSize:[30,30], iconAnchor:[15,30], className:''});
+        L.marker([lat,lng], {icon:icon}).addTo(m);
+        maps[p.pedido_id] = m;
+    }
+}
+
+async function marcarEntregue(pedidoId, btn){
+    if(!confirm('Confirmar que esta entrega foi feita?')) return;
+    btn.disabled = true; btn.innerHTML = 'Salvando...';
+    try{
+        var r = await fetch('/api/rota/'+encodeURIComponent(TOKEN)+'/entregue', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ pedido_id: pedidoId })
+        });
+        var d = await r.json();
+        if(!r.ok || !d.success) throw new Error(d.error || 'Erro');
+        toast(d.concluida ? 'Rota concluída!' : 'Entrega registrada!');
+        await load();
+    }catch(e){
+        toast('Erro: ' + e.message, 'error');
+        btn.disabled = false; btn.innerHTML = IC('check-circle',16)+' Marcar como entregue';
+        if(window.hydrateIcons) hydrateIcons(btn);
+    }
+}
+
+async function load(){
+    try{
+        var r = await fetch('/api/rota/'+encodeURIComponent(TOKEN));
+        if(r.status === 404){ DATA = null; render(); return; }
+        DATA = await r.json();
+        maps = {};
+        render();
+    }catch(e){
+        document.getElementById('content').innerHTML = '<div class="empty"><p>Erro ao carregar a rota.</p></div>';
+    }
+}
+
+if(!TOKEN){
+    document.getElementById('content').innerHTML = '<div class="empty"><p>Link inválido.</p></div>';
+} else {
+    load();
+}
+</script>
+</body>
+</html>
