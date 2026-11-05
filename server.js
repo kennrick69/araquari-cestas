@@ -81,8 +81,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rotas da API
 // ══════════════════════════════════════
 app.use('/api/pedidos', require('./routes/orders'));
+// Rotas de entregadores: o CRUD admin é montado ANTES de /api/admin para
+// não cair no router genérico; protegido pelo mesmo ADMIN_TOKEN (requireAdmin).
+const rotas = require('./routes/rotas');
+app.use('/api/admin/rotas', require('./middleware/auth').requireAdmin, rotas.admin);
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/pagamento', require('./routes/payments'));
+
+// Link público do entregador (sem login — autenticado pelo token da rota).
+// Rate limit contra tentativa de adivinhar token.
+app.use('/api/rota', rateLimit({ windowMs: 60000, max: 60, key: 'rota' }), rotas.publico);
 
 // ══════════════════════════════════════
 // Geocode proxy (avoids CORS with Nominatim)
@@ -237,6 +245,12 @@ app.get('/api/loja', async (req, res) => {
     } catch (err) {
         res.json({ nome: '', telefone: '', whatsapp: '' });
     }
+});
+
+// ══════════════════════════════════════
+// Página da rota do entregador (link público /r/:token)
+app.get('/r/:token', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rota.html'));
 });
 
 // ══════════════════════════════════════
