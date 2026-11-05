@@ -6,6 +6,8 @@
 <title>Araquari Cestas - Painel Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="assets/lucide-icons.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -202,6 +204,7 @@ tr:hover{background:#ffffff05}
         <div class="tab active" data-tab="pedidos" onclick="switchTab('pedidos')">Pedidos</div>
         <div class="tab" data-tab="analise" onclick="switchTab('analise')">Boleto 30d</div>
         <div class="tab" data-tab="naopagos" onclick="switchTab('naopagos')" style="border-color:var(--blue)">Aguardando Pagamento</div>
+        <div class="tab" data-tab="rotas" onclick="switchTab('rotas');loadRotasTab()" style="border-color:#3b82f6"><span data-ic="route" data-sz="15" style="vertical-align:-3px"></span> Rotas</div>
         <div class="tab" data-tab="cestas" onclick="switchTab('cestas');loadCestas()" style="border-color:#25d366"><span data-ic="shopping-basket" data-sz="15" style="vertical-align:-3px"></span> Cestas</div>
         <div class="tab" data-tab="config" onclick="switchTab('config');loadConfig()" style="border-color:#9b59b6"><span data-ic="settings" data-sz="15" style="vertical-align:-3px"></span> Configurações</div>
     </div>
@@ -266,6 +269,63 @@ tr:hover{background:#ffffff05}
     <div style="font-size:12px;color:#888;margin-bottom:14px">Alterações são aplicadas no app em tempo real · cestas vêm fechadas, clique para editar</div>
     <div id="nova-cesta-form" style="display:none;background:#14233a;border:1px solid #25d366;border-radius:14px;padding:18px;margin-bottom:16px"></div>
     <div id="cestas-list" style="display:flex;flex-direction:column;gap:12px"></div>
+</div>
+
+<!-- ROTAS EDITOR -->
+<div id="rotas-editor" style="display:none;padding:0 20px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px"><span data-ic="route" data-sz="20"></span> Rotas de entrega</h3>
+        <button class="btn btn-sm btn-blue" onclick="loadPedidosEntrega()" style="padding:8px 14px"><span class="ic-inline"><span data-ic="refresh-cw" data-sz="14"></span> Atualizar</span></button>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px">Agrupa automaticamente os pedidos prontos por região · monte a rota, escolha o entregador e gere o link.</div>
+
+    <!-- Config: raio + ponto de saída -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Raio de agrupamento (km)</label>
+                <input type="number" id="rota-raio" step="0.5" min="0.5" value="2" style="width:120px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+            </div>
+            <div style="flex:1;min-width:200px">
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Ponto de saída (loja)</label>
+                <input type="text" id="rota-origem-label" placeholder="Nome do ponto de saída" style="width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+                <div style="font-size:10px;color:var(--text3);margin-top:3px" id="rota-origem-coord">—</div>
+            </div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-sm" id="btn-edit-origem" onclick="toggleEditOrigem()" style="background:var(--card2);color:var(--text);padding:8px 12px"><span class="ic-inline"><span data-ic="map-pin" data-sz="13"></span> Definir no mapa</span></button>
+                <button class="btn btn-sm btn-blue" onclick="salvarRotaConfig()" style="padding:8px 12px"><span class="ic-inline"><span data-ic="save" data-sz="13"></span> Salvar</span></button>
+            </div>
+        </div>
+        <div id="rota-edit-origem-hint" style="display:none;font-size:11px;color:var(--orange);margin-top:8px"><span data-ic="info" data-sz="12" style="vertical-align:-2px"></span> Clique no mapa para marcar o ponto de saída.</div>
+    </div>
+
+    <!-- Mapa -->
+    <div id="rota-map" style="height:340px;border-radius:12px;overflow:hidden;border:1px solid var(--border);margin-bottom:16px;background:var(--card)"></div>
+
+    <!-- Grupos / seleção -->
+    <div id="rota-grupos" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px"></div>
+
+    <!-- Barra de atribuição -->
+    <div id="rota-atribuir" style="background:var(--card);border:1px solid var(--blue);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:none">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+            <div style="font-size:13px;font-weight:700"><span id="rota-sel-count">0</span> pedido(s) selecionado(s)</div>
+            <div style="flex:1;min-width:180px">
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Entregador</label>
+                <div style="display:flex;gap:6px">
+                    <select id="rota-entregador" style="flex:1;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></select>
+                    <button class="btn btn-sm" onclick="novoEntregador()" style="background:var(--card2);color:var(--text);padding:8px 10px" title="Novo entregador"><span data-ic="plus" data-sz="14"></span></button>
+                </div>
+            </div>
+            <button class="btn btn-blue" onclick="gerarRota()" id="btn-gerar-rota" style="padding:11px 18px"><span class="ic-inline"><span data-ic="route" data-sz="15"></span> Gerar rota</span></button>
+        </div>
+    </div>
+
+    <!-- Resultado da rota gerada -->
+    <div id="rota-resultado" style="margin-bottom:16px"></div>
+
+    <!-- Rotas ativas -->
+    <h4 style="margin:18px 0 10px;font-size:14px;display:flex;align-items:center;gap:8px;color:var(--text2)"><span data-ic="list" data-sz="16"></span> Rotas ativas e recentes</h4>
+    <div id="rotas-lista" style="display:flex;flex-direction:column;gap:10px"></div>
 </div>
 
 <!-- CONFIG EDITOR -->
@@ -838,15 +898,22 @@ function switchTab(tab) {
     const tableWrap = document.querySelector('.table-wrap');
     const cestasArea = document.getElementById('cestas-editor');
     const configArea = document.getElementById('config-editor');
+    const rotasArea = document.getElementById('rotas-editor');
 
     // Hide all special areas first
     if(cestasArea) cestasArea.style.display = 'none';
     if(configArea) configArea.style.display = 'none';
+    if(rotasArea) rotasArea.style.display = 'none';
 
     if(tab === 'cestas') {
         if(ordersArea) ordersArea.style.display = 'none';
         if(tableWrap) tableWrap.style.display = 'none';
         if(cestasArea) cestasArea.style.display = 'block';
+        return;
+    } else if(tab === 'rotas') {
+        if(ordersArea) ordersArea.style.display = 'none';
+        if(tableWrap) tableWrap.style.display = 'none';
+        if(rotasArea) rotasArea.style.display = 'block';
         return;
     } else if(tab === 'config') {
         if(ordersArea) ordersArea.style.display = 'none';
@@ -1716,6 +1783,311 @@ async function testMP() {
     } catch(e) {
         resultEl.innerHTML = '<div style="padding:8px 12px;background:#ef444420;border:1px solid var(--red);border-radius:8px;font-size:12px;color:var(--red);margin-bottom:12px">Erro de conexão</div>';
     }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ROTAS DE ENTREGA
+// ══════════════════════════════════════════════════════════════════
+var ROTA_CORES = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6'];
+var rotaCfg = null, rotaGrupos = [], rotaSemGeo = [], rotaSel = {};
+var rotaMap = null, rotaLayers = null, rotaOrigemMarker = null, rotaEditOrigem = false;
+var rotaEntregadores = [];
+
+function escH(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function corGrupo(i){ return ROTA_CORES[i % ROTA_CORES.length]; }
+function rotaBaseLink(token){ return location.origin + '/r/' + token; }
+
+function loadRotasTab(){
+    loadRotaConfig().then(function(){
+        loadEntregadores();
+        loadPedidosEntrega();
+        loadRotasLista();
+    });
+}
+
+async function loadRotaConfig(){
+    try{
+        var r = await fetch(API+'/rotas/config', {headers:{'x-admin-token':TOKEN}});
+        rotaCfg = await r.json();
+        document.getElementById('rota-raio').value = rotaCfg.raio_km;
+        document.getElementById('rota-origem-label').value = rotaCfg.origem_label || '';
+        document.getElementById('rota-origem-coord').textContent = Number(rotaCfg.origem_lat).toFixed(5)+', '+Number(rotaCfg.origem_lng).toFixed(5);
+    }catch(e){}
+}
+
+function ensureRotaMap(){
+    if(rotaMap) { setTimeout(function(){ rotaMap.invalidateSize(); }, 150); return; }
+    var o = rotaCfg || {origem_lat:-26.3706, origem_lng:-48.7219};
+    rotaMap = L.map('rota-map', {zoomControl:true}).setView([o.origem_lat, o.origem_lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(rotaMap);
+    rotaLayers = L.layerGroup().addTo(rotaMap);
+    rotaMap.on('click', function(e){ if(rotaEditOrigem) setRotaOrigem(e.latlng.lat, e.latlng.lng); });
+    setTimeout(function(){ rotaMap.invalidateSize(); }, 200);
+}
+
+function setRotaOrigem(lat, lng){
+    rotaCfg = rotaCfg || {};
+    rotaCfg.origem_lat = lat; rotaCfg.origem_lng = lng;
+    document.getElementById('rota-origem-coord').textContent = lat.toFixed(5)+', '+lng.toFixed(5);
+    renderRotaMapa();
+}
+
+function toggleEditOrigem(){
+    rotaEditOrigem = !rotaEditOrigem;
+    document.getElementById('rota-edit-origem-hint').style.display = rotaEditOrigem ? 'block' : 'none';
+    var b = document.getElementById('btn-edit-origem');
+    b.style.background = rotaEditOrigem ? 'var(--orange)' : 'var(--card2)';
+    b.style.color = rotaEditOrigem ? '#1A1200' : 'var(--text)';
+    ensureRotaMap();
+}
+
+async function salvarRotaConfig(){
+    var body = {
+        raio_km: parseFloat(document.getElementById('rota-raio').value) || 2,
+        origem_label: document.getElementById('rota-origem-label').value,
+        origem_lat: rotaCfg && rotaCfg.origem_lat, origem_lng: rotaCfg && rotaCfg.origem_lng
+    };
+    try{
+        var r = await fetch(API+'/rotas/config', {method:'PUT', headers:{'Content-Type':'application/json','x-admin-token':TOKEN}, body:JSON.stringify(body)});
+        var d = await r.json();
+        if(!r.ok || !d.success) throw new Error(d.error||'Erro');
+        rotaCfg = d.config;
+        if(rotaEditOrigem) toggleEditOrigem();
+        showToast('Ajustes de rota salvos', 'success');
+        loadPedidosEntrega();
+    }catch(e){ showToast('Erro: '+e.message, 'error'); }
+}
+
+async function loadPedidosEntrega(){
+    var raio = parseFloat(document.getElementById('rota-raio').value) || 2;
+    var cont = document.getElementById('rota-grupos');
+    cont.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+    try{
+        var r = await fetch(API+'/rotas/pedidos-entrega?raio='+raio, {headers:{'x-admin-token':TOKEN}});
+        var d = await r.json();
+        if(!r.ok) throw new Error(d.error||'Erro');
+        rotaGrupos = d.grupos||[]; rotaSemGeo = d.semGeo||[];
+        if(d.origem){ rotaCfg = rotaCfg||{}; rotaCfg.origem_lat=d.origem.lat; rotaCfg.origem_lng=d.origem.lng; rotaCfg.origem_label=d.origem.label; }
+        var disp = {}; rotaGrupos.forEach(function(g){ g.pedidos.forEach(function(p){ disp[p.id]=true; }); });
+        Object.keys(rotaSel).forEach(function(id){ if(!disp[id]) delete rotaSel[id]; });
+        renderRotaMapa();
+        renderRotaGrupos();
+        updateAtribuirBar();
+    }catch(e){ cont.innerHTML = '<div style="color:var(--red);padding:12px">Erro ao carregar pedidos: '+escH(e.message)+'</div>'; }
+}
+
+function renderRotaMapa(){
+    ensureRotaMap();
+    rotaLayers.clearLayers();
+    var pts = [];
+    // Origem (loja)
+    if(rotaCfg && rotaCfg.origem_lat){
+        var oico = L.divIcon({html:'<div style="color:#1A1200;background:var(--orange);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">'+IC('store',16)+'</div>', iconSize:[30,30], iconAnchor:[15,15], className:''});
+        L.marker([rotaCfg.origem_lat, rotaCfg.origem_lng], {icon:oico, zIndexOffset:1000}).addTo(rotaLayers).bindPopup('Ponto de saída: '+escH(rotaCfg.origem_label||'Loja'));
+        pts.push([rotaCfg.origem_lat, rotaCfg.origem_lng]);
+    }
+    rotaGrupos.forEach(function(g, gi){
+        var cor = corGrupo(gi);
+        g.pedidos.forEach(function(p){
+            var lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+            if(!lat||!lng) return;
+            var m = L.circleMarker([lat,lng], {radius:8, color:'#fff', weight:2, fillColor:cor, fillOpacity:.9});
+            m.bindPopup('<b>'+escH(p.codigo)+'</b><br>'+escH(p.recebedor_nome)+'<br>'+escH(p.endereco_bairro||'')+'<br>Região '+(gi+1));
+            m.addTo(rotaLayers);
+            pts.push([lat,lng]);
+        });
+    });
+    if(pts.length){ try{ rotaMap.fitBounds(pts, {padding:[30,30], maxZoom:15}); }catch(e){} }
+}
+
+function renderRotaGrupos(){
+    var cont = document.getElementById('rota-grupos');
+    var totalPed = rotaGrupos.reduce(function(a,g){ return a+g.pedidos.length; }, 0);
+    if(!totalPed && !rotaSemGeo.length){
+        cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">'+IC('inbox',40)+'<p style="margin-top:8px">Nenhum pedido pronto para entrega.</p></div>';
+        return;
+    }
+    var h = '';
+    rotaGrupos.forEach(function(g, gi){
+        var cor = corGrupo(gi);
+        var todosSel = g.pedidos.every(function(p){ return rotaSel[p.id]; });
+        var bairros = (g.bairros||[]).join(', ') || 'Sem bairro';
+        h += '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+cor+';border-radius:12px;overflow:hidden">';
+        h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="toggleSelGrupo('+gi+')">';
+        h += '<span style="width:12px;height:12px;border-radius:50%;background:'+cor+';flex-shrink:0"></span>';
+        h += '<div style="flex:1"><div style="font-weight:800;font-size:14px">Região '+(gi+1)+' · '+g.pedidos.length+' entrega(s)</div><div style="font-size:11px;color:var(--text3)">'+escH(bairros)+'</div></div>';
+        h += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-weight:700" onclick="event.stopPropagation()"><input type="checkbox" '+(todosSel?'checked':'')+' onchange="toggleSelGrupo('+gi+',this.checked)"> Grupo</label>';
+        h += '</div>';
+        h += '<div style="border-top:1px solid var(--border)">';
+        g.pedidos.forEach(function(p){
+            h += '<label style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--border);cursor:pointer;font-size:13px">';
+            h += '<input type="checkbox" '+(rotaSel[p.id]?'checked':'')+' onchange="toggleSelPedido('+p.id+',this.checked)">';
+            h += '<div style="flex:1"><strong>'+escH(p.codigo)+'</strong> · '+escH(p.recebedor_nome)+'<div style="font-size:11px;color:var(--text3)">'+escH([p.endereco_rua,p.endereco_numero].filter(Boolean).join(', '))+' — '+escH(p.endereco_bairro||'')+'</div></div>';
+            h += '</label>';
+        });
+        h += '</div></div>';
+    });
+    if(rotaSemGeo.length){
+        h += '<div style="background:#f59e0b14;border:1px solid var(--orange);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--orange)">'+IC('alert-triangle',15)+' '+rotaSemGeo.length+' pedido(s) sem localização no mapa (não entram no agrupamento): '+escH(rotaSemGeo.map(function(p){return p.codigo;}).join(', '))+'</div>';
+    }
+    cont.innerHTML = h;
+}
+
+function toggleSelPedido(id, checked){
+    if(checked) rotaSel[id] = true; else delete rotaSel[id];
+    // sincroniza checkbox "Grupo"
+    renderRotaGrupos(); updateAtribuirBar();
+}
+function toggleSelGrupo(gi, checked){
+    var g = rotaGrupos[gi]; if(!g) return;
+    var novo = (typeof checked === 'boolean') ? checked : !g.pedidos.every(function(p){ return rotaSel[p.id]; });
+    g.pedidos.forEach(function(p){ if(novo) rotaSel[p.id]=true; else delete rotaSel[p.id]; });
+    renderRotaGrupos(); updateAtribuirBar();
+}
+
+function updateAtribuirBar(){
+    var n = Object.keys(rotaSel).length;
+    document.getElementById('rota-sel-count').textContent = n;
+    document.getElementById('rota-atribuir').style.display = n>0 ? 'block' : 'none';
+    var b = document.getElementById('btn-gerar-rota');
+    if(b) b.disabled = n===0;
+}
+
+async function loadEntregadores(){
+    try{
+        var r = await fetch(API+'/rotas/entregadores', {headers:{'x-admin-token':TOKEN}});
+        var d = await r.json();
+        rotaEntregadores = d.entregadores||[];
+        renderEntregadorSelect();
+    }catch(e){}
+}
+function renderEntregadorSelect(){
+    var sel = document.getElementById('rota-entregador');
+    if(!sel) return;
+    var cur = sel.value;
+    var h = '<option value="">— escolher —</option>';
+    rotaEntregadores.forEach(function(e){ h += '<option value="'+e.id+'">'+escH(e.nome)+(e.telefone?(' ('+escH(e.telefone)+')'):'')+'</option>'; });
+    sel.innerHTML = h;
+    if(cur) sel.value = cur;
+}
+function novoEntregador(){
+    var nome = prompt('Nome do entregador:');
+    if(!nome || !nome.trim()) return;
+    var tel = prompt('WhatsApp do entregador (opcional, com DDD):') || '';
+    fetch(API+'/rotas/entregadores', {method:'POST', headers:{'Content-Type':'application/json','x-admin-token':TOKEN}, body:JSON.stringify({nome:nome.trim(), telefone:tel.trim()})})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if(!d.success) throw new Error(d.error||'Erro');
+            rotaEntregadores.push(d.entregador);
+            renderEntregadorSelect();
+            document.getElementById('rota-entregador').value = d.entregador.id;
+            showToast('Entregador cadastrado', 'success');
+        })
+        .catch(function(e){ showToast('Erro: '+e.message, 'error'); });
+}
+
+async function gerarRota(){
+    var ids = Object.keys(rotaSel).map(Number);
+    if(!ids.length) return;
+    var entId = document.getElementById('rota-entregador').value;
+    if(!entId){ showToast('Escolha o entregador', 'warning'); return; }
+    var b = document.getElementById('btn-gerar-rota');
+    b.disabled = true;
+    try{
+        var r = await fetch(API+'/rotas/gerar', {method:'POST', headers:{'Content-Type':'application/json','x-admin-token':TOKEN}, body:JSON.stringify({pedido_ids:ids, entregador_id:Number(entId)})});
+        var d = await r.json();
+        if(!r.ok || !d.success) throw new Error(d.error||'Erro');
+        rotaSel = {};
+        renderRotaResultado(d);
+        showToast('Rota gerada com '+d.rota.total+' paradas', 'success');
+        loadPedidosEntrega();
+        loadRotasLista();
+    }catch(e){ showToast('Erro: '+e.message, 'error'); b.disabled=false; }
+}
+
+function renderRotaResultado(d){
+    var link = rotaBaseLink(d.rota.token);
+    var h = '<div style="background:var(--card);border:1px solid var(--green);border-radius:12px;padding:16px">';
+    h += '<div style="font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--green)">'+IC('check-circle',18)+' Rota gerada para '+escH(d.rota.entregador_nome)+'</div>';
+    h += '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">'+d.rota.total+' paradas · ~'+d.rota.distancia_km+' km · expira em 24h</div>';
+    h += '<div style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px">';
+    h += '<span style="flex:1;font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH(link)+'</span>';
+    h += '<button class="btn btn-sm btn-blue" onclick="copiarLink(\''+d.rota.token+'\')"><span class="ic-inline">'+IC('copy',13)+' Copiar</span></button>';
+    h += '</div>';
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    if(d.rota.entregador_telefone) h += '<button class="btn btn-sm" style="background:#25d366;color:#fff" onclick="whatsRota(\''+escH(d.rota.entregador_telefone)+'\',\''+d.rota.token+'\','+d.rota.total+')"><span class="ic-inline">'+IC('send',13)+' Enviar no WhatsApp</span></button>';
+    h += '<a class="btn btn-sm" style="background:var(--card2);color:var(--text)" href="'+link+'" target="_blank"><span class="ic-inline">'+IC('eye',13)+' Abrir</span></a>';
+    h += '</div></div>';
+    document.getElementById('rota-resultado').innerHTML = h;
+    if(window.hydrateIcons) hydrateIcons(document.getElementById('rota-resultado'));
+}
+
+function copiarLink(token){
+    var link = rotaBaseLink(token);
+    if(navigator.clipboard){ navigator.clipboard.writeText(link).then(function(){ showToast('Link copiado', 'success'); }); }
+    else { prompt('Link da rota:', link); }
+}
+function whatsRota(tel, token, total){
+    var num = (tel||'').replace(/\D/g,''); if(num && !num.startsWith('55')) num='55'+num;
+    var link = rotaBaseLink(token);
+    var msg = encodeURIComponent('Olá! Sua rota de entrega do Araquari Cestas ('+total+' paradas): '+link+'\nToque em cada parada pra navegar (Waze/Maps) e marque "Entregue" ao concluir.');
+    window.open('https://wa.me/'+num+'?text='+msg, '_blank');
+}
+
+async function loadRotasLista(){
+    var cont = document.getElementById('rotas-lista');
+    cont.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+    try{
+        var r = await fetch(API+'/rotas', {headers:{'x-admin-token':TOKEN}});
+        var d = await r.json();
+        var rotas = d.rotas||[];
+        if(!rotas.length){ cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:10px">Nenhuma rota ainda.</div>'; return; }
+        var h = '';
+        rotas.forEach(function(ro){
+            var total = parseInt(ro.total)||0, ent = parseInt(ro.entregues)||0;
+            var pct = total ? Math.round(ent/total*100) : 0;
+            var expirou = ro.expira_em && new Date(ro.expira_em).getTime() < Date.now();
+            var statusTxt = ro.status==='concluida' ? 'Concluída' : (expirou ? 'Expirada' : 'Ativa');
+            var statusCor = ro.status==='concluida' ? 'var(--green)' : (expirou ? 'var(--orange)' : 'var(--blue)');
+            var link = rotaBaseLink(ro.token);
+            h += '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px">';
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">';
+            h += '<div style="font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px">'+IC('user',14)+' '+escH(ro.entregador_nome||'—')+'</div>';
+            h += '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;background:'+statusCor+'22;color:'+statusCor+'">'+statusTxt+'</span>';
+            h += '</div>';
+            h += '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+ent+' / '+total+' entregues</div>';
+            h += '<div style="height:6px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+pct+'%;background:var(--green)"></div></div>';
+            h += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+            h += '<button class="btn btn-sm btn-blue" onclick="copiarLink(\''+ro.token+'\')"><span class="ic-inline">'+IC('link',12)+' Link</span></button>';
+            if(ro.entregador_telefone) h += '<button class="btn btn-sm" style="background:#25d366;color:#fff" onclick="whatsRota(\''+escH(ro.entregador_telefone)+'\',\''+ro.token+'\','+total+')"><span class="ic-inline">'+IC('send',12)+' WhatsApp</span></button>';
+            h += '<a class="btn btn-sm" style="background:var(--card2);color:var(--text)" href="'+link+'" target="_blank"><span class="ic-inline">'+IC('eye',12)+' Abrir</span></a>';
+            if(ro.status==='ativa' && !expirou) h += '<button class="btn btn-sm" style="background:var(--card2);color:var(--text)" onclick="trocarEntregador('+ro.id+')"><span class="ic-inline">'+IC('refresh-cw',12)+' Trocar</span></button>';
+            h += '<button class="btn btn-sm btn-red" onclick="desfazerRota('+ro.id+')"><span class="ic-inline">'+IC('trash-2',12)+' Desfazer</span></button>';
+            h += '</div></div>';
+        });
+        cont.innerHTML = h;
+    }catch(e){ cont.innerHTML = '<div style="color:var(--red);padding:10px">Erro ao listar rotas</div>'; }
+}
+
+function trocarEntregador(id){
+    if(!rotaEntregadores.length){ showToast('Cadastre um entregador primeiro', 'warning'); return; }
+    var opts = rotaEntregadores.map(function(e,i){ return (i+1)+') '+e.nome; }).join('\n');
+    var escolha = prompt('Trocar entregador para:\n'+opts+'\n\nDigite o número:');
+    var idx = parseInt(escolha)-1;
+    if(isNaN(idx) || !rotaEntregadores[idx]) return;
+    fetch(API+'/rotas/'+id, {method:'PATCH', headers:{'Content-Type':'application/json','x-admin-token':TOKEN}, body:JSON.stringify({entregador_id:rotaEntregadores[idx].id})})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ if(!d.success) throw new Error(d.error||'Erro'); showToast('Entregador trocado', 'success'); loadRotasLista(); })
+        .catch(function(e){ showToast('Erro: '+e.message, 'error'); });
+}
+
+function desfazerRota(id){
+    showConfirm('Desfazer rota', 'Os pedidos voltam a ficar disponíveis para reagrupar. Confirma?', function(){
+        fetch(API+'/rotas/'+id, {method:'DELETE', headers:{'x-admin-token':TOKEN}})
+            .then(function(r){ return r.json(); })
+            .then(function(d){ if(!d.success) throw new Error(d.error||'Erro'); showToast('Rota desfeita', 'success'); loadPedidosEntrega(); loadRotasLista(); })
+            .catch(function(e){ showToast('Erro: '+e.message, 'error'); });
+    }, {danger:true, okText:'Desfazer', icon:'trash-2'});
 }
 </script>
 </body>
