@@ -653,21 +653,14 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 <!-- mesmo gap:12px do .basket-cards de hoje (o wrapper quebraria o gap entre cards) -->
                 <div id="dynamic-baskets" style="display:flex;flex-direction:column;gap:12px"></div>
 
-                <!-- Donation custom value card (hidden by default) -->
-                <div class="basket-card" onclick="selectCustomDonation()" id="card-custom" style="display:none;border:2px dashed var(--orange)">
+                <!-- Donation custom value card (hidden by default) — abre modal de valor -->
+                <div class="basket-card" onclick="openDonationValue()" id="card-custom" style="display:none">
                     <div class="basket-icon" style="background:rgba(239,68,68,0.12)"><span style="color:var(--red);display:flex" data-ic="gift" data-sz="26"></span></div>
                     <div class="basket-info" style="flex:1">
                         <div class="basket-name">Valor livre</div>
-                        <div class="basket-desc">Digite o valor que deseja doar</div>
-                        <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
-                            <span style="font-size:14px;font-weight:800;color:var(--orange)">R$</span>
-                            <input type="text" id="input-custom-donation" inputmode="decimal" placeholder="0,00"
-                                onclick="event.stopPropagation()"
-                                oninput="formatDonationValue(this)"
-                                style="width:100px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:16px;font-weight:800;outline:none">
-                        </div>
+                        <div class="basket-desc">Escolha quanto quer doar</div>
                     </div>
-                    <div class="pay-check" id="custom-donation-check"></div>
+                    <div class="basket-chevron"><span data-ic="chevron-right" data-sz="22"></span></div>
                 </div>
             </div>
 
@@ -950,6 +943,33 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                 N&#xE3;o precisa, apenas quero doar
             </button>
         </div>
+    </div>
+</div>
+
+<!-- ═══ DONATION VALUE MODAL (quanto quer doar) ═══ -->
+<div class="modal-overlay" id="modal-donation-value">
+    <div class="modal" style="max-width:420px">
+        <div style="text-align:center;margin-bottom:20px">
+            <div style="margin-bottom:6px;color:var(--red)"><span data-ic="gift" data-sz="36"></span></div>
+            <div style="font-size:20px;font-weight:800">Quanto voc&#xEA; quer doar?</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:26px;font-weight:800;color:var(--text2)">R$</span>
+            <input type="text" id="input-donation-value" inputmode="numeric" placeholder="0,00"
+                oninput="onDonationValueInput(this)"
+                style="width:190px;padding:6px 4px;border:none;border-bottom:2px solid var(--border);background:transparent;color:var(--text);font-size:42px;font-weight:800;text-align:center;outline:none">
+        </div>
+        <div id="donation-value-hint" style="text-align:center;font-size:12px;color:var(--text3);min-height:16px;margin-bottom:16px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:20px">
+            <button class="btn btn-dark" style="flex:1;padding:11px 0;font-size:14px;border-radius:12px" onclick="setDonationQuick(10)">R$ 10</button>
+            <button class="btn btn-dark" style="flex:1;padding:11px 0;font-size:14px;border-radius:12px" onclick="setDonationQuick(20)">R$ 20</button>
+            <button class="btn btn-dark" style="flex:1;padding:11px 0;font-size:14px;border-radius:12px" onclick="setDonationQuick(50)">R$ 50</button>
+            <button class="btn btn-dark" style="flex:1;padding:11px 0;font-size:14px;border-radius:12px" onclick="setDonationQuick(100)">R$ 100</button>
+        </div>
+        <button class="btn btn-donate" id="btn-confirm-donation-value" style="width:100%;padding:15px" onclick="confirmDonationValue()" disabled>
+            Doar R$ 0,00
+        </button>
+        <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px" onclick="closeDonationValue()">Cancelar</button>
     </div>
 </div>
 
@@ -1455,19 +1475,28 @@ function showScreen(id, addToHistory = true) {
 
 // Handle Android back button / browser back
 window.addEventListener('popstate', function(e) {
-    // Close overlays first
+    const stay = () => history.pushState({ screen: navStack[navStack.length-1] || 'home' }, '', '');
+    // 1) Fecha overlays abertos primeiro (não sai da tela nem do app)
     const receipt = document.getElementById('receipt-overlay');
-    if(receipt) { receipt.remove(); history.pushState({ screen: navStack[navStack.length-1] }, '', ''); return; }
+    if(receipt) { receipt.remove(); stay(); return; }
+    const valueModal = document.getElementById('modal-donation-value');
+    if(valueModal && valueModal.classList.contains('show')) { closeDonationValue(); stay(); return; }
+    const contactModal = document.getElementById('modal-donation-contact');
+    if(contactModal && contactModal.classList.contains('show')) { contactModal.classList.remove('show'); stay(); return; }
     const compare = document.getElementById('modal-compare');
-    if(compare && compare.classList.contains('show')) { compare.classList.remove('show'); history.pushState({ screen: navStack[navStack.length-1] }, '', ''); return; }
+    if(compare && compare.classList.contains('show')) { compare.classList.remove('show'); stay(); return; }
 
+    // 2) Na home em modo doação: back sai do modo doação (não fecha o app)
+    if((navStack[navStack.length-1] === 'home') && state.isDonation) { exitDonationMode(); stay(); return; }
+
+    // 3) Navegação normal entre telas
     if(navStack.length > 1) {
         navStack.pop();
         const prevScreen = navStack[navStack.length - 1];
         showScreen(prevScreen, false);
     }
-    // Always keep at least one history entry to prevent app exit
-    history.pushState({ screen: navStack[navStack.length-1] || 'home' }, '', '');
+    // Mantém sempre uma entrada no histórico pra não fechar o app
+    stay();
 });
 
 // Initialize with double history entry to prevent accidental exit
@@ -1486,6 +1515,7 @@ function goBackFromDetail() {
         document.body.classList.add('donation-mode');
         document.getElementById('donation-mode-banner').style.display = 'block';
         document.getElementById('card-custom').style.display = 'flex';
+        clearBasketSelection();
         setDonateEntryCard(true);
         const title = document.querySelector('#home-sheet .sheet-title');
         const sub = document.querySelector('#home-sheet .sheet-sub');
@@ -1494,36 +1524,64 @@ function goBackFromDetail() {
     }
 }
 
-// Custom donation functions
-function formatDonationValue(input) {
-    let v = input.value.replace(/[^\d]/g, '');
-    if(v.length === 0) { input.value = ''; return; }
-    v = (parseInt(v) / 100).toFixed(2).replace('.', ',');
-    input.value = v;
+// ═══ DOAÇÃO "VALOR LIVRE" (modal) ═══
+// Mínimo aceito no Pix/Mercado Pago (R$). MP rejeita valores abaixo disso.
+const MIN_DOACAO = 1;
+
+function fmtBRL(v) { return (v || 0).toFixed(2).replace('.', ','); }
+
+function parseDonationValue() {
+    const input = document.getElementById('input-donation-value');
+    return parseFloat((input.value || '0').replace(/\./g, '').replace(',', '.')) || 0;
 }
 
-function selectCustomDonation() {
-    const input = document.getElementById('input-custom-donation');
-    const val = parseFloat((input.value || '0').replace(',', '.'));
-    if(val < 1) {
-        input.focus();
-        input.style.borderColor = 'var(--red)';
-        setTimeout(() => input.style.borderColor = 'var(--border)', 1500);
-        return;
-    }
-    // Deselect other cards
-    document.querySelectorAll('.basket-card').forEach(c => c.classList.remove('selected'));
-    document.getElementById('card-custom').classList.add('selected');
-    document.getElementById('custom-donation-check').innerHTML = IC('check',14);
+function openDonationValue() {
+    const input = document.getElementById('input-donation-value');
+    input.value = '';
+    updateDonationValueUI(0);
+    document.getElementById('modal-donation-value').classList.add('show');
+    // Abre o teclado numérico e foca o campo
+    setTimeout(() => { try { input.focus(); } catch(e) {} }, 120);
+}
 
-    // Set state with custom basket
+function closeDonationValue() {
+    document.getElementById('modal-donation-value').classList.remove('show');
+}
+
+// Digita só dígitos → formata como centavos (R$ x,xx)
+function onDonationValueInput(input) {
+    let v = input.value.replace(/[^\d]/g, '').slice(0, 8);
+    if(v.length === 0) { input.value = ''; updateDonationValueUI(0); return; }
+    const num = parseInt(v) / 100;
+    input.value = fmtBRL(num);
+    updateDonationValueUI(num);
+}
+
+function setDonationQuick(val) {
+    const input = document.getElementById('input-donation-value');
+    input.value = fmtBRL(val);
+    updateDonationValueUI(val);
+    try { input.focus(); } catch(e) {}
+}
+
+function updateDonationValueUI(val) {
+    const btn = document.getElementById('btn-confirm-donation-value');
+    const hint = document.getElementById('donation-value-hint');
+    const valid = val >= MIN_DOACAO;
+    if(btn) { btn.disabled = !valid; btn.textContent = 'Doar R$ ' + fmtBRL(val); }
+    if(hint) hint.textContent = (val > 0 && !valid) ? ('Valor mínimo R$ ' + fmtBRL(MIN_DOACAO)) : '';
+}
+
+function confirmDonationValue() {
+    const val = parseDonationValue();
+    if(val < MIN_DOACAO) return;
+    closeDonationValue();
     state.basket = 'custom';
     state.customDonation = true;
     state.customPrice = val;
     state.qty = 1;
-
-    // Go to map
-    showScreen('map');
+    // Mesmo passo das cestas no modo doação: modal de contato → pagamento
+    proceedFromDetail();
 }
 
 // ═══════════════════════════════════════
@@ -1683,12 +1741,20 @@ function toggleDonationMode() {
         body.classList.add('donation-mode');
         banner.style.display = 'block';
         if(customCard) customCard.style.display = 'flex';
+        clearBasketSelection();
         setDonateEntryCard(true);
         if(title) title.innerHTML = 'Doe uma cesta';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     } else {
         exitDonationMode();
     }
+}
+
+// Nenhum card deve aparecer selecionado ao abrir o modo doação (bug: a seleção
+// de uma cesta feita no modo compra persistia e virava borda dourada).
+function clearBasketSelection() {
+    document.querySelectorAll('.basket-card').forEach(c => c.classList.remove('selected'));
+    state.basket = null;
 }
 
 function exitDonationMode() {
@@ -1702,8 +1768,6 @@ function exitDonationMode() {
     const customCard = document.getElementById('card-custom');
     if(banner) banner.style.display = 'none';
     if(customCard) { customCard.style.display = 'none'; customCard.classList.remove('selected'); }
-    const customCheck = document.getElementById('custom-donation-check');
-    if(customCheck) customCheck.innerHTML = '';
     setDonateEntryCard(false);
     if(title) title.innerHTML = 'Escolha sua cesta';
     if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
