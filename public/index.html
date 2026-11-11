@@ -204,6 +204,8 @@ body { font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif; backgr
 .basket-price-sub { font-size:12px; color:var(--text3); font-weight:600; }
 .basket-chevron { color:var(--text3); flex-shrink:0; margin-left:2px; display:flex; align-items:center; }
 .basket-tag { padding:3px 9px; border-radius:7px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; }
+.donate-entry { margin-top:12px; background:var(--card2) !important; border-color:var(--border) !important; }
+.donate-entry:hover, .donate-entry:active { border-color:var(--text3) !important; background:var(--bg3) !important; }
 
 /* ── SEARCH / ADDRESS BAR ── */
 .address-bar {
@@ -633,14 +635,11 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
 
         <div class="bottom-sheet" id="home-sheet">
             <div class="sheet-handle"></div>
-            <div class="sheet-title">Escolha sua cesta</div>
-            <div class="sheet-sub">Selecione o tipo e peça agora</div>
-
-            <!-- Action buttons row -->
-            <div style="display:flex;gap:8px;margin-bottom:12px" id="action-buttons-row">
-                <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px"><span data-ic="arrow-left-right" data-sz="16" style="vertical-align:-3px;margin-right:4px"></span> Comparar</button>
-                <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px"><span data-ic="heart" data-sz="16" style="vertical-align:-3px;margin-right:4px"></span> Doar cesta</button>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                <div class="sheet-title">Escolha sua cesta</div>
+                <a id="top-action-link" onclick="openCompare()" class="compare-link" style="flex-shrink:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--text3);white-space:nowrap"><span data-ic="arrow-left-right" data-sz="15" style="display:inline-flex;vertical-align:-2px"></span> Comparar</a>
             </div>
+            <div class="sheet-sub">Selecione o tipo e peça agora</div>
 
             <!-- Donation mode banner (hidden by default) -->
             <div class="donation-banner" id="donation-mode-banner" style="display:none">
@@ -670,6 +669,16 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     </div>
                     <div class="pay-check" id="custom-donation-check"></div>
                 </div>
+            </div>
+
+            <!-- Donation entry card (after baskets, before illustrative notice) -->
+            <div class="basket-card donate-entry" id="card-donate-entry" onclick="toggleDonationMode()">
+                <div class="basket-icon" style="background:rgba(239,68,68,0.12)"><span style="color:var(--red);display:flex" data-ic="heart" data-sz="26"></span></div>
+                <div class="basket-info">
+                    <div class="basket-name" id="donate-entry-title">Doe uma cesta</div>
+                    <div class="basket-desc" id="donate-entry-sub">Ajude uma família de Araquari</div>
+                </div>
+                <div class="basket-chevron"><span data-ic="chevron-right" data-sz="22"></span></div>
             </div>
 
             <div style="margin-top:14px;font-size:10px;color:var(--text3);line-height:1.5;font-weight:500;text-align:center">
@@ -1477,11 +1486,7 @@ function goBackFromDetail() {
         document.body.classList.add('donation-mode');
         document.getElementById('donation-mode-banner').style.display = 'block';
         document.getElementById('card-custom').style.display = 'flex';
-        const row = document.getElementById('action-buttons-row');
-        row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
-            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">${IC('arrow-left',15)} Voltar a comprar</button>
-        `;
+        setDonateEntryCard(true);
         const title = document.querySelector('#home-sheet .sheet-title');
         const sub = document.querySelector('#home-sheet .sheet-sub');
         if(title) title.innerHTML = 'Doe uma cesta';
@@ -1670,7 +1675,6 @@ function toggleDonationMode() {
     state.isDonation = !state.isDonation;
     const body = document.body;
     const banner = document.getElementById('donation-mode-banner');
-    const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
     const customCard = document.getElementById('card-custom');
@@ -1679,10 +1683,7 @@ function toggleDonationMode() {
         body.classList.add('donation-mode');
         banner.style.display = 'block';
         if(customCard) customCard.style.display = 'flex';
-        row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:0.6;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
-            <button class="btn btn-sm" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;border:2px solid var(--orange)">${IC('arrow-left',15)} Voltar a comprar</button>
-        `;
+        setDonateEntryCard(true);
         if(title) title.innerHTML = 'Doe uma cesta';
         if(sub) sub.textContent = 'Escolha a cesta que deseja doar';
     } else {
@@ -1696,7 +1697,6 @@ function exitDonationMode() {
     state.customDonation = false;
     document.body.classList.remove('donation-mode');
     const banner = document.getElementById('donation-mode-banner');
-    const row = document.getElementById('action-buttons-row');
     const title = document.querySelector('#home-sheet .sheet-title');
     const sub = document.querySelector('#home-sheet .sheet-sub');
     const customCard = document.getElementById('card-custom');
@@ -1704,14 +1704,23 @@ function exitDonationMode() {
     if(customCard) { customCard.style.display = 'none'; customCard.classList.remove('selected'); }
     const customCheck = document.getElementById('custom-donation-check');
     if(customCheck) customCheck.innerHTML = '';
-    if(row) {
-        row.innerHTML = `
-            <button class="btn btn-sm btn-dark" onclick="openCompare()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px">${IC('arrow-left-right',16)} Comparar</button>
-            <button class="btn btn-sm btn-donate-outline" id="btn-toggle-donate" onclick="toggleDonationMode()" style="flex:1;padding:13px 14px;font-size:14px;border-radius:12px">${IC('heart',16)} Doar cesta</button>
-        `;
-    }
+    setDonateEntryCard(false);
     if(title) title.innerHTML = 'Escolha sua cesta';
     if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
+}
+
+// Modo doa\u00E7\u00E3o: esconde o card "Doe uma cesta" do fim e troca o link do topo
+// (\u21C6 Comparar  \u2194  \u2190 Voltar). No modo compra faz o inverso.
+function setDonateEntryCard(active) {
+    const card = document.getElementById('card-donate-entry');
+    if(card) card.style.display = active ? 'none' : 'flex';
+    const a = document.getElementById('top-action-link');
+    if(a) {
+        a.onclick = active ? exitDonationMode : openCompare;
+        a.innerHTML = active
+            ? IC('arrow-left',15) + ' Voltar'
+            : IC('arrow-left-right',15) + ' Comparar';
+    }
 }
 
 // ═══════════════════════════════════════
