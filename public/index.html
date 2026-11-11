@@ -637,7 +637,7 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
             <div class="sheet-handle"></div>
             <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
                 <div class="sheet-title">Escolha sua cesta</div>
-                <a onclick="openCompare()" class="compare-link" style="flex-shrink:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--text3);white-space:nowrap"><span data-ic="arrow-left-right" data-sz="15" style="display:inline-flex;vertical-align:-2px"></span> Comparar</a>
+                <a id="top-action-link" onclick="openCompare()" class="compare-link" style="flex-shrink:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--text3);white-space:nowrap"><span data-ic="arrow-left-right" data-sz="15" style="display:inline-flex;vertical-align:-2px"></span> Comparar</a>
             </div>
             <div class="sheet-sub">Selecione o tipo e peça agora</div>
 
@@ -1709,12 +1709,18 @@ function exitDonationMode() {
     if(sub) sub.textContent = 'Selecione o tipo e pe\u00E7a agora';
 }
 
-// Alterna o r\u00F3tulo do cart\u00E3o de doa\u00E7\u00E3o entre entrar e sair do modo doa\u00E7\u00E3o
+// Modo doa\u00E7\u00E3o: esconde o card "Doe uma cesta" do fim e troca o link do topo
+// (\u21C6 Comparar  \u2194  \u2190 Voltar). No modo compra faz o inverso.
 function setDonateEntryCard(active) {
-    const t = document.getElementById('donate-entry-title');
-    const s = document.getElementById('donate-entry-sub');
-    if(t) t.textContent = active ? 'Voltar a comprar' : 'Doe uma cesta';
-    if(s) s.textContent = active ? 'Sair do modo doa\u00E7\u00E3o' : 'Ajude uma fam\u00EDlia de Araquari';
+    const card = document.getElementById('card-donate-entry');
+    if(card) card.style.display = active ? 'none' : 'flex';
+    const a = document.getElementById('top-action-link');
+    if(a) {
+        a.onclick = active ? exitDonationMode : openCompare;
+        a.innerHTML = active
+            ? IC('arrow-left',15) + ' Voltar'
+            : IC('arrow-left-right',15) + ' Comparar';
+    }
 }
 
 // ═══════════════════════════════════════
