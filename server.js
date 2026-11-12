@@ -238,12 +238,28 @@ app.get('/api/health', healthCheck);
 // ══════════════════════════════════════
 // Config pública da loja (campos não-secretos) — usada pelo app do cliente
 app.get('/api/loja', async (req, res) => {
+    const on = (v, def) => (v === undefined || v === null || v === '') ? def : (v === '1' || v === 'true' || v === 'on');
+    const num = (v, def) => { const n = parseFloat(v); return Number.isFinite(n) ? n : def; };
     try {
-        const r = await pool.query("SELECT chave, valor FROM app_config WHERE chave IN ('loja_nome','loja_telefone','loja_whatsapp')");
+        const r = await pool.query(
+            "SELECT chave, valor FROM app_config WHERE chave IN ('loja_nome','loja_telefone','loja_whatsapp','entrega_ativo','entrega_dinheiro','entrega_pix','entrega_cartao','entrega_max_pedido','entrega_parcelamento','entrega_parcelas_max','entrega_acrescimo_pct')"
+        );
         const c = {}; r.rows.forEach(row => { c[row.chave] = row.valor; });
-        res.json({ nome: c.loja_nome || '', telefone: c.loja_telefone || '', whatsapp: c.loja_whatsapp || '' });
+        res.json({
+            nome: c.loja_nome || '', telefone: c.loja_telefone || '', whatsapp: c.loja_whatsapp || '',
+            entrega: {
+                ativo: on(c.entrega_ativo, true),
+                dinheiro: on(c.entrega_dinheiro, true),
+                pix: on(c.entrega_pix, true),
+                cartao: on(c.entrega_cartao, true),
+                max: Math.max(0, num(c.entrega_max_pedido, 0)),
+                parcelamento: on(c.entrega_parcelamento, true),
+                parcelas_max: Math.max(2, Math.round(num(c.entrega_parcelas_max, 3))),
+                acrescimo_pct: Math.max(0, num(c.entrega_acrescimo_pct, 10))
+            }
+        });
     } catch (err) {
-        res.json({ nome: '', telefone: '', whatsapp: '' });
+        res.json({ nome: '', telefone: '', whatsapp: '', entrega: { ativo: false } });
     }
 });
 

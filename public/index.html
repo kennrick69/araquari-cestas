@@ -766,7 +766,18 @@ body.donation-mode .back-btn { border-color:rgba(212,175,55,0.3) !important; }
                     <span class="pay-tag" style="background:rgba(232,133,12,0.12);color:var(--orange)">CADASTRO</span>
                     <div class="pay-check"></div>
                 </div>
+                <div class="pay-method" onclick="selectPay('entrega')" id="pay-entrega" style="display:none">
+                    <div class="pay-emoji" style="display:flex;align-items:center;justify-content:center;color:var(--green)"><span data-ic="hand-coins" data-sz="26"></span></div>
+                    <div class="pay-info">
+                        <div class="pay-name">Pagar na entrega</div>
+                        <div class="pay-desc">Dinheiro, Pix ou maquininha na porta</div>
+                    </div>
+                    <div class="pay-check"></div>
+                </div>
             </div>
+
+            <!-- Pagar na entrega: sub-fluxo (forma → troco/cartão). Renderizado via JS. -->
+            <div id="entrega-area" style="display:none;margin-bottom:14px"></div>
 
             <!-- Dados do pagador (boleto/cartão - hidden by default) -->
             <div id="payer-data-area" style="display:none;margin-bottom:14px">
@@ -1062,7 +1073,8 @@ const state = {
     uploadFiles: { doc:null, res:null },
     pedidoCodigo: null,
     isDonation: false,
-    donorContact: null
+    donorContact: null,
+    entrega: null   // { forma, cartaoTipo, parcelas, trocoPara } quando payMethod === 'entrega'
 };
 
 const BASKETS = {
@@ -1856,12 +1868,18 @@ function renderPaymentSummary() {
     if(payTitle) payTitle.innerHTML = state.isDonation ? IC('heart',20)+' Finalizar Doa\u00E7\u00E3o' : 'Pagamento';
     if(paySub) paySub.textContent = state.isDonation ? 'Escolha como deseja pagar sua doa\u00E7\u00E3o' : 'Escolha como deseja pagar';
 
+    // Mostra/esconde a opção "Pagar na entrega" conforme config + modo
+    const payEntrega = document.getElementById('pay-entrega');
+    if(payEntrega) payEntrega.style.display = entregaDisponivel() ? 'flex' : 'none';
+
     const b = BASKETS[state.basket];
     const effectivePrice = getEffectivePrice();
     const subtotal = effectivePrice * state.qty;
     const isPix = state.payMethod === 'pix';
+    const isEntrega = state.payMethod === 'entrega';
     const discount = isPix ? subtotal * 0.05 : 0;
-    const total = subtotal - discount;
+    const acrescimo = isEntrega ? entregaAcrescimo() : 0;
+    const total = subtotal - discount + acrescimo;
 
     const donationBadge = state.isDonation ? `<div style="background:rgba(61,163,61,0.12);border:1px solid rgba(61,163,61,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center">
         <div style="font-size:14px;font-weight:800;color:var(--green);display:flex;align-items:center;justify-content:center;gap:6px">${IC('hand-heart',18)} Voc\u00EA est\u00E1 fazendo uma doa\u00E7\u00E3o!</div>
@@ -1895,7 +1913,9 @@ function renderPaymentSummary() {
         <div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px"><span style="color:${b.color||'var(--text2)'};display:inline-flex">${IC(lucideName(b.emoji),16)}</span>${b.name} \u00D7 ${state.qty}</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
         <div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px">${state.isDonation ? IC('heart',14)+' Doa\u00E7\u00E3o' : IC('truck',14)+' Entrega'}</span><span style="color:var(--green)">Gr\u00E1tis</span></div>
         ${isPix ? `<div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px">${IC('zap',14)} Desconto PIX</span><span class="discount">-R$ ${discount.toFixed(2).replace('.',',')}</span></div>` : ''}
+        ${acrescimo > 0 ? `<div class="summary-row"><span style="display:inline-flex;align-items:center;gap:6px">${IC('credit-card',14)} Acréscimo ${entregaCfg().parcelas_max}x</span><span style="color:var(--orange)">+R$ ${acrescimo.toFixed(2).replace('.',',')}</span></div>` : ''}
         <div class="summary-row summary-total"><span style="font-weight:800;color:var(--text)">Total</span><span>R$ ${total.toFixed(2).replace('.',',')}</span></div>
+        ${isEntrega && entregaResumoTexto() ? `<div style="margin-top:10px;background:rgba(61,163,61,0.08);border:1px solid rgba(61,163,61,0.25);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:6px">${IC('hand-coins',15)} ${entregaResumoTexto()}</div>` : ''}
         ${addressBlock}
     `;
 }
@@ -1916,10 +1936,23 @@ function selectPay(method) {
     document.getElementById('boleto30-area').style.display = method === 'boleto30' ? 'block' : 'none';
     document.getElementById('payer-data-area').style.display = (method === 'boleto' || method === 'cartao') ? 'block' : 'none';
     document.getElementById('pix-email-area').style.display = method === 'pix' ? 'block' : 'none';
-    document.getElementById('btn-pay').disabled = false;
+    document.getElementById('entrega-area').style.display = method === 'entrega' ? 'block' : 'none';
+
+    // Pagar na entrega começa a seleção zerada e só habilita o botão depois que
+    // o cliente escolhe a forma (e troco/cartão). Os demais métodos já habilitam.
+    if(method === 'entrega') {
+        state.entrega = { forma: null, cartaoTipo: null, parcelas: null, trocoPara: null, trocoDefinido: false };
+        renderEntregaArea();
+    } else {
+        state.entrega = null;
+    }
+    document.getElementById('btn-pay').disabled = (method === 'entrega');
 
     if(method === 'boleto30') {
         document.getElementById('btn-pay').textContent = 'Enviar para Análise';
+    } else if(method === 'entrega') {
+        document.getElementById('btn-pay').textContent = 'Escolha a forma de pagamento';
+        document.getElementById('btn-pay').className = 'btn btn-primary';
     } else if(state.isDonation) {
         document.getElementById('btn-pay').textContent = 'Finalizar Doa\u00E7\u00E3o';
         document.getElementById('btn-pay').className = 'btn btn-donate';
@@ -1929,6 +1962,175 @@ function selectPay(method) {
     }
 
     renderPaymentSummary();
+}
+
+// ═══════════════════════════════════════
+// PAGAR NA ENTREGA — sub-fluxo
+// ═══════════════════════════════════════
+function entregaCfg() {
+    const e = (_loja && _loja.entrega) || {};
+    return {
+        ativo: e.ativo !== false,
+        dinheiro: e.dinheiro !== false,
+        pix: e.pix !== false,
+        cartao: e.cartao !== false,
+        max: Math.max(0, parseFloat(e.max) || 0),
+        parcelamento: e.parcelamento !== false,
+        parcelas_max: Math.max(2, parseInt(e.parcelas_max) || 3),
+        acrescimo_pct: Math.max(0, parseFloat(e.acrescimo_pct) || 10)
+    };
+}
+// Pode oferecer pagar na entrega? (não em doação, config ligada, dentro do teto)
+function entregaDisponivel() {
+    if(state.isDonation) return false;
+    const c = entregaCfg();
+    if(!c.ativo) return false;
+    if(!(c.dinheiro || c.pix || c.cartao)) return false;
+    const base = getEffectivePrice() * state.qty;
+    if(c.max > 0 && base > c.max + 0.001) return false;
+    return true;
+}
+function entregaBase() { return Math.round(getEffectivePrice() * state.qty * 100) / 100; }
+function entregaAcrescimo() {
+    const e = state.entrega;
+    if(e && e.forma === 'cartao' && e.cartaoTipo === 'credito3x') {
+        return Math.round(entregaBase() * (entregaCfg().acrescimo_pct / 100) * 100) / 100;
+    }
+    return 0;
+}
+function entregaTotal() { return Math.round((entregaBase() + entregaAcrescimo()) * 100) / 100; }
+
+function renderEntregaArea() {
+    const c = entregaCfg();
+    const e = state.entrega || {};
+    const box = (sel, extra) => 'background:var(--card);border:1px solid ' + (sel ? 'var(--green)' : 'var(--border)') + ';border-radius:12px;padding:13px 15px;cursor:pointer;display:flex;align-items:center;gap:10px;' + (extra||'');
+    let h = '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Como você quer pagar na entrega?</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:8px">';
+    if(c.dinheiro) h += `<div style="${box(e.forma==='dinheiro')}" onclick="selectEntregaForma('dinheiro')">${IC('banknote',20)}<div style="flex:1"><div style="font-weight:700;font-size:14px">Dinheiro</div><div style="font-size:11px;color:var(--text3)">Pago em espécie na entrega</div></div></div>`;
+    if(c.pix) h += `<div style="${box(e.forma==='pix')}" onclick="selectEntregaForma('pix')">${IC('qr-code',20)}<div style="flex:1"><div style="font-weight:700;font-size:14px">Pix na entrega</div><div style="font-size:11px;color:var(--text3)">QR Code no momento da entrega</div></div></div>`;
+    if(c.cartao) h += `<div style="${box(e.forma==='cartao')}" onclick="selectEntregaForma('cartao')">${IC('credit-card',20)}<div style="flex:1"><div style="font-weight:700;font-size:14px">Cartão na maquininha</div><div style="font-size:11px;color:var(--text3)">Débito ou crédito na porta</div></div></div>`;
+    h += '</div>';
+
+    if(e.forma === 'cartao') {
+        h += '<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Débito ou crédito?</div>';
+        h += '<div style="display:flex;flex-direction:column;gap:8px">';
+        h += `<div style="${box(e.cartaoTipo==='debito')}" onclick="selectEntregaCartao('debito')">${IC('credit-card',18)}<div style="flex:1;font-weight:700;font-size:14px">Débito</div></div>`;
+        h += `<div style="${box(e.cartaoTipo==='credito')}" onclick="selectEntregaCartao('credito')">${IC('credit-card',18)}<div style="flex:1;font-weight:700;font-size:14px">Crédito à vista</div></div>`;
+        if(c.parcelamento) {
+            h += `<div style="${box(e.cartaoTipo==='credito3x')}" onclick="selectEntregaCartao('credito3x')">${IC('credit-card',18)}<div style="flex:1"><div style="font-weight:700;font-size:14px">Crédito em ${c.parcelas_max}x</div><div style="font-size:11px;color:var(--orange)">+${c.acrescimo_pct.toString().replace('.',',')}% de acréscimo</div></div></div>`;
+        }
+        h += '</div>';
+
+        if(e.cartaoTipo === 'credito3x') {
+            const base = entregaBase(), acr = entregaAcrescimo(), tot = entregaTotal(), parc = Math.round(tot / c.parcelas_max * 100) / 100;
+            h += `<div style="margin-top:12px;background:rgba(232,133,12,0.08);border:1px solid rgba(232,133,12,0.25);border-radius:12px;padding:14px">
+                <div style="font-size:12px;font-weight:800;color:var(--orange);margin-bottom:8px;display:flex;align-items:center;gap:6px">${IC('calculator',15)} Parcelamento em ${c.parcelas_max}x</div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text2)">Valor do pedido</span><span>R$ ${fmtBRL(base)}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text2)">Acréscimo (${c.acrescimo_pct.toString().replace('.',',')}%)</span><span style="color:var(--orange)">+ R$ ${fmtBRL(acr)}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;padding-top:6px;border-top:1px solid var(--border);margin-top:6px"><span>Novo total</span><span>R$ ${fmtBRL(tot)}</span></div>
+                <div style="text-align:center;font-size:15px;font-weight:900;color:var(--orange);margin-top:8px">${c.parcelas_max}x de R$ ${fmtBRL(parc)}</div>
+            </div>`;
+        }
+    }
+
+    if(e.forma === 'dinheiro') {
+        const base = entregaBase();
+        const cedulas = trocoCedulas(base);
+        h += '<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Precisa de troco?</div>';
+        h += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        const selCerto = e.trocoDefinido && (e.trocoPara === null || e.trocoPara === 0);
+        h += `<button type="button" onclick="setTrocoCerto()" style="flex:1 1 100%;padding:12px;border-radius:10px;border:1px solid ${selCerto?'var(--green)':'var(--border)'};background:${selCerto?'rgba(61,163,61,0.12)':'var(--card)'};color:var(--text);font-weight:700;font-size:13px;cursor:pointer">Não, tenho o valor certo</button>`;
+        cedulas.forEach(v => {
+            const sel = e.trocoDefinido && e.trocoPara === v;
+            h += `<button type="button" onclick="setTrocoCedula(${v})" style="flex:1 1 28%;padding:12px;border-radius:10px;border:1px solid ${sel?'var(--green)':'var(--border)'};background:${sel?'rgba(61,163,61,0.12)':'var(--card)'};color:var(--text);font-weight:700;font-size:13px;cursor:pointer">R$ ${fmtBRL(v)}</button>`;
+        });
+        h += '</div>';
+        h += `<div style="margin-top:8px"><input id="input-troco-outro" class="form-input" inputmode="numeric" placeholder="Outro valor (ex: 150,00)" oninput="onTrocoOutroInput(this)" style="text-align:center;font-weight:700"></div>`;
+        if(e.trocoDefinido && e.trocoPara && e.trocoPara > 0) {
+            const troco = Math.round((e.trocoPara - base) * 100) / 100;
+            h += `<div style="margin-top:10px;text-align:center;font-size:15px;font-weight:800;color:var(--green)">Troco: R$ ${fmtBRL(troco)}</div>`;
+        } else if(selCerto) {
+            h += `<div style="margin-top:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text2)">Sem troco — você tem o valor certo</div>`;
+        }
+    }
+
+    document.getElementById('entrega-area').innerHTML = h;
+    if(window.hydrateIcons) hydrateIcons(document.getElementById('entrega-area'));
+    updateEntregaUI();
+}
+
+// Cédulas acima do total (próxima dezena + 20/50/100/200 que forem maiores)
+function trocoCedulas(total) {
+    const out = [];
+    const prox10 = Math.ceil(total / 10) * 10;
+    if(prox10 > total) out.push(prox10);
+    [20,50,100,200].forEach(v => { if(v > total && out.indexOf(v) < 0) out.push(v); });
+    return out.slice(0, 4);
+}
+
+function selectEntregaForma(forma) {
+    state.entrega = { forma, cartaoTipo: null, parcelas: null, trocoPara: null, trocoDefinido: false };
+    renderEntregaArea();
+}
+function selectEntregaCartao(tipo) {
+    state.entrega.cartaoTipo = tipo;
+    state.entrega.parcelas = (tipo === 'credito3x') ? entregaCfg().parcelas_max : null;
+    renderEntregaArea();
+}
+function setTrocoCerto() {
+    state.entrega.trocoPara = null; state.entrega.trocoDefinido = true;
+    const i = document.getElementById('input-troco-outro'); if(i) i.value = '';
+    renderEntregaArea();
+}
+function setTrocoCedula(v) {
+    state.entrega.trocoPara = v; state.entrega.trocoDefinido = true;
+    const i = document.getElementById('input-troco-outro'); if(i) i.value = '';
+    renderEntregaArea();
+}
+function onTrocoOutroInput(el) {
+    const raw = (el.value || '').replace(/[^\d,\.]/g, '').replace(/\./g,'').replace(',', '.');
+    const v = parseFloat(raw);
+    if(Number.isFinite(v) && v > 0) {
+        state.entrega.trocoPara = Math.round(v * 100) / 100;
+        state.entrega.trocoDefinido = true;
+    } else {
+        state.entrega.trocoDefinido = false;
+    }
+    updateEntregaUI();
+}
+
+// Valida a seleção, habilita/rotula o botão e atualiza o resumo
+function updateEntregaUI() {
+    const e = state.entrega, btn = document.getElementById('btn-pay');
+    if(!e) return;
+    let valido = false;
+    if(e.forma === 'pix') valido = true;
+    else if(e.forma === 'cartao') valido = !!e.cartaoTipo;
+    else if(e.forma === 'dinheiro') {
+        valido = e.trocoDefinido && (e.trocoPara === null || e.trocoPara === 0 || e.trocoPara >= entregaBase() - 0.001);
+    }
+    btn.disabled = !valido;
+    btn.className = 'btn btn-primary';
+    btn.textContent = valido ? ('Confirmar pedido · R$ ' + fmtBRL(entregaTotal())) : 'Escolha a forma de pagamento';
+    renderPaymentSummary();
+}
+
+// Texto da cobrança (p/ o resumo do cliente)
+function entregaResumoTexto() {
+    const e = state.entrega; if(!e || !e.forma) return '';
+    const base = entregaBase();
+    if(e.forma === 'pix') return 'Pix na entrega · R$ ' + fmtBRL(base);
+    if(e.forma === 'dinheiro') {
+        if(e.trocoPara && e.trocoPara > 0) return 'Dinheiro · paga com R$ ' + fmtBRL(e.trocoPara) + ' · troco R$ ' + fmtBRL(Math.round((e.trocoPara-base)*100)/100);
+        if(e.trocoDefinido) return 'Dinheiro · valor certo (sem troco)';
+        return 'Dinheiro na entrega';
+    }
+    if(e.forma === 'cartao') {
+        if(e.cartaoTipo === 'debito') return 'Cartão na maquininha · débito · R$ ' + fmtBRL(base);
+        if(e.cartaoTipo === 'credito') return 'Cartão na maquininha · crédito · R$ ' + fmtBRL(base);
+        if(e.cartaoTipo === 'credito3x') { const c = entregaCfg(); return 'Cartão · crédito ' + c.parcelas_max + 'x de R$ ' + fmtBRL(Math.round(entregaTotal()/c.parcelas_max*100)/100) + ' (total R$ ' + fmtBRL(entregaTotal()) + ')'; }
+    }
+    return '';
 }
 
 function handleUpload(type, el) {
@@ -1982,6 +2184,15 @@ async function finalizePay() {
         }
     }
 
+    if(state.payMethod === 'entrega') {
+        const e = state.entrega || {};
+        let ok = false;
+        if(e.forma === 'pix') ok = true;
+        else if(e.forma === 'cartao') ok = !!e.cartaoTipo;
+        else if(e.forma === 'dinheiro') ok = e.trocoDefinido && (!e.trocoPara || e.trocoPara >= entregaBase() - 0.001);
+        if(!ok) { showToast('Escolha como vai pagar na entrega.', 'warning'); return; }
+    }
+
     // Disable button and show loading
     btn.disabled = true;
     btn.textContent = 'Enviando pedido...';
@@ -1991,8 +2202,9 @@ async function finalizePay() {
         const effectivePrice = getEffectivePrice();
         const subtotal = effectivePrice * state.qty;
         const isPix = state.payMethod === 'pix';
+        const isEntrega = state.payMethod === 'entrega';
         const discount = isPix ? subtotal * 0.05 : 0;
-        const total = subtotal - discount;
+        const total = isEntrega ? entregaTotal() : (subtotal - discount);
 
         const af = state.addressFull || {};
         const addr = state.address || {};
@@ -2014,10 +2226,13 @@ async function finalizePay() {
             recebedor_nome: addr.recebedor || '',
             recebedor_telefone: addr.telefone || '',
             pagamento_metodo: state.payMethod,
-            desconto: discount,
+            desconto: isEntrega ? 0 : discount,
             total: total,
             cpf: state.payMethod === 'boleto30' ? (document.getElementById('input-cpf')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-cpf-payer')?.value || '') : null,
-            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : state.payMethod === 'pix' ? ((document.getElementById('input-email-pix')?.value || '').trim() || null) : null
+            email: state.payMethod === 'boleto30' ? (document.getElementById('input-email-boleto30')?.value || '') : (state.payMethod === 'boleto' || state.payMethod === 'cartao') ? (document.getElementById('input-email-payer')?.value || '') : state.payMethod === 'pix' ? ((document.getElementById('input-email-pix')?.value || '').trim() || null) : null,
+            entrega_forma: isEntrega ? state.entrega.forma : null,
+            entrega_cartao_tipo: isEntrega ? state.entrega.cartaoTipo : null,
+            entrega_troco_para: (isEntrega && state.entrega.forma === 'dinheiro') ? state.entrega.trocoPara : null
         };
 
         console.log('Enviando pedido:', JSON.stringify(body));
@@ -2059,6 +2274,8 @@ async function finalizePay() {
 
         if(state.payMethod === 'boleto30') {
             showStatus('analise');
+        } else if(state.payMethod === 'entrega') {
+            showStatus('entrega');
         } else if(state.payMethod === 'pix') {
             await processPixPayment(data.pedido.codigo);
         } else if(state.payMethod === 'boleto') {
@@ -2414,6 +2631,33 @@ function showStatus(type) {
             <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px">${IC('arrow-left',16)} Voltar ao início</button>
         `;
         // Poll for status updates
+        startStatusPolling(codigo);
+    } else if(type === 'entrega') {
+        const resumo = entregaResumoTexto();
+        el.innerHTML = `
+            ${animCheck(72)}
+            <div class="status-title">Pedido Confirmado!</div>
+            <div style="background:var(--card);border-radius:12px;padding:12px 16px;margin:12px auto;max-width:280px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Código do Pedido</div>
+                <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:4px;letter-spacing:1px">${codigo}</div>
+            </div>
+            <div style="background:rgba(61,163,61,0.1);border:1px solid rgba(61,163,61,0.3);border-radius:14px;padding:16px;margin:12px auto;max-width:320px;text-align:center">
+                <div style="font-size:13px;font-weight:800;color:var(--green);display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px">${IC('hand-coins',18)} Pagamento na entrega</div>
+                <div style="font-size:13px;color:var(--text2);line-height:1.5">${resumo}</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:8px">Você paga diretamente ao entregador quando a cesta chegar.</div>
+            </div>
+            <div class="status-sub">Sua ${b.name} foi registrada! Acompanhe o status abaixo.</div>
+            <div style="max-width:300px;margin:0 auto">${imprevistoBtn({ codigo: codigo, cesta_nome: b.name })}</div>
+            <div class="status-steps" id="live-steps">
+                <div class="status-step done"><div class="step-dot">${IC('check-circle',22)}</div><div class="step-text"><div class="step-title">Pedido recebido</div><div class="step-desc">Pagamento na entrega</div></div></div>
+                <div class="status-step active"><div class="step-dot">${IC('check-circle',22)}</div><div class="step-text"><div class="step-title">Pedido confirmado</div><div class="step-desc">A loja vai preparar</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('package',22)}</div><div class="step-text"><div class="step-title">Em separação</div><div class="step-desc">Montando sua cesta</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('inbox',22)}</div><div class="step-text"><div class="step-title">Pronto para entrega</div><div class="step-desc">Sua cesta está pronta</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('truck',22)}</div><div class="step-text"><div class="step-title">Saiu para entrega</div><div class="step-desc">A caminho do seu endereço</div></div></div>
+                <div class="status-step"><div class="step-dot">${IC('badge-check',22)}</div><div class="step-text"><div class="step-title">Entregue</div><div class="step-desc">Cesta entregue e paga</div></div></div>
+            </div>
+            <button class="btn btn-dark" onclick="showScreen('home')" style="max-width:300px;margin-top:16px">${IC('arrow-left',16)} Voltar ao início</button>
+        `;
         startStatusPolling(codigo);
     } else if(state.isDonation) {
         const dataHora = new Date().toLocaleString('pt-BR');

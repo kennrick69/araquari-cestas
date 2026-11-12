@@ -290,7 +290,9 @@ async function carregarRotaPorToken(token) {
                 p.id AS pedido_id, p.codigo, p.recebedor_nome, p.recebedor_telefone,
                 p.endereco_rua, p.endereco_numero, p.endereco_complemento, p.endereco_referencia,
                 p.endereco_bairro, p.endereco_cidade, p.latitude, p.longitude,
-                p.cesta_nome, p.quantidade, p.status
+                p.cesta_nome, p.quantidade, p.status, p.total, p.pagamento_status,
+                p.entrega_pagamento, p.entrega_forma, p.entrega_cartao_tipo, p.entrega_parcelas,
+                p.entrega_troco_para, p.entrega_troco_valor, p.entrega_valor_original, p.entrega_acrescimo
            FROM rota_paradas rp JOIN pedidos p ON p.id = rp.pedido_id
           WHERE rp.rota_id = $1 ORDER BY rp.ordem ASC`,
         [rota.id]
@@ -347,12 +349,20 @@ publico.post('/:token/entregue', async (req, res) => {
             [rota.id, pedidoId]
         );
         // Atualiza o pedido → entregue (cliente vê no app), com log
-        const ped = await client.query('SELECT status FROM pedidos WHERE id = $1', [pedidoId]);
+        const ped = await client.query('SELECT status, pagamento_status, entrega_pagamento FROM pedidos WHERE id = $1', [pedidoId]);
         const anterior = ped.rows.length ? ped.rows[0].status : null;
-        await client.query('UPDATE pedidos SET status = $1 WHERE id = $2', ['entregue', pedidoId]);
+
+        // Pagar na entrega: só vira "pago" quando o entregador confirma que recebeu.
+        const ehEntrega = ped.rows.length && ped.rows[0].entrega_pagamento && ped.rows[0].pagamento_status === 'na_entrega';
+        const pagamentoRecebido = req.body.pagamento_recebido === true;
+        if (ehEntrega && pagamentoRecebido) {
+            await client.query('UPDATE pedidos SET status = $1, pagamento_status = $2 WHERE id = $3', ['entregue', 'aprovado', pedidoId]);
+        } else {
+            await client.query('UPDATE pedidos SET status = $1 WHERE id = $2', ['entregue', pedidoId]);
+        }
         await client.query(
             'INSERT INTO pedidos_log (pedido_id, status_anterior, status_novo, observacao) VALUES ($1,$2,$3,$4)',
-            [pedidoId, anterior, 'entregue', 'Entregue pelo entregador (rota ' + rota.id + ')']
+            [pedidoId, anterior, 'entregue', 'Entregue pelo entregador (rota ' + rota.id + ')' + (ehEntrega ? (pagamentoRecebido ? ' · pagamento na entrega recebido' : ' · pagamento na entrega PENDENTE') : '')]
         );
 
         // Se todas as paradas foram entregues → conclui a rota

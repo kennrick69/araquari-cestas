@@ -101,6 +101,35 @@ function endereco(p){
     return [p.endereco_rua, p.endereco_numero, p.endereco_bairro, p.endereco_cidade].filter(Boolean).join(', ');
 }
 
+function brl(v){ return 'R$ ' + (parseFloat(v)||0).toFixed(2).replace('.',','); }
+
+// Pedido "pagar na entrega"? (e ainda não recebido)
+function ehEntrega(p){ return !!p.entrega_pagamento; }
+function entregaPago(p){ return p.pagamento_status === 'aprovado'; }
+
+// Linhas da cobrança — dinheiro sempre nesta ordem: quanto cobrar, com quanto
+// o cliente vai pagar, quanto levar de troco.
+function entregaLinhas(p){
+    const base = (p.entrega_valor_original != null) ? p.entrega_valor_original : p.total;
+    if(p.entrega_forma === 'dinheiro'){
+        if(p.entrega_troco_para && parseFloat(p.entrega_troco_para) > 0){
+            return ['Cobrar ' + brl(base), 'Cliente vai pagar com ' + brl(p.entrega_troco_para), 'Levar ' + brl(p.entrega_troco_valor) + ' de troco'];
+        }
+        return ['Cobrar ' + brl(base), 'Cliente tem o valor certo', 'Sem troco'];
+    }
+    if(p.entrega_forma === 'pix') return ['Cobrar ' + brl(base) + ' por Pix na entrega'];
+    if(p.entrega_forma === 'cartao'){
+        if(p.entrega_cartao_tipo === 'debito') return ['LEVAR A MAQUININHA', 'Cobrar ' + brl(base) + ' no débito'];
+        if(p.entrega_cartao_tipo === 'credito') return ['LEVAR A MAQUININHA', 'Cobrar ' + brl(base) + ' no crédito'];
+        if(p.entrega_cartao_tipo === 'credito3x'){
+            const n = p.entrega_parcelas || 3;
+            return ['LEVAR A MAQUININHA', 'Cobrar ' + brl(p.total) + ' no crédito em ' + n + 'x de ' + brl(parseFloat(p.total)/n)];
+        }
+        return ['LEVAR A MAQUININHA', 'Cobrar ' + brl(base)];
+    }
+    return ['Cobrar ' + brl(base)];
+}
+
 // Monta os links "Abrir rota completa no Google Maps", dividindo em partes
 // quando passa do limite de waypoints por URL (origem + até 9 + destino).
 function buildGmapsParts(origem, stops){
@@ -148,6 +177,24 @@ function render(){
        + '<div><span class="n" style="color:var(--green)">'+entregues+'</span> / '+total+'</div></div>'
        + '<div class="progress-bar"><div style="width:'+pct+'%"></div></div></div>';
 
+    // Resumo de pagamento na entrega (antes de sair): troco total + maquininha
+    var pendentes = paradas.filter(function(p){ return ehEntrega(p) && !entregaPago(p); });
+    var trocoTotal = 0, temCartao = false, temDinheiro = false, temPix = false;
+    pendentes.forEach(function(p){
+        if(p.entrega_forma === 'cartao') temCartao = true;
+        if(p.entrega_forma === 'pix') temPix = true;
+        if(p.entrega_forma === 'dinheiro'){ temDinheiro = true; trocoTotal += (parseFloat(p.entrega_troco_valor) || 0); }
+    });
+    if(pendentes.length){
+        var itens = '';
+        if(temDinheiro) itens += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'+IC('banknote',16)+' Troco a levar em dinheiro: <strong style="color:var(--green)">'+brl(trocoTotal)+'</strong></div>';
+        if(temCartao) itens += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;color:var(--orange);font-weight:800">'+IC('credit-card',16)+' Leve a maquininha</div>';
+        if(temPix) itens += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'+IC('qr-code',16)+' Alguma entrega paga por Pix na porta</div>';
+        h += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px">'
+           + '<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Antes de sair · Pagamentos na entrega</div>'
+           + itens + '</div>';
+    }
+
     // Botão rota completa (origem = loja)
     if(total && DATA.origem && DATA.origem.lat){
         var stops = paradas.map(function(p){ return { lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }; })
@@ -194,6 +241,16 @@ function renderStop(p){
     if(p.recebedor_telefone) h += '<div>'+IC('phone',13)+' '+esc(p.recebedor_telefone)+'</div>';
     h += '</div>';
 
+    // Pagamento na entrega — destaque com as infos na ordem pedida
+    if(ehEntrega(p)){
+        var pago = entregaPago(p);
+        var cor = pago ? 'var(--green)' : (p.entrega_forma === 'cartao' ? 'var(--orange)' : 'var(--green)');
+        var linhas = entregaLinhas(p).map(function(l){ return '<div style="font-size:14px;font-weight:800;line-height:1.5">'+esc(l)+'</div>'; }).join('');
+        h += '<div style="margin:0 14px 12px;border:2px solid '+cor+';border-radius:12px;padding:12px 14px;background:'+cor+'14">'
+           + '<div style="font-size:11px;font-weight:800;color:'+cor+';text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px;margin-bottom:6px">'+IC('hand-coins',15)+' Pagamento na entrega'+(pago?' · RECEBIDO':'')+'</div>'
+           + linhas + '</div>';
+    }
+
     if(hasGeo) h += '<div class="stop-map" id="m-'+p.pedido_id+'"></div>';
 
     h += '<div class="stop-nav">';
@@ -234,12 +291,21 @@ function initMaps(paradas){
 }
 
 async function marcarEntregue(pedidoId, btn){
-    if(!confirm('Confirmar que esta entrega foi feita?')) return;
+    var p = (DATA && DATA.paradas || []).filter(function(x){ return x.pedido_id === pedidoId; })[0];
+    var pedirPagamento = p && ehEntrega(p) && !entregaPago(p);
+    var pagamentoRecebido = false;
+    if(pedirPagamento){
+        var linhas = entregaLinhas(p).join(' · ');
+        if(!confirm('Pagamento recebido?\n\n' + linhas + '\n\nConfirmar entrega E recebimento do pagamento.')) return;
+        pagamentoRecebido = true;
+    } else {
+        if(!confirm('Confirmar que esta entrega foi feita?')) return;
+    }
     btn.disabled = true; btn.innerHTML = 'Salvando...';
     try{
         var r = await fetch('/api/rota/'+encodeURIComponent(TOKEN)+'/entregue', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ pedido_id: pedidoId })
+            body: JSON.stringify({ pedido_id: pedidoId, pagamento_recebido: pagamentoRecebido })
         });
         var d = await r.json();
         if(!r.ok || !d.success) throw new Error(d.error || 'Erro');
